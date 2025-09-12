@@ -1,0 +1,13 @@
+# Python
+*.pyc
+__pycache__/
+
+# Entorno virtual
+venv/
+
+# Base de datos local
+db.sqlite3
+*.sqlite3
+
+# VS Code
+.vscode/
