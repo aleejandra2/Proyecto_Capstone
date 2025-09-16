@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
-from .validators import validar_rut_chileno
+from .validators import validar_formato_rut 
 
 # Create your models here.
 
@@ -20,7 +20,7 @@ class Usuario(AbstractUser):
         ADMINISTRADOR = "Administrador", "Administrador"
 
     # RUT con validación y unicidad; se guardará normalizado por señal pre_save
-    rut = models.CharField(max_length=12, unique=True, validators=[validar_rut_chileno])
+    rut = models.CharField(max_length=12, unique=True, validators=[validar_formato_rut])
 
     # Email único ("email único para login/recuperación")
     email = models.EmailField(max_length=128, unique=True)

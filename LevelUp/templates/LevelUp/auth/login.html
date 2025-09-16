@@ -1,0 +1,44 @@
+{% extends "LevelUp/base.html" %}
+{% load form_extras %}
+{% block title %}Iniciar sesión · LevelUp{% endblock %}
+
+{% block content %}
+<main style="min-height:calc(100vh - 220px); display:flex; align-items:center; background: linear-gradient(135deg,#667eea 0%, #764ba2 100%);">
+  <div class="container" style="display:flex; justify-content:center;">
+    <div class="card" style="width:100%; max-width:420px;">
+      <div class="card-content">
+        <div class="text-center" style="text-align:center; margin-bottom:1rem;">
+          <div style="width:4rem;height:4rem;margin:.5rem auto; background:linear-gradient(45deg,#3b82f6,#8b5cf6); border-radius:1rem; display:flex; align-items:center; justify-content:center; font-size:2rem;">🎓</div>
+          <h1 style="font-size:1.75rem; font-weight:800; margin:.25rem 0; color:#111827;">LevelUp</h1>
+          <p style="color:#6b7280;">Plataforma Educativa Gamificada</p>
+        </div>
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="form-group">
+            <label class="form-label" for="id_email">Email</label>
+            {{ form.email|add_class:"form-input" }}
+            {% if form.email.errors %}<div class="msg error" style="margin-top:.4rem;">{{ form.email.errors|striptags }}</div>{% endif %}
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="id_password">Contraseña</label>
+            {{ form.password|add_class:"form-input" }}
+            {% if form.password.errors %}<div class="msg error" style="margin-top:.4rem;">{{ form.password.errors|striptags }}</div>{% endif %}
+          </div>
+
+          <div class="form-group" style="display:flex; align-items:center; gap:.5rem;">
+            {{ form.remember }} <label for="{{ form.remember.id_for_label }}">Recordarme</label>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width:100%;">Iniciar sesión</button>
+        </form>
+
+        <div style="margin-top:1rem; text-align:center;">
+          <span>¿No tienes cuenta?</span> <a class="link" href="{% url 'register' %}">Crear cuenta</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}

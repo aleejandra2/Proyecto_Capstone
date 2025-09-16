@@ -1,0 +1,97 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}LevelUp - Plataforma Educativa{% endblock %}</title>
+
+  <link rel="icon" type="image/x-icon" href="{% static 'LevelUp/images/logo.png' %}">
+  <link rel="stylesheet" href="{% static 'LevelUp/css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'LevelUp/css/navbar.css' %}">
+  <link rel="stylesheet" href="{% static 'LevelUp/css/footer.css' %}">
+  <style>
+    /* Estilos mínimos de apoyo */
+    body { background: #f8fafc; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 1.25rem; }
+    .card { background: white; border-radius: 0.75rem; box-shadow: 0 10px 25px rgba(0,0,0,.06); }
+    .card-content { padding: 1.25rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-label { display:block; font-weight:600; margin-bottom:.25rem; color:#374151; }
+    .form-input, .form-select {
+      width:100%; padding:.6rem .8rem; border:1px solid #e5e7eb; border-radius:.5rem; outline:none;
+    }
+    .form-input:focus, .form-select:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.15); }
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; padding:.6rem .9rem; border-radius:.5rem; border:0; cursor:pointer; }
+    .btn-primary { background:#6366f1; color:white; }
+    .btn-outline { background:white; border:1px solid #e5e7eb; color:#374151; }
+    .link { color:#4f46e5; text-decoration:none; }
+    .link:hover { text-decoration:underline; }
+    .messages { position:relative; margin:1rem auto; max-width:700px; }
+    .msg { padding:.75rem 1rem; border-radius:.5rem; margin-bottom:.5rem; color:#111827; }
+    .msg.success { background:#dcfce7; }
+    .msg.info { background:#e0f2fe; }
+    .msg.warning { background:#fef9c3; }
+    .msg.error { background:#fee2e2; }
+    nav.navbar { background:white; border-bottom:1px solid #e5e7eb; }
+    .navbar-container { max-width:1100px; margin:0 auto; padding: .75rem 1rem; display:flex; align-items:center; justify-content:space-between; }
+    .navbar-brand { display:flex; gap:.5rem; align-items:center; font-weight:700; color:#111827; text-decoration:none; }
+    .navbar-nav { display:flex; gap:1rem; list-style:none; }
+    .navbar-link { text-decoration:none; color:#374151; }
+    .navbar-link.active { color:#111827; font-weight:600; }
+    footer { margin-top:3rem; padding:2rem 0; background:#111827; color:#e5e7eb; }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-container">
+        <a class="navbar-brand" href="{% url 'home' %}">
+    <div class="navbar-logo">🎓</div><span>LevelUp</span>
+        </a>
+
+
+    <ul class="navbar-nav">
+        {% if user.is_authenticated %}
+            <li><a class="navbar-link {% if request.path == '/' %}active{% endif %}" href="{% url 'home' %}">Inicio</a></li>
+        {% endif %}
+    </ul>
+
+
+      <div>
+        {% if user.is_authenticated %}
+          <span style="margin-right:.75rem;">👋 {{ user.first_name|default:user.username }}</span>
+          <a class="btn btn-outline" href="{% url 'logout' %}">Cerrar sesión</a>
+        {% else %}
+          <a class="btn btn-outline" href="{% url 'login' %}">Iniciar sesión</a>
+          <a class="btn btn-primary" href="{% url 'register' %}" style="margin-left:.5rem;">Registrarme</a>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+
+  <!-- Mensajes -->
+  <div class="messages">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="msg {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  </div>
+
+  <!-- Contenido -->
+  {% block content %}{% endblock %}
+
+  <!-- Footer -->
+  <footer>
+    <div class="container" style="display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+      <div>© 2025 LevelUp Education</div>
+      <div><a class="link" href="#">Privacidad</a> · <a class="link" href="#">Términos</a></div>
+    </div>
+  </footer>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
