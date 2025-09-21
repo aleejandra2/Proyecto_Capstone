@@ -6,11 +6,11 @@
   <div class="container">
 
     <!-- Encabezado -->
-    <div class="card" style="margin-bottom:1rem;">
-      <div class="card-content" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+    <div class="card mb-1">
+      <div class="card-content section-header">
         <div>
           <h1 style="font-size:1.75rem; font-weight:800; margin:0;">Portal del Profesor 👨‍🏫</h1>
-          <p style="color:#6b7280; margin:.25rem 0 0;">Gestiona tus clases y el progreso de tus estudiantes.</p>
+          <p class="text-muted" style="margin:.25rem 0 0;">Gestiona tus clases y el progreso de tus estudiantes.</p>
         </div>
         <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
           <a href="{% url 'actividades' %}" class="btn btn-primary">Crear actividad</a>
@@ -20,55 +20,57 @@
     </div>
 
     <!-- KPIs -->
-    <div class="card" style="margin-bottom:1rem;">
+    <div class="card mb-1">
       <div class="card-content">
-        <div style="display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:1rem;">
-          <div class="stats-card" style="text-align:center;">
-            <div style="font-size:1rem; color:#6b7280;">Estudiantes</div>
-            <div style="font-size:2rem; font-weight:800;">{{ total_estudiantes|default:0 }}</div>
+        <div class="stats-grid">
+          <div class="stats-card">
+            <div class="label">Estudiantes</div>
+            <div class="value">{{ total_estudiantes|default:0 }}</div>
           </div>
-          <div class="stats-card" style="text-align:center;">
-            <div style="font-size:1rem; color:#6b7280;">Actividades</div>
-            <div style="font-size:2rem; font-weight:800;">{{ total_actividades|default:0 }}</div>
+          <div class="stats-card">
+            <div class="label">Actividades</div>
+            <div class="value">{{ total_actividades|default:0 }}</div>
           </div>
-          <div class="stats-card" style="text-align:center;">
-            <div style="font-size:1rem; color:#6b7280;">Promedio</div>
-            <div style="font-size:2rem; font-weight:800;">{{ promedio_general|default:"—" }}</div>
+          <div class="stats-card">
+            <div class="label">Promedio</div>
+            <div class="value">{{ promedio_general|default:"—" }}</div>
           </div>
-          <div class="stats-card" style="text-align:center;">
-            <div style="font-size:1rem; color:#6b7280;">Días activos</div>
-            <div style="font-size:2rem; font-weight:800;">{{ dias_activos|default:0 }}</div>
+          <div class="stats-card">
+            <div class="label">Días activos</div>
+            <div class="value">{{ dias_activos|default:0 }}</div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Dos columnas: Actividad reciente + Acciones -->
-    <div style="display:grid; grid-template-columns: 2fr 1fr; gap:1rem;">
+    <div class="grid-2-1">
       <!-- Actividad reciente -->
       <div class="card">
         <div class="card-content">
           <h2 style="font-size:1.25rem; font-weight:700; margin:0 0 .75rem;">Actividad reciente</h2>
-          <div class="space-y-4" style="display:grid; gap:.75rem;">
-            <div class="card" style="padding:.75rem 1rem; display:flex; align-items:center; gap:1rem;">
-              <div class="w-10 h-10 rounded-full" style="width:2.5rem; height:2.5rem; background:#dbeafe; display:flex; align-items:center; justify-content:center;">AV</div>
+
+          <div class="activity-list">
+            <div class="activity-card" style="display:flex; align-items:center; gap:1rem;">
+              <div class="leaderboard-avatar">AV</div>
               <div style="flex:1;">
                 <div style="font-weight:600;">Ana Vargas completó “Fracciones Básicas”</div>
-                <div style="color:#6b7280; font-size:.9rem;">Hace 5 minutos</div>
+                <div class="text-muted" style="font-size:.9rem;">Hace 5 minutos</div>
               </div>
-              <span class="badge" style="background:#dcfce7; padding:.25rem .5rem; border-radius:.5rem;">+150 pts</span>
+              <span class="btn btn-outline" style="pointer-events:none;">+150 pts</span>
             </div>
 
-            <div class="card" style="padding:.75rem 1rem; display:flex; align-items:center; gap:1rem;">
-              <div class="w-10 h-10 rounded-full" style="width:2.5rem; height:2.5rem; background:#fef3c7; display:flex; align-items:center; justify-content:center;">LR</div>
+            <div class="activity-card" style="display:flex; align-items:center; gap:1rem;">
+              <div class="leaderboard-avatar" style="background:#f59e0b;color:#111827;">LR</div>
               <div style="flex:1;">
                 <div style="font-weight:600;">Luis Ramírez subió al nivel 4</div>
-                <div style="color:#6b7280; font-size:.9rem;">Hace 12 minutos</div>
+                <div class="text-muted" style="font-size:.9rem;">Hace 12 minutos</div>
               </div>
-              <span class="badge" style="background:#fde68a; padding:.25rem .5rem; border-radius:.5rem;">Nivel Up!</span>
+              <span class="btn btn-outline" style="pointer-events:none;">Nivel Up!</span>
             </div>
           </div>
-          <div style="margin-top:.75rem; color:#6b7280; font-size:.9rem;">* Conecta tus queryset reales de progreso/actividades aquí.</div>
+
+          <div class="mt-1 text-muted" style="font-size:.9rem;">* Conecta tus queryset reales de progreso/actividades aquí.</div>
         </div>
       </div>
 
@@ -76,10 +78,10 @@
       <div class="card">
         <div class="card-content">
           <h3 style="font-size:1.1rem; font-weight:700; margin:0 0 .5rem;">Acciones rápidas</h3>
-          <div style="display:grid; gap:.5rem;">
-            <a href="{% url 'actividades' %}" class="btn btn-outline" style="justify-content:flex-start;">📝 Nueva actividad</a>
-            <a href="{% url 'reportes_docente' %}" class="btn btn-outline" style="justify-content:flex-start;">📊 Reportes</a>
-            <a href="{% url 'actividades' %}" class="btn btn-outline" style="justify-content:flex-start;">🎖️ Asignar logros</a>
+          <div class="activity-list">
+            <a href="{% url 'actividades' %}" class="btn btn-outline">📝 Nueva actividad</a>
+            <a href="{% url 'reportes_docente' %}" class="btn btn-outline">📊 Reportes</a>
+            <a href="{% url 'actividades' %}" class="btn btn-outline">🎖️ Asignar logros</a>
           </div>
         </div>
       </div>
