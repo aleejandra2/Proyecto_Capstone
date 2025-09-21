@@ -1,0 +1,152 @@
+{% extends "LevelUp/base.html" %}
+{% block title %}Portal del Estudiante · LevelUp{% endblock %}
+
+{% block content %}
+<main class="min-h-screen">
+    <div class="container">
+
+        <!-- Encabezado -->
+        <div class="card" style="margin-bottom:1rem;">
+            <div class="card-content"
+                style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+                <div>
+                    <h1 style="font-size:1.75rem; font-weight:800; margin:0;">¡Bienvenido/a! 👋</h1>
+                    <p style="color:#6b7280; margin:.25rem 0 0;">Continúa tu aventura educativa y sigue subiendo de
+                        nivel.</p>
+                </div>
+                <a href="{% url 'actividades' %}" class="btn btn-primary">Ver actividades</a>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="card" style="margin-bottom:1rem;">
+            <div class="card-content">
+                <div style="display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:1rem;">
+                    <div class="card stats-card"
+                        style="text-align:center; padding:1rem; color:#111827; border:1px solid #e5e7eb;">
+                        <div style="font-size:1rem; color:#6b7280;">Nivel</div>
+                        <div style="font-size:2rem; font-weight:800;">{{ nivel|default:1 }}</div>
+                    </div>
+                    <div class="card stats-card"
+                        style="text-align:center; padding:1rem; color:#111827; border:1px solid #e5e7eb;">
+                        <div style="font-size:1rem; color:#6b7280;">Puntos</div>
+                        <div style="font-size:2rem; font-weight:800;">{{ puntos|default:0 }}</div>
+                    </div>
+                    <div class="card stats-card"
+                        style="text-align:center; padding:1rem; color:#111827; border:1px solid #e5e7eb;">
+                        <div style="font-size:1rem; color:#6b7280;">Medallas</div>
+                        <div style="font-size:2rem; font-weight:800;">{{ medallas|default:0 }}</div>
+                    </div>
+                    <div class="card stats-card"
+                        style="text-align:center; padding:1rem; color:#111827; border:1px solid #e5e7eb;">
+                        <div style="font-size:1rem; color:#6b7280;">Actividades</div>
+                        <div style="font-size:2rem; font-weight:800;">{{ actividades_count|default:0 }}</div>
+                    </div>
+                </div>
+                <div style="margin-top:1rem; color:#6b7280;">
+                    Curso: <strong>{{ curso|default:"Sin curso" }}</strong>
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- Contenido principal: Actividades + Sidebar -->
+        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:1rem;">
+            <!-- Actividades asignadas -->
+            <div class="card">
+                <div class="card-content">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:.75rem;">
+                        <h2 style="font-size:1.25rem; font-weight:700; margin:0;">Actividades asignadas</h2>
+                        <a href="{% url 'actividades' %}" class="link">Ver todas →</a>
+                    </div>
+
+                    <!-- Placeholder de lista (puedes reemplazar por tu loop real) -->
+                    <div class="activity-list" style="display:grid; gap:.75rem;">
+                        <div class="activity-card card" style="padding: .75rem 1rem;">
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <div>
+                                    <div style="font-weight:600;">Fracciones básicas</div>
+                                    <div style="color:#6b7280; font-size:.9rem;">Dificultad: Fácil · 100 pts</div>
+                                </div>
+                                <a href="{% url 'actividades' %}" class="btn btn-outline">Empezar</a>
+                            </div>
+                        </div>
+
+                        <div class="activity-card card" style="padding: .75rem 1rem;">
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <div>
+                                    <div style="font-weight:600;">Comprensión lectora</div>
+                                    <div style="color:#6b7280; font-size:.9rem;">Dificultad: Media · 150 pts</div>
+                                </div>
+                                <a href="{% url 'actividades' %}" class="btn btn-outline">Continuar</a>
+                            </div>
+                        </div>
+
+                        <div class="activity-card card" style="padding: .75rem 1rem;">
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <div>
+                                    <div style="font-weight:600;">Problemas lógicos</div>
+                                    <div style="color:#6b7280; font-size:.9rem;">Dificultad: Difícil · 200 pts</div>
+                                </div>
+                                <a href="{% url 'actividades' %}" class="btn btn-outline">Empezar</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:.75rem; color:#6b7280; font-size:.9rem;">* Esta es una vista previa.
+                        Reemplaza por tu queryset de actividades asignadas.</div>
+                </div>
+            </div>
+
+            <!-- Sidebar: Ranking + Logros -->
+            <div style="display:grid; gap:1rem;">
+                <div class="card">
+                    <div class="card-content">
+                        <div style="display:flex; align-items:center; justify-content:space-between;">
+                            <h3 style="font-size:1.1rem; font-weight:700; margin:0;">🏆 Ranking semanal</h3>
+                            <a href="{% url 'ranking' %}" class="link">Ver ranking</a>
+                        </div>
+                        <ul style="list-style:none; padding:0; margin:.75rem 0 0; display:grid; gap:.5rem;">
+                            <li class="leaderboard-item" style="display:flex; align-items:center; gap:.75rem;">
+                                <span class="leaderboard-rank">1</span>
+                                <div class="leaderboard-avatar">AV</div>
+                                <div class="leaderboard-info">
+                                    <div class="leaderboard-name">Ana Vargas</div>
+                                    <div class="leaderboard-level">Nivel 6</div>
+                                </div>
+                                <div class="leaderboard-points">1580 pts</div>
+                            </li>
+                            <li class="leaderboard-item" style="display:flex; align-items:center; gap:.75rem;">
+                                <span class="leaderboard-rank">2</span>
+                                <div class="leaderboard-avatar">LR</div>
+                                <div class="leaderboard-info">
+                                    <div class="leaderboard-name">Luis Ramírez</div>
+                                    <div class="leaderboard-level">Nivel 5</div>
+                                </div>
+                                <div class="leaderboard-points">1420 pts</div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-content">
+                        <h3 style="font-size:1.1rem; font-weight:700; margin:0 0 .5rem;">🎖️ Logros recientes</h3>
+                        <div class="reward-card card" style="padding:.75rem 1rem;">
+                            <div style="font-weight:600;">Matemago</div>
+                            <div style="color:#6b7280; font-size:.9rem;">Completaste 3 actividades de matemáticas</div>
+                        </div>
+                        <div class="reward-card card" style="padding:.75rem 1rem; margin-top:.5rem;">
+                            <div style="font-weight:600;">Lector Estrella</div>
+                            <div style="color:#6b7280; font-size:.9rem;">Lograste 90% en comprensión lectora</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</main>
+{% endblock %}

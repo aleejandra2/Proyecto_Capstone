@@ -54,9 +54,21 @@
 
 
     <ul class="navbar-nav">
-        {% if user.is_authenticated %}
-            <li><a class="navbar-link {% if request.path == '/' %}active{% endif %}" href="{% url 'home' %}">Inicio</a></li>
-        {% endif %}
+      {% if user.is_authenticated and user.rol == 'ESTUDIANTE' %}
+        <li><a class="navbar-link" href="{% url 'home' %}">Portal</a></li>
+        <li><a class="navbar-link" href="{% url 'actividades' %}">Actividades</a></li>
+        <li><a class="navbar-link" href="{% url 'ranking' %}">Ranking</a></li>
+        <li><a class="navbar-link" href="{% url 'logros' %}">Recompensas</a></li>
+
+      {% elif user.is_authenticated and user.rol == 'DOCENTE' %}
+        <li><a class="navbar-link" href="{% url 'home' %}">Portal</a></li>
+        <li><a class="navbar-link" href="{% url 'actividades' %}">Actividades</a></li>
+        <li><a class="navbar-link" href="{% url 'reportes_docente' %}">Reportes</a></li>
+
+      {% elif user.is_authenticated and user.rol == 'ADMINISTRADOR' %}
+        <li><a class="navbar-link" href="{% url 'home' %}">Portal</a></li>
+        <li><a class="navbar-link" href="{% url 'admin:login' %}">Django Admin</a></li>
+      {% endif %}
     </ul>
 
 

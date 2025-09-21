@@ -11,9 +11,34 @@ from .models import Estudiante, Actividad, Usuario
 def home(request):
     return render(request, 'LevelUp/index.html')
 
+@login_required
+def actividades_view(request):
+    # Placeholder: lista de actividades (ajusta el queryset a tu necesidad)
+    actividades = Actividad.objects.all().order_by("-id")[:20]
+    return render(request, "LevelUp/actividades/lista.html", {
+        "actividades": actividades
+    })
+
+@login_required
+def ranking_view(request):
+    # Placeholder: Top estudiantes por puntos
+    estudiantes_top = Estudiante.objects.order_by("-puntos").select_related("usuario")[:20]
+    return render(request, "LevelUp/ranking.html", {
+        "estudiantes_top": estudiantes_top
+    })
+
+@login_required
+def reportes_docente_view(request):
+    # Placeholder: panel simple de reportes para docente
+    total_estudiantes = Estudiante.objects.count()
+    total_actividades = Actividad.objects.count()
+    return render(request, "LevelUp/reportes_docente.html", {
+        "total_estudiantes": total_estudiantes,
+        "total_actividades": total_actividades
+    })
+
 
 User = get_user_model()
-
 
 def register_view(request):
     if request.method == "POST":
@@ -69,49 +94,51 @@ def logout_view(request):
     return redirect("login")
 
 
-@login_required
+@login_required(login_url='login')
 def home_view(request):
     """
-    Enruta a un template distinto según el rol del usuario.
-    Carga datos básicos para cada dashboard.
+    Enruta a una plantilla distinta según el rol del usuario
+    y arma el contexto básico de cada portal.
     """
-    rol = getattr(request.user, "rol", "")
+    rol = getattr(request.user, "rol", None)
+    ctx = {}
+
+    template_by_role = {
+        Usuario.Rol.ESTUDIANTE:    "LevelUp/portal/estudiante.html",
+        Usuario.Rol.DOCENTE:       "LevelUp/portal/docente.html",
+        Usuario.Rol.ADMINISTRADOR: "LevelUp/portal/admin.html",
+    }
 
     if rol == Usuario.Rol.ESTUDIANTE:
-        # Datos del estudiante
-        ctx = {}
         try:
-            est = Estudiante.objects.get(usuario=request.user)
+            est = Estudiante.objects.select_related("usuario").get(usuario=request.user)
             ctx.update({
                 "nivel": est.nivel,
                 "puntos": est.puntos,
                 "medallas": est.medallas,
-                "curso": est.curso,
+                "curso": getattr(est, "curso", "Sin curso"),
             })
         except Estudiante.DoesNotExist:
             ctx.update({"nivel": 1, "puntos": 0, "medallas": 0, "curso": "Sin curso"})
         ctx["actividades_count"] = Actividad.objects.count()
-        return render(request, "LevelUp/home_student.html", ctx)
 
     elif rol == Usuario.Rol.DOCENTE:
-        # Datos globales simples para docente (ajusta a tus necesidades)
-        ctx = {
+        ctx.update({
             "total_estudiantes": Estudiante.objects.count(),
             "total_actividades": Actividad.objects.count(),
-            "promedio_general": "—",  # si luego guardas notas, puedes calcularlo
+            "promedio_general": "—",  # placeholder si luego agregas notas
             "dias_activos": 7,        # placeholder
-        }
-        return render(request, "LevelUp/home_teacher.html", ctx)
+        })
 
     elif rol == Usuario.Rol.ADMINISTRADOR:
-        # Resumen para admin
-        ctx = {
+        User = get_user_model()  # O usa Usuario directamente si prefieres
+        ctx.update({
             "usuarios_total": User.objects.count(),
             "profesores_total": User.objects.filter(rol=Usuario.Rol.DOCENTE).count(),
             "estudiantes_total": User.objects.filter(rol=Usuario.Rol.ESTUDIANTE).count(),
             "actividades_total": Actividad.objects.count(),
-        }
-        return render(request, "LevelUp/home_admin.html", ctx)
+        })
 
-    # Fallback genérico si no tiene rol
-    return render(request, "LevelUp/dashboard.html", {})
+    # fallback: si no tiene rol, muestra portal estudiante
+    template = template_by_role.get(rol, "LevelUp/portal/estudiante.html")
+    return render(request, template, ctx)

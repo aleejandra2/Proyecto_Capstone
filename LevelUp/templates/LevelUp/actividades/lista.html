@@ -1,0 +1,36 @@
+{% extends "LevelUp/base.html" %}
+{% block title %}Actividades · LevelUp{% endblock %}
+{% block content %}
+<main class="min-h-screen">
+  <div class="container">
+    <div class="card">
+      <div class="card-content">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h1 style="margin:0; font-size:1.5rem; font-weight:800;">Actividades</h1>
+          <a href="{% url 'home' %}" class="btn btn-outline">← Volver</a>
+        </div>
+        <div style="margin-top:1rem; display:grid; gap:.75rem;">
+          {% for act in actividades %}
+            <div class="card" style="padding: .75rem 1rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+                <div>
+                  <div style="font-weight:700;">{{ act.titulo|default:"Actividad sin título" }}</div>
+                  <div style="color:#6b7280; font-size:.9rem;">
+                    {{ act.descripcion|default:"Sin descripción" }}
+                  </div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:.9rem;">Dificultad: {{ act.get_dificultad_display|default:act.dificultad }}</div>
+                  <div style="font-weight:700;">{{ act.puntos|default:0 }} pts</div>
+                </div>
+              </div>
+            </div>
+          {% empty %}
+            <div class="msg info">No hay actividades disponibles.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}

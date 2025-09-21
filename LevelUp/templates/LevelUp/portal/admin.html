@@ -1,0 +1,92 @@
+{% extends "LevelUp/base.html" %}
+{% block title %}Portal de Administración · LevelUp{% endblock %}
+
+{% block content %}
+<main class="min-h-screen">
+  <div class="container">
+
+    <!-- Encabezado -->
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-content" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+        <div>
+          <h1 style="font-size:1.75rem; font-weight:800; margin:0;">Portal de Administración 🛠️</h1>
+          <p style="color:#6b7280; margin:.25rem 0 0;">Gestiona toda la plataforma LevelUp.</p>
+        </div>
+        <a href="{% url 'admin:index' %}" class="btn btn-primary">Ir al Django Admin</a>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-content">
+        <div style="display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:1rem;">
+          <div class="stats-card" style="text-align:center;">
+            <div style="font-size:1rem; color:#6b7280;">Usuarios</div>
+            <div style="font-size:2rem; font-weight:800;">{{ usuarios_total|default:0 }}</div>
+          </div>
+          <div class="stats-card" style="text-align:center;">
+            <div style="font-size:1rem; color:#6b7280;">Profesores</div>
+            <div style="font-size:2rem; font-weight:800;">{{ profesores_total|default:0 }}</div>
+          </div>
+          <div class="stats-card" style="text-align:center;">
+            <div style="font-size:1rem; color:#6b7280;">Estudiantes</div>
+            <div style="font-size:2rem; font-weight:800;">{{ estudiantes_total|default:0 }}</div>
+          </div>
+          <div class="stats-card" style="text-align:center;">
+            <div style="font-size:1rem; color:#6b7280;">Actividades</div>
+            <div style="font-size:2rem; font-weight:800;">{{ actividades_total|default:0 }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dos columnas: Estado del sistema + Actividad de hoy -->
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+      <!-- Estado del sistema -->
+      <div class="card">
+        <div class="card-content">
+          <h2 style="font-size:1.25rem; font-weight:700; margin:0 0 .75rem;">Estado del sistema</h2>
+          <div style="display:grid; gap:.5rem;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span>Servidor</span><span class="badge" style="background:#dcfce7; padding:.25rem .5rem; border-radius:.5rem;">🟢 Activo</span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span>Base de datos</span><span class="badge" style="background:#dcfce7; padding:.25rem .5rem; border-radius:.5rem;">🟢 Activo</span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span>API</span><span class="badge" style="background:#dcfce7; padding:.25rem .5rem; border-radius:.5rem;">🟢 Activo</span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span>Cache</span><span class="badge" style="background:#fde68a; padding:.25rem .5rem; border-radius:.5rem;">🟡 Lento</span>
+            </div>
+          </div>
+          <div style="margin-top:.75rem; color:#6b7280; font-size:.9rem;">* Reemplaza por chequeos reales si añades healthchecks.</div>
+        </div>
+      </div>
+
+      <!-- Actividad de hoy -->
+      <div class="card">
+        <div class="card-content">
+          <h2 style="font-size:1.25rem; font-weight:700; margin:0 0 .75rem;">Actividad de hoy</h2>
+          <div style="display:grid; gap:.5rem;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span>Nuevos usuarios</span><span style="font-weight:700; color:#10b981;">+24</span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span>Actividades completadas</span><span style="font-weight:700; color:#3b82f6;">156</span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span>Reportes generados</span><span style="font-weight:700; color:#8b5cf6;">12</span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span>Tiempo activo</span><span style="font-weight:700;">98.7%</span>
+            </div>
+          </div>
+          <div style="margin-top:.75rem; color:#6b7280; font-size:.9rem;">* Conecta a tus métricas reales cuando estén disponibles.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+{% endblock %}
