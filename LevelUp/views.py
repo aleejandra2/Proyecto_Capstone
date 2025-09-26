@@ -3,8 +3,10 @@ from django.http import HttpResponse
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth import get_user_model
-from .forms import RegistrationForm, LoginForm
+from .forms import RegistrationForm, LoginForm, ProfileForm
 from .models import Estudiante, Actividad, Usuario 
 
 # Create your views here.
@@ -142,3 +144,40 @@ def home_view(request):
     # fallback: si no tiene rol, muestra portal estudiante
     template = template_by_role.get(rol, "LevelUp/portal/estudiante.html")
     return render(request, template, ctx)
+
+# --- PERFIL ---
+@login_required
+def perfil_view(request):
+    """Resumen del perfil del usuario."""
+    return render(request, "LevelUp/perfil/ver.html", {"user_obj": request.user})
+
+@login_required
+def perfil_editar_view(request):
+    """Editar datos básicos del perfil (nombre, apellido, email, RUT)."""
+    if request.method == "POST":
+        form = ProfileForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Perfil actualizado correctamente.")
+            return redirect("perfil")
+        else:
+            messages.error(request, "Revisa los campos del formulario.")
+    else:
+        form = ProfileForm(instance=request.user)
+    return render(request, "LevelUp/perfil/editar.html", {"form": form})
+
+@login_required
+def cambiar_password_view(request):
+    """Cambiar contraseña (mantiene la sesión activa al cambiarla)."""
+    if request.method == "POST":
+        form = PasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)  # mantener sesión
+            messages.success(request, "Tu contraseña fue actualizada.")
+            return redirect("perfil")
+        else:
+            messages.error(request, "Corrige los errores e inténtalo nuevamente.")
+    else:
+        form = PasswordChangeForm(user=request.user)
+    return render(request, "LevelUp/perfil/cambiar_password.html", {"form": form})

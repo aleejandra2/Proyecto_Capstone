@@ -13,6 +13,11 @@ urlpatterns = [
     path("ranking/", views.ranking_view, name="ranking"),
     path("reportes/docente/", views.reportes_docente_view, name="reportes_docente"),
 
+    # PERFIL
+    path("perfil/", views.perfil_view, name="perfil"),
+    path("perfil/editar/", views.perfil_editar_view, name="perfil_editar"),
+    path("perfil/cambiar-password/", views.cambiar_password_view, name="cambiar_password"),
+
     # Recuperar / Restablecer contraseña
     path(
         "password/recuperar/",

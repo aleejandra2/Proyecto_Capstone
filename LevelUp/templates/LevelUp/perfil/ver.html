@@ -1,0 +1,37 @@
+{% extends "LevelUp/base.html" %}
+{% block title %}Mi Perfil · LevelUp{% endblock %}
+{% block content %}
+<main class="min-h-screen">
+  <div class="container">
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-content" style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div>
+          <h1 style="font-size:1.5rem;font-weight:800;margin:0;">Mi perfil</h1>
+          <p style="color:#6b7280;margin:.25rem 0 0;">Gestiona tu información y seguridad.</p>
+        </div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+          <a class="btn btn-outline" href="{% url 'perfil_editar' %}">✏️ Editar perfil</a>
+          <a class="btn btn-primary" href="{% url 'cambiar_password' %}">🔒 Cambiar contraseña</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-content">
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;">
+          <div>
+            <div class="form-group"><div class="form-label">Nombre</div><div>{{ user_obj.first_name|default:"—" }}</div></div>
+            <div class="form-group"><div class="form-label">Apellido</div><div>{{ user_obj.last_name|default:"—" }}</div></div>
+            <div class="form-group"><div class="form-label">Email</div><div>{{ user_obj.email }}</div></div>
+          </div>
+          <div>
+            <div class="form-group"><div class="form-label">RUT</div><div>{{ user_obj.rut|default:"—" }}</div></div>
+            <div class="form-group"><div class="form-label">Rol</div><div>{{ user_obj.get_rol_display }}</div></div>
+            <div class="form-group"><div class="form-label">Miembro desde</div><div>{{ user_obj.date_joined|date:"d/m/Y H:i" }}</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}
