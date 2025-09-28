@@ -1,6 +1,8 @@
 {% extends "LevelUp/base.html" %}
 {% load static %}
 {% load form_extras %}
+
+{% block navbar %}{% endblock %}
 {% block title %}Crear cuenta · LevelUp{% endblock %}
 
 {% block extra_head %}
@@ -9,12 +11,12 @@
 {% endblock %}
 
 {% block content %}
-<main class="center-page auth-bg--teal">
-  <div class="auth-card card">
+<main class="center-page auth-bg auth-bg--teal">
+  <div class="auth-card card auth-wide">
     <div class="card-content">
-      <h1 class="title-xl mb-3">Crear cuenta</h1>
+      <h1 class="mb-3  text-center">Crear cuenta</h1>
 
-      <form method="post" novalidate autocomplete="off" class="row g-3">
+      <form method="post" novalidate autocomplete="off" class="row g-3 js-validate-touch">
         {% csrf_token %}
 
         {% if form.non_field_errors %}
@@ -110,4 +112,73 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <!-- JS Reglas de contraseña -->
   <script src="{% static 'LevelUp/js/password.js' %}" defer></script>
+
+  <!-- Validación on-blur para campos vacíos -->
+  <script>
+  (function () {
+    const form = document.querySelector('form.js-validate-touch') || document.querySelector('form[method="post"]');
+    if (!form) return;
+
+    const fields = form.querySelectorAll('.form-control, .form-select');
+
+    function showError(input, msg) {
+      input.classList.add('is-invalid');
+      // crea feedback (solo cliente) justo después del input si no existe
+      let fb = input.parentElement.querySelector('.invalid-feedback.client');
+      if (!fb) {
+        fb = document.createElement('div');
+        fb.className = 'invalid-feedback d-block client';
+        input.insertAdjacentElement('afterend', fb);
+      }
+      fb.textContent = msg || 'Este campo es obligatorio.';
+    }
+
+    function clearError(input) {
+      input.classList.remove('is-invalid');
+      const fb = input.parentElement.querySelector('.invalid-feedback.client');
+      if (fb) fb.remove();
+    }
+
+    function isEmpty(val) {
+      return (val == null) || (String(val).trim() === '');
+    }
+
+    fields.forEach((field) => {
+      // marcar como "tocado"
+      field.addEventListener('focus', () => { field.dataset.touched = '1'; });
+
+      // validar al salir (si quedó vacío)
+      field.addEventListener('blur', () => {
+        if (!field.dataset.touched) return;
+        if (isEmpty(field.value)) {
+          const label = form.querySelector(`label[for="${field.id}"]`);
+          const nombre = label ? label.textContent.trim() : 'Este campo';
+          showError(field, `${nombre} es obligatorio.`);
+        } else {
+          clearError(field);
+        }
+      });
+
+      // al escribir, limpiar si deja de estar vacío
+      field.addEventListener('input', () => {
+        if (!isEmpty(field.value)) clearError(field);
+      });
+    });
+
+    // Evita envío con vacíos
+    form.addEventListener('submit', (e) => {
+      let hasError = false;
+      fields.forEach((f) => {
+        if (isEmpty(f.value)) {
+          hasError = true;
+          f.dataset.touched = '1';
+          const label = form.querySelector(`label[for="${f.id}"]`);
+          const nombre = label ? label.textContent.trim() : 'Este campo';
+          showError(f, `${nombre} es obligatorio.`);
+        }
+      });
+      if (hasError) e.preventDefault();
+    });
+  })();
+  </script>
 {% endblock %}
