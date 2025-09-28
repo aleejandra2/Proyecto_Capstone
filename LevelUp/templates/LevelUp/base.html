@@ -20,42 +20,81 @@
 <body>
 
   <!-- Navbar -->
-  <nav class="navbar">
-    <div class="navbar-container">
-      <a class="navbar-brand" href="{% url 'home' %}">
-        <div class="navbar-logo">🎓</div><span>LevelUp</span>
-      </a>
+  <nav class="navbar navbar-expand-lg bg-body-tertiary">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+      <span class="me-2">🎓</span><span>LevelUp</span>
+    </a>
 
-      <ul class="navbar-nav">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain"
+            aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarMain">
+      {% with current=request.resolver_match.url_name %}
+
+      <!-- Links por rol -->
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         {% if user.is_authenticated and user.rol == 'ESTUDIANTE' %}
-          <li><a class="navbar-link {% if request.path == '/' %}active{% endif %}" href="{% url 'home' %}">Portal</a></li>
-          <li><a class="navbar-link" href="{% url 'actividades' %}">Actividades</a></li>
-          <li><a class="navbar-link" href="{% url 'ranking' %}">Ranking</a></li>
-          <li><a class="navbar-link" href="{% url 'logros' %}">Recompensas</a></li>
+          <li class="nav-item">
+            <a class="nav-link {% if current == 'home' %}active{% endif %}" href="{% url 'home' %}">Portal</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if current == 'actividades' %}active{% endif %}" href="{% url 'actividades' %}">Actividades</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if current == 'ranking' %}active{% endif %}" href="{% url 'ranking' %}">Ranking</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if current == 'logros' %}active{% endif %}" href="{% url 'logros' %}">Recompensas</a>
+          </li>
 
         {% elif user.is_authenticated and user.rol == 'DOCENTE' %}
-          <li><a class="navbar-link {% if request.path == '/' %}active{% endif %}" href="{% url 'home' %}">Portal</a></li>
-          <li><a class="navbar-link" href="{% url 'actividades' %}">Actividades</a></li>
-          <li><a class="navbar-link" href="{% url 'reportes_docente' %}">Reportes</a></li>
+          <li class="nav-item">
+            <a class="nav-link {% if current == 'home' %}active{% endif %}" href="{% url 'home' %}">Portal</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if current == 'actividades' %}active{% endif %}" href="{% url 'actividades' %}">Actividades</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if current == 'reportes_docente' %}active{% endif %}" href="{% url 'reportes_docente' %}">Reportes</a>
+          </li>
 
         {% elif user.is_authenticated and user.rol == 'ADMINISTRADOR' %}
-          <li><a class="navbar-link {% if request.path == '/' %}active{% endif %}" href="{% url 'home' %}">Portal</a></li>
-          <li><a class="navbar-link" href="{% url 'admin:login' %}">Django Admin</a></li>
+          <li class="nav-item">
+            <a class="nav-link {% if current == 'home' %}active{% endif %}" href="{% url 'home' %}">Portal</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'admin:login' %}">Django Admin</a>
+          </li>
         {% endif %}
       </ul>
 
-      <div>
+      <!-- Acciones usuario -->
+      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
         {% if user.is_authenticated %}
-          <span style="margin-right:.75rem;">👋 {{ user.first_name|default:user.username }}</span>
-          <a class="btn btn-outline" href="{% url 'perfil' %}" style="margin-right:.5rem;">Mi perfil</a>
-          <a class="btn btn-outline" href="{% url 'logout' %}">Cerrar sesión</a>
+          <li class="nav-item me-2">
+            <a class="btn btn-outline-secondary" href="{% url 'perfil' %}">Mi perfil</a>
+          </li>
+          <li class="nav-item">
+            <a class="btn btn-outline-danger" href="{% url 'logout' %}">Cerrar sesión</a>
+          </li>
         {% else %}
-          <a class="btn btn-outline" href="{% url 'login' %}">Iniciar sesión</a>
-          <a class="btn btn-primary" href="{% url 'register' %}" style="margin-left:.5rem;">Registrarme</a>
+          <li class="nav-item me-2">
+            <a class="btn btn-outline-primary" href="{% url 'login' %}">Iniciar sesión</a>
+          </li>
+          <li class="nav-item">
+            <a class="btn btn-primary" href="{% url 'register' %}">Registrarme</a>
+          </li>
         {% endif %}
-      </div>
+      </ul>
+
+      {% endwith %}
     </div>
-  </nav>
+  </div>
+</nav>
+
 
   <!-- Mensajes -->
   <div class="messages">

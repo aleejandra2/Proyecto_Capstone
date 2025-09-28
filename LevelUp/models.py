@@ -156,3 +156,4 @@ class ReporteProgreso(models.Model):
 
     def __str__(self):
         return f"Reporte {self.pk} - {self.estudiante.usuario.username} - {self.fecha}"
+    

@@ -9,7 +9,7 @@
     <div class="card mb-1">
       <div class="card-content section-header">
         <div>
-          <h1 style="font-size:1.75rem; font-weight:800; margin:0;">¡Bienvenido/a! 👋</h1>
+          <h1 style="font-size:1.75rem; font-weight:800; margin:0;">¡Bienvenido/a, {{ request.user.get_full_name|default:request.user.username }}! 👋 </h1>
           <p class="text-muted" style="margin:.25rem 0 0;">Continúa tu aventura educativa y sigue subiendo de nivel.</p>
         </div>
         <a href="{% url 'actividades' %}" class="btn btn-primary">Ver actividades</a>
@@ -140,4 +140,23 @@
 
   </div>
 </main>
+
+<script>
+document.querySelectorAll('.profile-tabs a').forEach(tab => {
+  tab.addEventListener('click', e => {
+    e.preventDefault();
+    // Quitar "active" de todas las pestañas
+    document.querySelectorAll('.profile-tabs a').forEach(t => t.classList.remove('active'));
+    // Quitar "active" de todos los contenidos
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+
+    // Activar pestaña actual
+    tab.classList.add('active');
+    // Mostrar contenido correspondiente
+    const paneId = tab.getAttribute('data-tab');
+    document.getElementById(paneId).classList.add('active');
+  });
+});
+</script>
+
 {% endblock %}
