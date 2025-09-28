@@ -1,37 +1,97 @@
 {% extends "LevelUp/base.html" %}
+{% load static %}
+
+{% block head %}
+<link rel="stylesheet" href="{% static 'css/style.css' %}?v=3">
+{% endblock %}
+
 {% block title %}Mi Perfil · LevelUp{% endblock %}
 {% block content %}
 <main class="min-h-screen">
   <div class="container">
-    <div class="card" style="margin-bottom:1rem;">
-      <div class="card-content" style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
-        <div>
-          <h1 style="font-size:1.5rem;font-weight:800;margin:0;">Mi perfil</h1>
-          <p style="color:#6b7280;margin:.25rem 0 0;">Gestiona tu información y seguridad.</p>
+
+    <!-- Portada + header de perfil -->
+    <div class="card mb-1">
+      <div class="profile-cover" aria-label="Portada">
+        {# Si quieres imagen de portada luego, agrega aquí un <img src="..." alt="Portada"> #}
+      </div>
+
+      <div class="card-content">
+        <div class="profile-header">
+          <!-- Avatar solo con inicial -->
+          <div class="profile-avatar">
+            {% with display_name=user_obj.get_full_name|default:user_obj.username %}
+              <span class="avatar-initial">{{ display_name|slice:":1"|upper }}</span>
+            {% endwith %}
+          </div>
+
+          <div class="profile-name">
+            <h1 class="h1-title">{{ user_obj.get_full_name|default:user_obj.username }}</h1>
+            <div class="profile-handle">@{{ user_obj.username }}</div>
+          </div>
+
+          <div class="profile-actions">
+            <a class="btn btn-outline" href="{% url 'perfil_editar' %}">✏️ Editar perfil</a>
+            <a class="btn btn-primary" href="{% url 'cambiar_password' %}">🔒 Cambiar contraseña</a>
+          </div>
         </div>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-          <a class="btn btn-outline" href="{% url 'perfil_editar' %}">✏️ Editar perfil</a>
-          <a class="btn btn-primary" href="{% url 'cambiar_password' %}">🔒 Cambiar contraseña</a>
+
+        <nav class="profile-tabs" aria-label="Pestañas de perfil">
+          <a href="#" class="active" data-tab="actividad">Actividad</a>
+          <a href="#" data-tab="informacion">Información</a>
+        </nav>
+
+        <!-- Contenedor de secciones -->
+        <div class="tab-content">
+          <!-- 🧠 Sección ACTIVIDAD -->
+          <div id="actividad" class="tab-pane active">
+            <div class="card">
+              <div class="card-content">
+                <h3 class="section-title">Actividad reciente</h3>
+                <div class="card-soft">Aún no hay actividad. ¡Pronto verás tus logros y cambios aquí! 🎉</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 📄 Sección INFORMACIÓN -->
+          <div id="informacion" class="tab-pane">
+            <div class="card">
+              <div class="card-content">
+                <h3 class="section-title">Información del perfil</h3>
+                <div class="about">
+                  <div class="item">🪪 <span><b>Nombre:</b> {{ user_obj.first_name|default:"—" }}</span></div>
+                  <div class="item">🧾 <span><b>Apellido:</b> {{ user_obj.last_name|default:"—" }}</span></div>
+                  <div class="item">📧 <span><b>Email:</b> {{ user_obj.email }}</span></div>
+                  <div class="item">🆔 <span><b>RUT:</b> {{ user_obj.rut|default:"—" }}</span></div>
+                  <div class="item">🎓 <span><b>Rol:</b> {{ user_obj.get_rol_display }}</span></div>
+                  <div class="item">📅 <span><b>Miembro desde:</b> {{ user_obj.date_joined|date:"d/m/Y H:i" }}</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-content">
-        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;">
-          <div>
-            <div class="form-group"><div class="form-label">Nombre</div><div>{{ user_obj.first_name|default:"—" }}</div></div>
-            <div class="form-group"><div class="form-label">Apellido</div><div>{{ user_obj.last_name|default:"—" }}</div></div>
-            <div class="form-group"><div class="form-label">Email</div><div>{{ user_obj.email }}</div></div>
-          </div>
-          <div>
-            <div class="form-group"><div class="form-label">RUT</div><div>{{ user_obj.rut|default:"—" }}</div></div>
-            <div class="form-group"><div class="form-label">Rol</div><div>{{ user_obj.get_rol_display }}</div></div>
-            <div class="form-group"><div class="form-label">Miembro desde</div><div>{{ user_obj.date_joined|date:"d/m/Y H:i" }}</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  </div><!-- /container -->
 </main>
+
+<script>
+  (function(){
+    const tabs = document.querySelectorAll('.profile-tabs a');
+    const panes = document.querySelectorAll('.tab-pane');
+    if (!tabs.length || !panes.length) return;
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', e => {
+        e.preventDefault();
+        tabs.forEach(t => t.classList.remove('active'));
+        panes.forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        const pane = document.getElementById(tab.getAttribute('data-tab'));
+        if (pane) pane.classList.add('active');
+      });
+    });
+  })();
+</script>
 {% endblock %}
