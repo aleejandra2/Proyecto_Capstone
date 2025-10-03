@@ -2,6 +2,8 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, PasswordChangeForm
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.forms import inlineformset_factory
+from .models import Actividad, ItemActividad
 
 from .validators import formatear_rut_usuario
 
@@ -156,3 +158,139 @@ class ProfilePasswordForm(PasswordChangeForm):
         widget=forms.PasswordInput(attrs={"class": "form-input"}),
         help_text=""
     )
+
+# ------------------------------
+# Actividades
+# ------------------------------    
+class ActividadForm(forms.ModelForm):
+    class Meta:
+        model = Actividad
+        fields = [
+            "titulo", "descripcion", "tipo", "dificultad",
+            "recurso", "recompensa", "es_publicada", "fecha_cierre", "xp_total"
+        ]
+        widgets = {
+            "titulo": forms.TextInput(attrs={"class": "form-control"}),
+            "descripcion": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "tipo": forms.Select(attrs={"class": "form-select"}),
+            "dificultad": forms.Select(attrs={"class": "form-select"}),
+            "recurso": forms.Select(attrs={"class": "form-select"}),
+            "recompensa": forms.Select(attrs={"class": "form-select"}),
+            "es_publicada": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "fecha_cierre": forms.DateTimeInput(attrs={"class": "form-control", "type": "datetime-local"}),
+            "xp_total": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
+        }
+
+class ItemActividadForm(forms.ModelForm):
+    # Alternativas (máx 6) + correcta
+    alt_1 = forms.CharField(label="Alternativa A", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
+    alt_2 = forms.CharField(label="Alternativa B", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
+    alt_3 = forms.CharField(label="Alternativa C", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
+    alt_4 = forms.CharField(label="Alternativa D", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
+    alt_5 = forms.CharField(label="Alternativa E", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
+    alt_6 = forms.CharField(label="Alternativa F", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
+
+    correcta = forms.ChoiceField(
+        label="¿Cuál es la correcta?",
+        required=False,
+        choices=[("1","A"),("2","B"),("3","C"),("4","D"),("5","E"),("6","F")],
+        widget=forms.RadioSelect(attrs={"class": "form-check-input"})
+    )
+
+    # Verdadero / Falso
+    tf_respuesta = forms.ChoiceField(
+        label="Respuesta",
+        required=False,
+        choices=[("true","Verdadero"),("false","Falso")],
+        widget=forms.RadioSelect(attrs={"class": "form-check-input"})
+    )
+
+    class Meta:
+        model = ItemActividad
+        fields = ["tipo", "enunciado", "puntaje", "imagen"]
+        labels = {"enunciado": "Pregunta"}
+        widgets = {
+            "tipo": forms.Select(attrs={"class": "form-select"}),
+            "enunciado": forms.Textarea(attrs={"class": "form-control", "rows": 2, "placeholder": "Escribe la pregunta…"}),
+            "puntaje": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
+            "imagen": forms.ClearableFileInput(attrs={"class": "form-control"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Precargar desde datos (si el ítem existe)
+        datos = getattr(self.instance, "datos", None) or {}
+        t = (getattr(self.instance, "tipo", "") or "").lower()
+
+        if self.instance and self.instance.pk:
+            if t == "mcq":
+                opciones = datos.get("opciones", [])
+                for i in range(6):
+                    self.fields[f"alt_{i+1}"].initial = opciones[i] if i < len(opciones) else ""
+                corr = datos.get("correcta")
+                if isinstance(corr, int) and 1 <= corr <= 6:
+                    self.fields["correcta"].initial = str(corr)
+            elif t == "tf":
+                val = datos.get("respuesta")
+                if isinstance(val, bool):
+                    self.fields["tf_respuesta"].initial = "true" if val else "false"
+
+    def clean(self):
+        cleaned = super().clean()
+        t = (cleaned.get("tipo") or "").lower()
+
+        if t == "mcq":
+            alternativas = []
+            for i in range(6):
+                v = (cleaned.get(f"alt_{i+1}") or "").strip()
+                if v:
+                    alternativas.append((i+1, v))
+            if len(alternativas) < 2:
+                raise forms.ValidationError("En opción múltiple, ingresa al menos 2 alternativas.")
+
+            correcta = cleaned.get("correcta")
+            if not correcta:
+                raise forms.ValidationError("Selecciona la alternativa correcta.")
+            correcta_idx = int(correcta)
+
+            idxs = [idx for idx, _ in alternativas]
+            if correcta_idx not in idxs:
+                raise forms.ValidationError("La correcta debe apuntar a una alternativa ingresada.")
+
+            # Normalizar a 6 posiciones
+            opciones = [""] * 6
+            for idx, texto in alternativas:
+                opciones[idx-1] = texto
+
+            cleaned["_datos_payload"] = {"opciones": opciones, "correcta": correcta_idx}
+
+        elif t == "tf":
+            ans = cleaned.get("tf_respuesta")
+            if ans not in ("true","false"):
+                raise forms.ValidationError("Selecciona Verdadero o Falso.")
+            cleaned["_datos_payload"] = {"respuesta": True if ans == "true" else False}
+
+        elif t == "text":
+            cleaned["_datos_payload"] = {"abierta": True}
+
+        # otros tipos: puedes añadir metadata si quieres
+        return cleaned
+
+    def save(self, commit=True):
+        obj = super().save(commit=False)
+        payload = self.cleaned_data.get("_datos_payload")
+        if payload is not None:
+            obj.datos = payload
+        if commit:
+            obj.save()
+        return obj
+
+
+ItemFormSet = inlineformset_factory(
+    Actividad,
+    ItemActividad,
+    form=ItemActividadForm,   # <- importante
+    extra=0,
+    can_delete=True
+)

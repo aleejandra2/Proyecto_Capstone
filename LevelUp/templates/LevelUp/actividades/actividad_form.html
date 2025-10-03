@@ -1,0 +1,336 @@
+{% extends "LevelUp/base.html" %}
+{% load static %}
+{% block title %}{% if editar %}Editar{% else %}Nueva{% endif %} actividad{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <h1 class="h4 mb-3">{% if editar %}Editar{% else %}Nueva{% endif %} actividad</h1>
+
+  <form method="post" enctype="multipart/form-data" class="card p-3">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <!-- Datos de la Actividad -->
+    <div class="row g-3">
+      <div class="col-lg-8">
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.titulo.id_for_label }}">Título</label>
+          {{ form.titulo }} {{ form.titulo.errors }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.descripcion.id_for_label }}">Descripción</label>
+          {{ form.descripcion }} {{ form.descripcion.errors }}
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label" for="{{ form.tipo.id_for_label }}">Tipo</label>
+            {{ form.tipo }} {{ form.tipo.errors }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label" for="{{ form.dificultad.id_for_label }}">Dificultad</label>
+            {{ form.dificultad }} {{ form.dificultad.errors }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label" for="{{ form.xp_total.id_for_label }}">XP total</label>
+            {{ form.xp_total }} {{ form.xp_total.errors }}
+          </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+          <div class="col-md-6">
+            <label class="form-label" for="{{ form.recurso.id_for_label }}">Recurso</label>
+            {{ form.recurso }} {{ form.recurso.errors }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="{{ form.recompensa.id_for_label }}">Recompensa</label>
+            {{ form.recompensa }} {{ form.recompensa.errors }}
+          </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+          <div class="col-md-4">
+            <div class="form-check mt-4">
+              {{ form.es_publicada }}
+              <label class="form-check-label" for="{{ form.es_publicada.id_for_label }}">Publicar</label>
+              {{ form.es_publicada.errors }}
+            </div>
+          </div>
+          <div class="col-md-8">
+            <label class="form-label" for="{{ form.fecha_cierre.id_for_label }}">Fecha de cierre</label>
+            {{ form.fecha_cierre }} {{ form.fecha_cierre.errors }}
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <!-- Ayuda dinámica -->
+        <div class="border rounded p-3 bg-light" id="ayuda-tipo-actividad">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge text-bg-primary">Sugerencias</span>
+            <span class="text-muted small">se actualizan al elegir “Tipo”</span>
+          </div>
+          <ul class="small m-0 ps-3" id="lista-ayuda-tipo">
+            <li>Si eliges <strong>Quiz</strong>, añade ítems de Opción múltiple o V/F.</li>
+            <li>Para <strong>Video</strong>, agrega preguntas de reflexión (Texto).</li>
+            <li>En <strong>Juego</strong>, usa ítems Interactivo/Juego con URL.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <hr class="my-4">
+
+    <!-- Ítems -->
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <h2 class="h6 m-0">Ítems de la actividad</h2>
+      <div class="d-flex gap-2">
+        <div class="dropdown">
+          <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            Agregar ítem rápido
+          </button>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item add-item-kind" href="#" data-kind="mcq">Opción múltiple</a></li>
+            <li><a class="dropdown-item add-item-kind" href="#" data-kind="tf">Verdadero / Falso</a></li>
+            <li><a class="dropdown-item add-item-kind" href="#" data-kind="text">Respuesta abierta</a></li>
+          </ul>
+        </div>
+        <button type="button" id="btn-add-item" class="btn btn-sm btn-outline-primary">+ Agregar ítem</button>
+      </div>
+    </div>
+
+    {{ formset.management_form }}
+
+    <div id="items-container">
+      {% for f in formset %}
+        {% if f.non_field_errors %}
+          <div class="alert alert-danger">{{ f.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="card mb-3 item-form" data-form-index="{{ forloop.counter0 }}">
+          <div class="card-body">
+            {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label" for="{{ f.tipo.id_for_label }}">Tipo de ítem</label>
+                {{ f.tipo }} {{ f.tipo.errors }}
+              </div>
+              <div class="col-md-2">
+                <label class="form-label" for="{{ f.puntaje.id_for_label }}">Puntaje</label>
+                {{ f.puntaje }} {{ f.puntaje.errors }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ f.imagen.id_for_label }}">Imagen (opcional)</label>
+                {{ f.imagen }} {{ f.imagen.errors }}
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <label class="form-label" for="{{ f.enunciado.id_for_label }}">Pregunta</label>
+              {{ f.enunciado }} {{ f.enunciado.errors }}
+            </div>
+
+            <!-- MCQ (oculto por defecto, lo muestra JS) -->
+            <div class="item-mcq-block mt-3 d-none">
+              <div class="mb-2"><span class="badge text-bg-info">Opción múltiple</span></div>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label" for="{{ f.alt_1.id_for_label }}">Alternativa A</label>
+                  {{ f.alt_1 }} {{ f.alt_1.errors }}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="{{ f.alt_2.id_for_label }}">Alternativa B</label>
+                  {{ f.alt_2 }} {{ f.alt_2.errors }}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="{{ f.alt_3.id_for_label }}">Alternativa C</label>
+                  {{ f.alt_3 }} {{ f.alt_3.errors }}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="{{ f.alt_4.id_for_label }}">Alternativa D</label>
+                  {{ f.alt_4 }} {{ f.alt_4.errors }}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="{{ f.alt_5.id_for_label }}">Alternativa E</label>
+                  {{ f.alt_5 }} {{ f.alt_5.errors }}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="{{ f.alt_6.id_for_label }}">Alternativa F</label>
+                  {{ f.alt_6 }} {{ f.alt_6.errors }}
+                </div>
+              </div>
+
+            <div class="mt-2">
+                <div class="form-label">¿Cuál es la correcta?</div>
+                <div class="d-flex flex-wrap gap-3">
+                    {% for val, lbl in f.correcta.field.choices %}
+                    {% with rid=f.correcta.id_for_label|add:"_"|add:forloop.counter0 %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="{{ f.correcta.html_name }}" id="{{ rid }}"
+                            value="{{ val }}" 
+                            {% if f.correcta.value == val %}checked{% endif %}>
+                        <label class="form-check-label" for="{{ rid }}">{{ lbl }}</label>
+                    </div>
+                    {% endwith %}
+                    {% endfor %}
+                </div>
+                {{ f.correcta.errors }}
+            </div>
+
+            </div>
+
+            <!-- True/False (oculto por defecto) -->
+            <div class="item-tf-block mt-3 d-none">
+              <div class="mb-2"><span class="badge text-bg-info">Verdadero / Falso</span></div>
+              <div class="d-flex flex-wrap gap-3">
+                {% for radio in f.tf_respuesta %}
+                  <div class="form-check">
+                    {{ radio.tag }}
+                    <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                  </div>
+                {% endfor %}
+              </div>
+              {{ f.tf_respuesta.errors }}
+            </div>
+
+            <div class="d-flex align-items-center gap-2 mt-3">
+              <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item">Quitar</button>
+              {% if f.DELETE %}
+                <label class="form-check small text-muted m-0">
+                  {{ f.DELETE }} Marcar para eliminar
+                </label>
+              {% endif %}
+              {% if f.instance.pk %}
+                <small class="text-muted ms-auto">ID ítem: {{ f.instance.pk }}</small>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Template del empty_form -->
+    <template id="empty-form-template">
+      {% with ef=formset.empty_form %}
+      <div class="card mb-3 item-form" data-form-index="__prefix__">
+        <div class="card-body">
+          {% for hidden in ef.hidden_fields %}{{ hidden }}{% endfor %}
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label" for="{{ ef.tipo.id_for_label }}">Tipo de ítem</label>
+              {{ ef.tipo }} {{ ef.tipo.errors }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label" for="{{ ef.puntaje.id_for_label }}">Puntaje</label>
+              {{ ef.puntaje }} {{ ef.puntaje.errors }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ ef.imagen.id_for_label }}">Imagen (opcional)</label>
+              {{ ef.imagen }} {{ ef.imagen.errors }}
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <label class="form-label" for="{{ ef.enunciado.id_for_label }}">Pregunta</label>
+            {{ ef.enunciado }} {{ ef.enunciado.errors }}
+          </div>
+
+          <!-- MCQ (oculto por defecto) -->
+          <div class="item-mcq-block mt-3 d-none">
+            <div class="mb-2"><span class="badge text-bg-info">Opción múltiple</span></div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="{{ ef.alt_1.id_for_label }}">Alternativa A</label>
+                {{ ef.alt_1 }} {{ ef.alt_1.errors }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ ef.alt_2.id_for_label }}">Alternativa B</label>
+                {{ ef.alt_2 }} {{ ef.alt_2.errors }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ ef.alt_3.id_for_label }}">Alternativa C</label>
+                {{ ef.alt_3 }} {{ ef.alt_3.errors }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ ef.alt_4.id_for_label }}">Alternativa D</label>
+                {{ ef.alt_4 }} {{ ef.alt_4.errors }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ ef.alt_5.id_for_label }}">Alternativa E</label>
+                {{ ef.alt_5 }} {{ ef.alt_5.errors }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ ef.alt_6.id_for_label }}">Alternativa F</label>
+                {{ ef.alt_6 }} {{ ef.alt_6.errors }}
+              </div>
+            </div>
+            <div class="mt-2">
+                <div class="form-label">¿Cuál es la correcta?</div>
+                <div class="d-flex flex-wrap gap-3">
+                    {% with ef=formset.empty_form %}
+                    {% for val, lbl in ef.correcta.field.choices %}
+                    {% with rid=ef.correcta.id_for_label|add:"_"|add:forloop.counter0 %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="{{ ef.correcta.html_name }}" id="{{ rid }}"
+                            value="{{ val }}">
+                        <label class="form-check-label" for="{{ rid }}">{{ lbl }}</label>
+                    </div>
+                    {% endwith %}
+                    {% endfor %}
+                    {% endwith %}
+                </div>
+                {{ formset.empty_form.correcta.errors }}
+            </div>
+
+
+
+          <!-- V/F (oculto por defecto) -->
+          <div class="item-tf-block mt-3 d-none">
+            <div class="mb-2"><span class="badge text-bg-info">Verdadero / Falso</span></div>
+            <div class="d-flex flex-wrap gap-3">
+              {% for radio in ef.tf_respuesta %}
+                <div class="form-check">
+                  {{ radio.tag }}
+                  <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                </div>
+              {% endfor %}
+            </div>
+            {{ ef.tf_respuesta.errors }}
+          </div>
+
+          <div class="d-flex align-items-center gap-2 mt-3">
+            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item">Quitar</button>
+            {% if ef.DELETE %}
+              <label class="form-check small text-muted m-0">
+                {{ ef.DELETE }} Marcar para eliminar
+              </label>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endwith %}
+    </template>
+
+    <div class="d-flex gap-2 mt-2">
+      <button class="btn btn-success" type="submit">Guardar</button>
+      <a class="btn btn-outline-secondary" href="{% url 'docente_lista' %}">Volver</a>
+    </div>
+  </form>
+</div>
+
+<!-- JS -->
+<script src="{% static 'LevelUp/js/actividad_formset.js' %}"></script>
+<script src="{% static 'LevelUp/js/actividad_dynamic.js' %}"></script>
+{% endblock %}

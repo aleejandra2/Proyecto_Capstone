@@ -1,33 +1,71 @@
+# LevelUp/admin.py
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth import get_user_model
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+
 from .models import (
-    Usuario, Administrador, Docente, Estudiante,
-    Ranking, Recurso, Recompensa, Actividad, AsignacionActividad, ReporteProgreso
+    Administrador, Docente, Estudiante,
+    Ranking, Recurso, Recompensa,
+    Actividad, AsignacionActividad, ReporteProgreso,
+    ItemActividad, Submission, Answer,
 )
 
 # Register your models here.
+Usuario = get_user_model()
+
 @admin.register(Usuario)
-class UsuarioAdmin(UserAdmin):
-    fieldsets = UserAdmin.fieldsets + (
-        ('Datos LevelUp', {'fields': ('rut', 'rol')}),
+class UsuarioAdmin(BaseUserAdmin):
+    list_display  = ("username", "email", "rut", "rol", "is_staff", "is_active")
+    list_filter   = ("rol", "is_staff", "is_active")
+    search_fields = ("username", "email", "rut", "first_name", "last_name")
+
+    fieldsets = BaseUserAdmin.fieldsets + (
+        ("Datos LevelUp", {"fields": ("rut", "rol")}),
     )
-    add_fieldsets = UserAdmin.add_fieldsets + (
-        ('Datos LevelUp', {'fields': ('rut', 'rol', 'email')}),
+    add_fieldsets = BaseUserAdmin.add_fieldsets + (
+        ("Datos LevelUp", {"fields": ("rut", "rol", "email")}),
     )
-    list_display = ('username', 'email', 'rut', 'rol', 'is_staff', 'is_active')
-    list_filter = ('rol', 'is_staff', 'is_active')
-    search_fields = ('username', 'email', 'rut', 'first_name', 'last_name')
+
+
+# ---------- Actividades ----------
+class ItemActividadInline(admin.StackedInline):
+    model = ItemActividad
+    extra = 0
+    fields = ("orden", "tipo", "enunciado", "puntaje", "imagen", "datos")
+    ordering = ("orden",)
+
 
 @admin.register(Actividad)
 class ActividadAdmin(admin.ModelAdmin):
-    list_display = ('titulo', 'tipo', 'dificultad', 'recurso', 'recompensa')
-    list_filter = ('tipo', 'dificultad')
-    search_fields = ('titulo', 'descripcion')
+    list_display  = ("titulo", "tipo", "dificultad", "docente", "xp_total", "es_publicada", "fecha_publicacion")
+    list_filter   = ("tipo", "dificultad", "es_publicada")
+    search_fields = ("titulo", "descripcion", "docente__usuario__username", "docente__usuario__first_name", "docente__usuario__last_name")
+    date_hierarchy = "fecha_publicacion"
+    inlines = [ItemActividadInline]
+    readonly_fields = ("fecha_publicacion",)
+
 
 @admin.register(AsignacionActividad)
 class AsignacionActividadAdmin(admin.ModelAdmin):
-    list_display = ('estudiante', 'actividad', 'estado', 'nota', 'fecha_asignacion', 'fecha_completada')
-    list_filter = ('estado', 'fecha_asignacion', 'fecha_completada')
-    search_fields = ('estudiante__usuario__username', 'actividad__titulo')
+    list_display  = ("estudiante", "actividad", "estado", "nota", "fecha_asignacion", "fecha_completada")
+    list_filter   = ("estado", "fecha_asignacion", "fecha_completada")
+    search_fields = ("estudiante__usuario__username", "actividad__titulo")
 
+
+@admin.register(Submission)
+class SubmissionAdmin(admin.ModelAdmin):
+    list_display  = ("actividad", "estudiante", "finalizado", "calificacion", "xp_obtenido", "enviado_en")
+    list_filter   = ("finalizado",)
+    search_fields = ("actividad__titulo", "estudiante__usuario__username")
+    date_hierarchy = "enviado_en"
+
+
+@admin.register(Answer)
+class AnswerAdmin(admin.ModelAdmin):
+    list_display  = ("submission", "item", "es_correcta", "puntaje_obtenido")
+    list_filter   = ("es_correcta",)
+    search_fields = ("submission__actividad__titulo", "submission__estudiante__usuario__username", "item__enunciado")
+
+
+# Otros catálogos
 admin.site.register([Administrador, Docente, Estudiante, Ranking, Recurso, Recompensa, ReporteProgreso])

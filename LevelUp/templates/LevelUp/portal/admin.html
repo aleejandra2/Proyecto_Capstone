@@ -6,93 +6,113 @@
   <div class="container">
 
     <!-- Encabezado -->
-    <div class="card mb-1">
-      <div class="card-content section-header">
+    <div class="card mb-3">
+      <div class="card-body d-flex flex-wrap justify-content-between align-items-start gap-2">
         <div>
-          <h1 class="title-xl">Panel de Administración 🛠️</h1>
-          <p class="subtitle">Gestiona usuarios, contenidos y el estado general del sistema.</p>
+          <h1 class="h3 m-0">Panel de Administración 🛠️</h1>
+          <p class="text-muted mb-0 mt-1">Gestiona usuarios, contenidos y el estado general del sistema.</p>
         </div>
-        <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
-          <a href="{% url 'admin:index' %}" class="btn btn-primary">Ir a Django Admin</a>
+        <div class="d-flex gap-2 flex-wrap">
+          <a href="{% url 'home' %}" class="btn btn-primary">Ir a Django Admin</a>
+          <!-- Si tu Admin también puede usar el flujo de docente, descomenta la siguiente línea:
+          <a href="{% url 'crear' %}" class="btn btn-outline-primary">+ Nueva actividad (frontend)</a>
+          -->
         </div>
       </div>
     </div>
 
     <!-- KPIs -->
-    <div class="card mb-1">
-      <div class="card-content">
-        <div class="stats-grid">
-          <div class="stats-card">
-            <div class="label">Total Usuarios</div>
-            <div class="value">{{ usuarios_total|default:0 }}</div>
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-6 col-md-3">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Total Usuarios</div>
+              <div class="fs-3 fw-bold">{{ usuarios_total|default:0 }}</div>
+            </div>
           </div>
-          <div class="stats-card">
-            <div class="label">Profesores</div>
-            <div class="value">{{ profesores_total|default:0 }}</div>
+          <div class="col-6 col-md-3">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Profesores</div>
+              <div class="fs-3 fw-bold">{{ profesores_total|default:0 }}</div>
+            </div>
           </div>
-          <div class="stats-card">
-            <div class="label">Estudiantes</div>
-            <div class="value">{{ estudiantes_total|default:0 }}</div>
+          <div class="col-6 col-md-3">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Estudiantes</div>
+              <div class="fs-3 fw-bold">{{ estudiantes_total|default:0 }}</div>
+            </div>
           </div>
-          <div class="stats-card">
-            <div class="label">Actividades</div>
-            <div class="value">{{ actividades_total|default:0 }}</div>
+          <div class="col-6 col-md-3">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Actividades</div>
+              <div class="fs-3 fw-bold">{{ actividades_total|default:0 }}</div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Estado del sistema + Actividad -->
-    <div class="grid-2-1">
-      <div class="card">
-        <div class="card-content">
-          <h2 style="font-size:1.25rem; font-weight:700; margin:0 0 .5rem;">Estado del Sistema</h2>
-          <div class="activity-list">
-            <div class="activity-card section-header">
-              <span>Servidor</span>
-              <span class="btn btn-outline" style="pointer-events:none;">🟢 Activo</span>
-            </div>
-            <div class="activity-card section-header">
-              <span>Base de Datos</span>
-              <span class="btn btn-outline" style="pointer-events:none;">🟢 Activo</span>
-            </div>
-            <div class="activity-card section-header">
-              <span>API</span>
-              <span class="btn btn-outline" style="pointer-events:none;">🟢 Activo</span>
-            </div>
-            <div class="activity-card section-header">
-              <span>Cache</span>
-              <span class="btn btn-outline" style="pointer-events:none;">🟡 Lento</span>
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <div class="card-body">
+            <h2 class="h5 mb-3">Estado del Sistema</h2>
+            <div class="d-grid gap-2">
+              <div class="d-flex justify-content-between align-items-center border rounded p-2">
+                <span>Servidor</span><span class="btn btn-outline-secondary disabled">🟢 Activo</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center border rounded p-2">
+                <span>Base de Datos</span><span class="btn btn-outline-secondary disabled">🟢 Activo</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center border rounded p-2">
+                <span>API</span><span class="btn btn-outline-secondary disabled">🟢 Activo</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center border rounded p-2">
+                <span>Cache</span><span class="btn btn-outline-secondary disabled">🟡 Lento</span>
+              </div>
             </div>
           </div>
-          <!-- <p class="subtitle" style="margin-top:.75rem;">* Conecta estos estados a tus checks reales si más adelante implementas monitoreo.</p> -->
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-content">
-          <h3 style="font-size:1.1rem; font-weight:700; margin:0 0 .5rem;">Actividad de hoy</h3>
-          <div class="activity-list">
-            <div class="activity-card section-header">
-              <span>Nuevos usuarios</span>
-              <strong>+24</strong>
+      <!-- Actividad / accesos de contenido -->
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <div class="card-body">
+            <h3 class="h6 mb-3">Contenido</h3>
+            <div class="d-grid gap-2">
+              <a class="btn btn-primary" href="/admin/LevelUp/actividad/add/" target="_blank">+ Nueva actividad
+                (Admin)</a>
+              <a class="btn btn-outline-primary" href="/admin/LevelUp/actividad/" target="_blank">Gestionar
+                actividades</a>
+              <a class="btn btn-outline-secondary" href="/admin/LevelUp/asignacionactividad/add/"
+                target="_blank">Asignar actividad</a>
+              <a class="btn btn-outline-secondary" href="/admin/LevelUp/asignacionactividad/" target="_blank">Ver
+                asignaciones</a>
             </div>
-            <div class="activity-card section-header">
-              <span>Actividades completadas</span>
-              <strong>156</strong>
-            </div>
-            <div class="activity-card section-header">
-              <span>Reportes generados</span>
-              <strong>12</strong>
-            </div>
-            <div class="activity-card section-header">
-              <span>Tiempo activo</span>
-              <strong>98.7%</strong>
+
+            <hr>
+            <h3 class="h6 mb-2">Actividad de hoy</h3>
+            <div class="d-grid gap-2">
+              <div class="d-flex justify-content-between align-items-center border rounded p-2">
+                <span>Nuevos usuarios</span><strong>+24</strong>
+              </div>
+              <div class="d-flex justify-content-between align-items-center border rounded p-2">
+                <span>Actividades completadas</span><strong>156</strong>
+              </div>
+              <div class="d-flex justify-content-between align-items-center border rounded p-2">
+                <span>Reportes generados</span><strong>12</strong>
+              </div>
+              <div class="d-flex justify-content-between align-items-center border rounded p-2">
+                <span>Tiempo activo</span><strong>98.7%</strong>
+              </div>
             </div>
           </div>
-          <!-- <p class="subtitle" style="margin-top:.75rem;">* Placeholder. Puedes reemplazarlo por métricas reales.</p> -->
         </div>
       </div>
+
     </div>
 
   </div>
