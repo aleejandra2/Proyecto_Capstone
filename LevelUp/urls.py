@@ -1,11 +1,10 @@
-from django.urls import path
-from . import views
-from django.urls import reverse_lazy
+from django.urls import path, reverse_lazy
 from django.contrib.auth import views as auth_views
+from . import views
 from .views import register_view, login_view, logout_view, home_view
 
 urlpatterns = [
-     # Home / Auth
+    # Home / Auth
     path("", home_view, name="home"),
     path("ingresar/", login_view, name="login"),
     path("registro/", register_view, name="register"),
@@ -21,7 +20,6 @@ urlpatterns = [
     path("perfil/editar/", views.perfil_editar_view, name="perfil_editar"),
     path("perfil/cambiar-password/", views.cambiar_password_view, name="cambiar_password"),
 
-    # Flujo Actividades
     # Docente
     path("actividades/docente/", views.actividades_docente_lista, name="docente_lista"),
     path("actividades/docente/nueva/", views.actividad_crear, name="crear"),
@@ -31,14 +29,14 @@ urlpatterns = [
     path("actividades/estudiante/", views.estudiante_mis_actividades, name="estudiante_lista"),
     path("actividades/estudiante/<int:pk>/resolver/", views.actividad_resolver, name="resolver"),
 
-    # Recuperar / Restablecer contraseña
+    # Recuperar 
     path(
         "password/recuperar/",
         auth_views.PasswordResetView.as_view(
             template_name="LevelUp/auth/password_reset_form.html",
             email_template_name="LevelUp/auth/password_reset_email.html",
             subject_template_name="LevelUp/auth/password_reset_subject.txt",
-            success_url=reverse_lazy("levelup:password_reset_done"),
+            success_url=reverse_lazy("password_reset_done"),
         ),
         name="password_reset",
     ),
@@ -53,7 +51,7 @@ urlpatterns = [
         "password/restablecer/<uidb64>/<token>/",
         auth_views.PasswordResetConfirmView.as_view(
             template_name="LevelUp/auth/password_reset_confirm.html",
-            success_url=reverse_lazy("levelup:password_reset_complete"),
+            success_url=reverse_lazy("password_reset_complete"),
         ),
         name="password_reset_confirm",
     ),
