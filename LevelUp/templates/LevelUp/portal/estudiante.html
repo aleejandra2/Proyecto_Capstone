@@ -6,131 +6,144 @@
   <div class="container">
 
     <!-- Encabezado -->
-    <div class="card mb-1">
-      <div class="card-content section-header">
+    <div class="card mb-3">
+      <div class="card-body d-flex flex-wrap justify-content-between align-items-start gap-2">
         <div>
-          <h1 style="font-size:1.75rem; font-weight:800; margin:0;">¡Bienvenido/a, {{ request.user.get_full_name|default:request.user.username }}! 👋 </h1>
-          <p class="text-muted" style="margin:.25rem 0 0;">Continúa tu aventura educativa y sigue subiendo de nivel.</p>
+          <h1 class="h3 m-0">¡Bienvenido/a, {{ request.user.get_full_name|default:request.user.username }}! 👋</h1>
+          <p class="text-muted mb-0 mt-1">Continúa tu aventura educativa y sigue subiendo de nivel.</p>
         </div>
-        <a href="{% url 'actividades' %}" class="btn btn-primary">Ver actividades</a>
+        <a href="{% url 'estudiante_lista' %}" class="btn btn-success">Ver actividades</a>
       </div>
     </div>
 
     <!-- Stats -->
-    <div class="card mb-1">
-      <div class="card-content">
-        <div class="stats-grid">
-          <div class="stats-card">
-            <div class="label">Nivel</div>
-            <div class="value">{{ nivel|default:1 }}</div>
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-6 col-md-3">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Nivel</div>
+              <div class="fs-3 fw-bold">{{ nivel|default:1 }}</div>
+            </div>
           </div>
-          <div class="stats-card">
-            <div class="label">Puntos</div>
-            <div class="value">{{ puntos|default:0 }}</div>
+          <div class="col-6 col-md-3">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Puntos</div>
+              <div class="fs-3 fw-bold">{{ puntos|default:0 }}</div>
+            </div>
           </div>
-          <div class="stats-card">
-            <div class="label">Medallas</div>
-            <div class="value">{{ medallas|default:0 }}</div>
+          <div class="col-6 col-md-3">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Medallas</div>
+              <div class="fs-3 fw-bold">{{ medallas|default:0 }}</div>
+            </div>
           </div>
-          <div class="stats-card">
-            <div class="label">Actividades</div>
-            <div class="value">{{ actividades_count|default:0 }}</div>
+          <div class="col-6 col-md-3">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Actividades</div>
+              <div class="fs-3 fw-bold">{{ actividades_count|default:0 }}</div>
+            </div>
           </div>
         </div>
-        <div class="mt-1 text-muted">
+        <div class="mt-2 text-muted">
           Curso: <strong>{{ curso|default:"Sin curso" }}</strong>
         </div>
       </div>
     </div>
 
     <!-- Contenido principal -->
-    <div class="grid-2-1">
-      <!-- Actividades asignadas -->
-      <div class="card">
-        <div class="card-content">
-          <div class="section-header">
-            <h2 style="font-size:1.25rem; font-weight:700; margin:0;">Actividades asignadas</h2>
-            <a href="{% url 'actividades' %}" class="link">Ver todas →</a>
+    <div class="row g-3">
+      <!-- Actividades asignadas (linkea a la lista real) -->
+      <div class="col-lg-8">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h2 class="h5 m-0">Actividades asignadas</h2>
+              <a href="{% url 'estudiante_lista' %}" class="link-secondary">Ver todas →</a>
+            </div>
+
+            <!-- Placeholders con CTA real -->
+            <div class="border rounded p-3 mb-2">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-semibold">Fracciones básicas</div>
+                  <div class="text-muted small">Dificultad: Fácil · 100 XP</div>
+                </div>
+                <a href="{% url 'estudiante_lista' %}" class="btn btn-outline-success btn-sm">Empezar</a>
+              </div>
+            </div>
+
+            <div class="border rounded p-3 mb-2">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-semibold">Comprensión lectora</div>
+                  <div class="text-muted small">Dificultad: Media · 150 XP</div>
+                </div>
+                <a href="{% url 'estudiante_lista' %}" class="btn btn-outline-success btn-sm">Continuar</a>
+              </div>
+            </div>
+
+            <div class="border rounded p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-semibold">Problemas lógicos</div>
+                  <div class="text-muted small">Dificultad: Difícil · 200 XP</div>
+                </div>
+                <a href="{% url 'estudiante_lista' %}" class="btn btn-outline-success btn-sm">Empezar</a>
+              </div>
+            </div>
+
           </div>
-
-          <!-- Placeholder -->
-          <div class="activity-list">
-            <div class="activity-card">
-              <div class="section-header">
-                <div>
-                  <div style="font-weight:600;">Fracciones básicas</div>
-                  <div class="text-muted" style="font-size:.9rem;">Dificultad: Fácil · 100 pts</div>
-                </div>
-                <a href="{% url 'actividades' %}" class="btn btn-outline">Empezar</a>
-              </div>
-            </div>
-
-            <div class="activity-card">
-              <div class="section-header">
-                <div>
-                  <div style="font-weight:600;">Comprensión lectora</div>
-                  <div class="text-muted" style="font-size:.9rem;">Dificultad: Media · 150 pts</div>
-                </div>
-                <a href="{% url 'actividades' %}" class="btn btn-outline">Continuar</a>
-              </div>
-            </div>
-
-            <div class="activity-card">
-              <div class="section-header">
-                <div>
-                  <div style="font-weight:600;">Problemas lógicos</div>
-                  <div class="text-muted" style="font-size:.9rem;">Dificultad: Difícil · 200 pts</div>
-                </div>
-                <a href="{% url 'actividades' %}" class="btn btn-outline">Empezar</a>
-              </div>
-            </div>
-          </div>
-
-          <!-- <div class="mt-1 text-muted" style="font-size:.9rem;">* Esta es una vista previa. Reemplaza por tu queryset de actividades asignadas.</div> -->
         </div>
       </div>
 
       <!-- Sidebar -->
-      <div style="display:grid; gap:1rem;">
-        <div class="card">
-          <div class="card-content">
-            <div class="section-header">
-              <h3 style="font-size:1.1rem; font-weight:700; margin:0;">🏆 Ranking semanal</h3>
-              <a href="{% url 'ranking' %}" class="link">Ver ranking</a>
+      <div class="col-lg-4">
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <h3 class="h6 m-0">🏆 Ranking semanal</h3>
+              <a href="{% url 'ranking' %}" class="link-secondary">Ver ranking</a>
             </div>
-            <ul class="leaderboard mt-1">
-              <li class="leaderboard-item">
-                <span class="leaderboard-rank">1</span>
-                <div class="leaderboard-avatar">AV</div>
-                <div class="leaderboard-info">
-                  <div class="leaderboard-name">Ana Vargas</div>
-                  <div class="leaderboard-level">Nivel 6</div>
+            <ul class="list-unstyled mt-3 mb-0">
+              <li class="d-flex align-items-center justify-content-between border rounded p-2 mb-2">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="badge text-bg-dark">1</span>
+                  <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center"
+                    style="width:32px;height:32px;">AV</div>
+                  <div>
+                    <div class="fw-semibold">Ana Vargas</div>
+                    <div class="text-muted small">Nivel 6</div>
+                  </div>
                 </div>
-                <div class="leaderboard-points">1580 pts</div>
+                <div class="fw-semibold">1580 pts</div>
               </li>
-              <li class="leaderboard-item">
-                <span class="leaderboard-rank">2</span>
-                <div class="leaderboard-avatar">LR</div>
-                <div class="leaderboard-info">
-                  <div class="leaderboard-name">Luis Ramírez</div>
-                  <div class="leaderboard-level">Nivel 5</div>
+              <li class="d-flex align-items-center justify-content-between border rounded p-2">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="badge text-bg-dark">2</span>
+                  <div class="rounded-circle d-flex align-items-center justify-content-center"
+                    style="width:32px;height:32px;background:#f59e0b;color:#111827;">LR</div>
+                  <div>
+                    <div class="fw-semibold">Luis Ramírez</div>
+                    <div class="text-muted small">Nivel 5</div>
+                  </div>
                 </div>
-                <div class="leaderboard-points">1420 pts</div>
+                <div class="fw-semibold">1420 pts</div>
               </li>
             </ul>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-content">
-            <h3 style="font-size:1.1rem; font-weight:700; margin:0 0 .5rem;">🎖️ Logros recientes</h3>
-            <div class="reward-card">
-              <div style="font-weight:600;">Matemago</div>
-              <div class="text-muted" style="font-size:.9rem;">Completaste 3 actividades de matemáticas</div>
+          <div class="card-body">
+            <h3 class="h6 mb-2">🎖️ Logros recientes</h3>
+            <div class="border rounded p-2 mb-2">
+              <div class="fw-semibold">Matemago</div>
+              <div class="text-muted small">Completaste 3 actividades de matemáticas</div>
             </div>
-            <div class="reward-card mt-1">
-              <div style="font-weight:600;">Lector Estrella</div>
-              <div class="text-muted" style="font-size:.9rem;">Lograste 90% en comprensión lectora</div>
+            <div class="border rounded p-2">
+              <div class="fw-semibold">Lector Estrella</div>
+              <div class="text-muted small">Lograste 90% en comprensión lectora</div>
             </div>
           </div>
         </div>
@@ -140,23 +153,4 @@
 
   </div>
 </main>
-
-<script>
-document.querySelectorAll('.profile-tabs a').forEach(tab => {
-  tab.addEventListener('click', e => {
-    e.preventDefault();
-    // Quitar "active" de todas las pestañas
-    document.querySelectorAll('.profile-tabs a').forEach(t => t.classList.remove('active'));
-    // Quitar "active" de todos los contenidos
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-
-    // Activar pestaña actual
-    tab.classList.add('active');
-    // Mostrar contenido correspondiente
-    const paneId = tab.getAttribute('data-tab');
-    document.getElementById(paneId).classList.add('active');
-  });
-});
-</script>
-
 {% endblock %}

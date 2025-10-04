@@ -1,0 +1,36 @@
+{% extends "LevelUp/base.html" %}
+{% block title %}Mis actividades{% endblock %}
+{% block content %}
+<div class="container py-3">
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 m-0">Mis actividades</h1>
+        <a class="btn btn-primary" href="{% url 'crear' %}">Nueva actividad</a>
+    </div>
+
+    <div class="list-group">
+        {% for a in actividades %}
+        <a class="list-group-item list-group-item-action" href="{% url 'editar' a.pk %}">
+            <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1">{{ a.titulo }}</h5>
+                <small class="text-nowrap">{{ a.get_dificultad_display }}</small>
+            </div>
+            <div class="small text-muted">
+                {{ a.get_tipo_display }} · XP {{ a.xp_total }}
+                · {% if a.es_publicada %}<span class="text-success">Publicada</span>{% else %}<span
+                    class="text-secondary">Borrador</span>{% endif %}
+                {% if a.fecha_cierre %}· Cierra: {{ a.fecha_cierre|date:"d/m/Y H:i" }}{% endif %}
+            </div>
+        </a>
+        {% empty %}
+        <div class="alert alert-info">Aún no tienes actividades.</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
