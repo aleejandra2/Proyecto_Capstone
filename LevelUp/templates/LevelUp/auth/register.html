@@ -1,8 +1,7 @@
 {% extends "LevelUp/base.html" %}
+{% block navbar %}{% endblock %}
 {% load static %}
 {% load form_extras %}
-
-{% block navbar %}{% endblock %}
 {% block title %}Crear cuenta · LevelUp{% endblock %}
 
 {% block extra_head %}
@@ -11,12 +10,12 @@
 {% endblock %}
 
 {% block content %}
-<main class="center-page auth-bg auth-bg--teal">
-  <div class="auth-card card auth-wide">
+<main class="center-page auth-bg--teal">
+  <div class="auth-card card">
     <div class="card-content">
-      <h1 class="mb-3  text-center">Crear cuenta</h1>
+      <h1 class="title-xl mb-3">Crear cuenta</h1>
 
-      <form method="post" novalidate autocomplete="off" class="row g-3 js-validate-touch">
+       <form method="post" novalidate autocomplete="off" class="row g-3 js-validate-touch">
         {% csrf_token %}
 
         {% if form.non_field_errors %}
@@ -105,6 +104,8 @@
     </div>
   </div>
 </main>
+
+
 {% endblock %}
 
 {% block extra_js %}
@@ -113,7 +114,7 @@
   <!-- JS Reglas de contraseña -->
   <script src="{% static 'LevelUp/js/password.js' %}" defer></script>
 
-  <!-- Validación on-blur para campos vacíos -->
+   <!-- Validación on-blur para campos vacíos -->
   <script>
   (function () {
     const form = document.querySelector('form.js-validate-touch') || document.querySelector('form[method="post"]');

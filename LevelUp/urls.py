@@ -29,7 +29,7 @@ urlpatterns = [
     path("actividades/estudiante/", views.estudiante_mis_actividades, name="estudiante_lista"),
     path("actividades/estudiante/<int:pk>/resolver/", views.actividad_resolver, name="resolver"),
 
-    # Recuperar 
+    # Recuperar / Restablecer contraseña
     path(
         "password/recuperar/",
         auth_views.PasswordResetView.as_view(
