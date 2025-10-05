@@ -446,10 +446,9 @@ body {
 
 
 /* —— Perfil —— */
-/* La portada ya no tiene gradiente; queda transparente (o solo imagen si la hay) */
 .profile-cover{
   position:relative; height:100px; border-radius:12px;
-  background:transparent; /* antes: linear-gradient(...) */
+  background:transparent; 
   overflow:hidden;
 }
 .profile-cover img{
@@ -474,7 +473,7 @@ body {
 .profile-avatar .avatar-initial{
   font-weight:800;
   font-size:42px;
-  color:#334155;   /* oscuro sobre gris claro */
+  color:#334155;  
   line-height:1;
   user-select:none;
 }
@@ -500,8 +499,6 @@ body {
 .h1-title{ font-size:1.5rem; font-weight:800; margin:0; }
 .subtitle-muted{ color:#6b7280; margin:.25rem 0 0; }
 .section-title{ font-size:1.1rem; font-weight:700; margin:0 0 .5rem; }
-
-
 
 /* Cambio de pestañas (tabs) */
 .tab-pane { display: none; }

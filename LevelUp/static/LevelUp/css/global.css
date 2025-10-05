@@ -10,10 +10,13 @@
   --warning:#f59e0b;
 }
 
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
-body{ margin:0; background:var(--bg); color:var(--text); font-family:system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol"; }
-a{ color:inherit; }
+html,body{ height:100%; }             /* (mantener una sola vez) */
+body{
+  margin:0;                            /* (evita bordes blancos del navegador) */
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+}
 
 /* ====== Layout ====== */
 .container{ max-width:1100px; margin:0 auto; padding:1.25rem; }
@@ -57,7 +60,36 @@ a{ color:inherit; }
 .messages{ position:relative; margin:1rem auto; max-width:700px; }
 .msg{ padding:.75rem 1rem; border-radius:.5rem; margin-bottom:.5rem; color:var(--text); }
 .msg.success{ background:#dcfce7; }
-.msg.info{ background:#e0f2fe; }
+.msg.info{ background:#e0f2fe; }/* ===== Fix auth gradient: cubrir todo el viewport y sin bordes blancos ===== */
+
+/* Los fondos de auth deben ocupar toda la pantalla y centrar la card */
+.auth-bg--indigo,
+.auth-bg--teal,
+.auth-bg--blue{
+  min-height: 100svh;         /* alto real en móviles modernos */
+  min-height: 100vh;          /* fallback */
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+
+  /* que el degradado cubra sin dejar franjas */
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+/* Si usas center-page junto a auth, ignora el calc(100vh - 140px) */
+.center-page.auth-bg--indigo,
+.center-page.auth-bg--teal,
+.center-page.auth-bg--blue{
+  min-height: 100svh !important;
+  min-height: 100vh !important;
+}
+
+/* El contenedor de mensajes a veces deja una franja arriba: quítala */
+.messages{ margin: 0 auto; }
+
 .msg.warning{ background:#fef9c3; }
 .msg.error{ background:#fee2e2; }
 
@@ -70,7 +102,7 @@ nav.navbar{ background:#fff; border-bottom:1px solid var(--border); }
 .navbar-link.active{ color:var(--text); font-weight:600; }
 
 /* ====== Footer ====== */
-.footer-base{ margin-top:3rem; padding:2rem 0; background:#111827; color:#e5e7eb; }
+.footer-base{padding:2rem 0; background:#111827; }
 
 /* ====== Portales ====== */
 /* Stats cards */
@@ -123,3 +155,5 @@ nav.navbar{ background:#fff; border-bottom:1px solid var(--border); }
 
 /* Asegura que el degradado se vea detrás de la card centrada */
 .center-page { min-height: calc(100vh - 140px); display:flex; align-items:center; justify-content:center; padding: 2rem 1rem; }
+
+
