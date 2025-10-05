@@ -208,33 +208,7 @@ def cambiar_password_view(request):
 # Flujo de Actividades (Docente y Estudiante)
 # ===================================================================
 
-from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse, Http404
-from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import PasswordChangeForm
-from django.contrib.auth import update_session_auth_hash
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from django.db import transaction, models
 
-from .forms import RegistrationForm, LoginForm, ProfileForm
-from .forms import ActividadForm, ItemFormSet
-
-from .models import (
-    Estudiante, Docente, Actividad, AsignacionActividad,
-    ItemActividad, Submission, Answer, Usuario
-)
-
-# -------------------------------------------------------------------
-# Helpers de rol
-# -------------------------------------------------------------------
-def es_docente(user) -> bool:
-    return getattr(user, "rol", None) == Usuario.Rol.DOCENTE
-
-def es_estudiante(user) -> bool:
-    return getattr(user, "rol", None) == Usuario.Rol.ESTUDIANTE
 
 
 # -------------------------------------------------------------------

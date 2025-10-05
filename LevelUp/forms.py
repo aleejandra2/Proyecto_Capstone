@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm, PasswordChangeForm
+from django.contrib.auth.forms import UserCreationForm, PasswordChangeForm, PasswordResetForm
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
@@ -89,6 +89,20 @@ class LoginForm(forms.Form):
     )
     remember = forms.BooleanField(label="Recordarme", required=False)
 
+# ------------------------------
+# Recuperar contraseña
+# ------------------------------
+class PasswordResetFormVisible(PasswordResetForm):
+    """
+    Muestra error si el email no está registrado.
+    Si el email existe, el flujo normal de PasswordResetForm enviará el correo.
+    """
+    def clean_email(self):
+        email = (self.cleaned_data.get("email") or "").strip().lower()
+        User = get_user_model()
+        if not User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("Este correo no se encuentra registrado.")
+        return email
 
 # ------------------------------
 # Perfil: edición de datos

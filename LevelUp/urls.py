@@ -2,6 +2,7 @@ from django.urls import path, reverse_lazy
 from django.contrib.auth import views as auth_views
 from . import views
 from .views import register_view, login_view, logout_view, home_view
+from .forms import PasswordResetFormVisible
 
 urlpatterns = [
     # Home / Auth
@@ -37,6 +38,7 @@ urlpatterns = [
             email_template_name="LevelUp/auth/password_reset_email.html",
             subject_template_name="LevelUp/auth/password_reset_subject.txt",
             success_url=reverse_lazy("password_reset_done"),
+            form_class=PasswordResetFormVisible,
         ),
         name="password_reset",
     ),
