@@ -541,3 +541,79 @@ def actividad_resolver(request, pk):
         "actividad": act,
         "submission": sub
     })
+
+# views.py
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from LevelUp.models import Matricula, GrupoRefuerzoNivelAlumno, GrupoRefuerzoNivel
+
+def _nombre_docente(obj):
+    """
+    Devuelve un nombre “bonito” tanto si obj es Usuario como si es Docente (con .usuario).
+    """
+    if not obj:
+        return None
+    # Caso Docente con OneToOne a Usuario
+    usuario = getattr(obj, "usuario", None)
+    if usuario:
+        return usuario.get_full_name() or usuario.username
+    # Caso Usuario directo
+    get_full = getattr(obj, "get_full_name", None)
+    if callable(get_full):
+        return get_full() or getattr(obj, "username", None)
+    return str(obj)
+
+
+
+@login_required
+def portal_estudiante(request):
+    u = request.user
+
+    # Curso actual (toma la matrícula más reciente)
+    matricula = (Matricula.objects
+                 .select_related("curso")
+                 .filter(estudiante=u)
+                 .order_by("-fecha")
+                 .first())
+
+    curso_str = None
+    if matricula and matricula.curso:
+        c = matricula.curso
+        curso_str = f'{c.nivel}° Básico {c.letra}'
+
+    docente_matematicas = None
+    docente_ingles = None
+
+    # 1) Si el alumno está en un grupo de refuerzo, usamos ese grupo
+    gr_alum = (GrupoRefuerzoNivelAlumno.objects
+               .select_related("grupo")
+               .filter(alumno=u)
+               .first())
+    if gr_alum and gr_alum.grupo:
+        g = gr_alum.grupo
+        # Acepta ambos nombres de campo: profesor_* o docente_*
+        dm = getattr(g, "docente_matematicas", None) or getattr(g, "profesor_matematicas", None)
+        di = getattr(g, "docente_ingles", None) or getattr(g, "profesor_ingles", None)
+        docente_matematicas = _nombre_docente(dm)
+        docente_ingles = _nombre_docente(di)
+
+    # 2) Si no hay grupo del alumno, usa el grupo del nivel del curso (si existe)
+    if (not docente_matematicas or not docente_ingles) and matricula and matricula.curso:
+        g = (GrupoRefuerzoNivel.objects
+             .filter(nivel=matricula.curso.nivel)
+             .first())
+        if g:
+            dm = getattr(g, "docente_matematicas", None) or getattr(g, "profesor_matematicas", None)
+            di = getattr(g, "docente_ingles", None) or getattr(g, "profesor_ingles", None)
+            if not docente_matematicas:
+                docente_matematicas = _nombre_docente(dm)
+            if not docente_ingles:
+                docente_ingles = _nombre_docente(di)
+
+    context = {
+        # …tus otras variables…
+        "curso": curso_str,
+        "docente_matematicas": docente_matematicas,
+        "docente_ingles": docente_ingles,
+    }
+    return render(request, "LevelUp/estudiante_portal.html", context)
