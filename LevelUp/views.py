@@ -23,7 +23,6 @@ from .models import (
 # Helpers de rol
 # -------------------------------------------------------------------
 def es_docente(user) -> bool:
-    # En tu proyecto request.user es Usuario (custom) y tiene 'rol'
     return getattr(user, "rol", None) == Usuario.Rol.DOCENTE
 
 def es_estudiante(user) -> bool:
@@ -31,10 +30,8 @@ def es_estudiante(user) -> bool:
 
 
 # -------------------------------------------------------------------
-# Home 
+# Login y Registro 
 # -------------------------------------------------------------------
-def home(request):
-    return render(request, 'LevelUp/index.html')
 
 @login_required
 def actividades_view(request):
@@ -542,7 +539,6 @@ def actividad_resolver(request, pk):
         "submission": sub
     })
 
-# views.py
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from LevelUp.models import Matricula, GrupoRefuerzoNivelAlumno, GrupoRefuerzoNivel
