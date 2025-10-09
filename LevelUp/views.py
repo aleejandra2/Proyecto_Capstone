@@ -8,6 +8,9 @@ from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db import transaction, models
+import json
+from django.db.models import Count, Q
+
 
 from .forms import RegistrationForm, LoginForm, ProfileForm
 # Formularios de actividades
@@ -16,7 +19,8 @@ from .forms import ActividadForm, ItemFormSet
 # Modelos
 from .models import (
     Estudiante, Docente, Actividad, AsignacionActividad,
-    ItemActividad, Submission, Answer, Usuario
+    ItemActividad, Submission, Answer, Usuario,
+    Matricula, GrupoRefuerzoNivelAlumno, GrupoRefuerzoNivel
 )
 
 # -------------------------------------------------------------------
@@ -221,6 +225,7 @@ def actividades_docente_lista(request):
     qs = Actividad.objects.filter(docente=docente).order_by("-id")
     return render(request, "LevelUp/actividades/docente_lista.html", {"actividades": qs})
 
+
 @login_required
 def actividad_crear(request):
     if not es_docente(request.user):
@@ -229,7 +234,11 @@ def actividad_crear(request):
 
     if request.method == "POST":
         form = ActividadForm(request.POST, request.FILES)
-        formset = ItemFormSet(request.POST, request.FILES)
+
+        # Validar ítems sobre una instancia temporal sin guardar
+        temp_act = Actividad(docente=docente)
+        formset = ItemFormSet(request.POST, request.FILES, instance=temp_act)
+
         if form.is_valid() and formset.is_valid():
             with transaction.atomic():
                 act = form.save(commit=False)
@@ -238,11 +247,15 @@ def actividad_crear(request):
                     act.fecha_publicacion = timezone.now()
                 act.save()
                 form.save_m2m()
+
+                # Guardar ítems ligados a la actividad real
                 formset.instance = act
                 formset.save()
+
             messages.success(request, "Actividad creada correctamente.")
             return redirect("docente_lista")
-        messages.error(request, "Revisa los errores en el formulario y los ítems.")
+        else:
+            messages.error(request, "Revisa los errores en el formulario y los ítems.")
     else:
         form = ActividadForm()
         if "docente" in form.fields:
@@ -254,6 +267,7 @@ def actividad_crear(request):
         "formset": formset
     })
 
+
 @login_required
 def actividad_editar(request, pk):
     if not es_docente(request.user):
@@ -264,18 +278,21 @@ def actividad_editar(request, pk):
     if request.method == "POST":
         form = ActividadForm(request.POST, request.FILES, instance=act)
         formset = ItemFormSet(request.POST, request.FILES, instance=act)
+
         if form.is_valid() and formset.is_valid():
             with transaction.atomic():
-                act = form.save(commit=False)
-                act.docente = docente
-                if getattr(act, "es_publicada", False) and not getattr(act, "fecha_publicacion", None):
-                    act.fecha_publicacion = timezone.now()
-                act.save()
+                obj = form.save(commit=False)
+                obj.docente = docente
+                if getattr(obj, "es_publicada", False) and not getattr(obj, "fecha_publicacion", None):
+                    obj.fecha_publicacion = timezone.now()
+                obj.save()
                 form.save_m2m()
                 formset.save()
+
             messages.success(request, "Actividad actualizada.")
             return redirect("docente_lista")
-        messages.error(request, "Revisa los errores en el formulario y los ítems.")
+        else:
+            messages.error(request, "Revisa los errores en el formulario y los ítems.")
     else:
         form = ActividadForm(instance=act)
         if "docente" in form.fields:
@@ -290,6 +307,147 @@ def actividad_editar(request, pk):
 
 
 # -----------------------
+# Helpers de corrección (estudiante)
+# -----------------------
+def _norm(s):
+    return str(s or "").strip()
+
+def _norm_lower(s):
+    return _norm(s).lower()
+
+def _post_bool(v):
+    return str(v).lower() in ("true", "1", "on", "si", "sí")
+
+def _grade_mcq(item, POST):
+    """
+    Espera:
+      - name='item_{id}' (radio) para single
+      - name='item_{id}' (checkboxes -> getlist) para multiple
+    item.datos:
+      {"opciones":[...], "correctas":[0,2], "multiple": bool}
+    """
+    name = f"item_{item.pk}"
+    datos = item.datos or {}
+    correctas = list(datos.get("correctas", []))  # índices 0-based
+    multiple = bool(datos.get("multiple", False))
+
+    if multiple:
+        raw = POST.getlist(name)
+        elegidas = []
+        for r in raw:
+            try:
+                elegidas.append(int(r))
+            except Exception:
+                pass
+        ok = set(elegidas) == set(correctas)
+        payload = {"marcadas": elegidas}
+        inter = len(set(elegidas) & set(correctas))
+        ratio = inter / max(1, len(correctas))
+        return ok, payload, ratio
+    else:
+        val = POST.get(name, "")
+        try:
+            idx = int(val)
+        except Exception:
+            idx = None
+        ok = (idx is not None) and correctas == [idx]
+        payload = {"marcada": idx}
+        ratio = 1.0 if ok else 0.0
+        return ok, payload, ratio
+
+def _grade_tf(item, POST):
+    """
+    name='item_{id}' -> 'true'/'false'
+    item.datos: {"respuesta": true/false}
+    """
+    name = f"item_{item.pk}"
+    esperado = bool((item.datos or {}).get("respuesta"))
+    r = _post_bool(POST.get(name))
+    ok = (r == esperado)
+    payload = {"valor": r}
+    return ok, payload, 1.0 if ok else 0.0
+
+def _grade_fib(item, POST):
+    """
+    name='item_{id}' -> texto
+    item.datos: {"respuestas":[...], "case_insensitive": true}
+    """
+    name = f"item_{item.pk}"
+    datos = item.datos or {}
+    case_ins = bool(datos.get("case_insensitive", True))
+    aceptadas = [str(x) for x in datos.get("respuestas", [])]
+    txt = POST.get(name, "")
+    if case_ins:
+        ok = _norm_lower(txt) in {_norm_lower(x) for x in aceptadas}
+    else:
+        ok = _norm(txt) in {_norm(x) for x in aceptadas}
+    payload = {"texto": txt}
+    return ok, payload, 1.0 if ok else 0.0
+
+def _grade_sort(item, POST):
+    """
+    Espera un input hidden:
+      name='item_{id}_orden' con ids separados por coma (s1,s3,s2)
+      o getlist('item_{id}_orden')
+    item.datos: {"items":[{"id":"s1","texto":"1"},...], "orden_correcto":["s1","s3","s2"]}
+    """
+    datos = item.datos or {}
+    correcto = list(datos.get("orden_correcto", []))
+    name = f"item_{item.pk}_orden"
+    if POST.getlist(name):
+        orden = POST.getlist(name)
+    else:
+        raw = POST.get(name, "")
+        orden = [x for x in raw.split(",") if x] if raw else []
+    ok = orden == correcto
+    payload = {"orden": orden}
+    ratio = 1.0 if ok else 0.0
+    return ok, payload, ratio
+
+def _grade_match(item, POST):
+    """
+    Espera un input hidden:
+      name='item_{id}_pares' con JSON: [{"left":"l1","right":"rA"}, ...]
+    item.datos: {"pares":[{"left":{"id":"l1","texto":...},"right":{"id":"rA","texto":...}}, ...]}
+    Puntaje parcial proporcional a pares correctos.
+    """
+    datos = item.datos or {}
+    esperado = {(p["left"]["id"], p["right"]["id"]) for p in datos.get("pares", [])}
+    name = f"item_{item.pk}_pares"
+    try:
+        raw = POST.get(name, "[]")
+        rlist = json.loads(raw) if isinstance(raw, str) else (raw or [])
+    except Exception:
+        rlist = []
+    rset = {(str(p.get("left")), str(p.get("right"))) for p in rlist if p}
+    inter = len(esperado & rset)
+    total = max(1, len(esperado))
+    ratio = inter / total
+    ok = (inter == len(esperado))
+    payload = {"pares": [{"left": l, "right": r} for (l, r) in rset]}
+    return ok, payload, ratio
+
+def _grade_text(item, POST):
+    """
+    Respuesta abierta -> no autocorrige (puedes ampliar con palabras_clave).
+    item.datos: {"palabras_clave":[...], "long_min": 0}
+    """
+    name = f"item_{item.pk}"
+    txt = POST.get(name, "")
+    payload = {"texto": txt}
+    return False, payload, 0.0
+
+def _grade_interactive(item, POST):
+    """
+    Por cumplimiento: si viene 'completado' truthy -> puntaje completo.
+    """
+    name = f"item_{item.pk}_completado"
+    done = _post_bool(POST.get(name, True))  # default True si no llega nada
+    payload = {"completado": done}
+    return bool(done), payload, 1.0 if done else 0.0
+
+
+# -----------------------
 # Estudiante
 # -----------------------
 @login_required
@@ -298,12 +456,67 @@ def estudiante_mis_actividades(request):
         raise Http404
     estudiante = get_object_or_404(Estudiante, usuario=request.user)
 
-    qs = Actividad.objects.filter(
-        es_publicada=True,
-        asignacionactividad__estudiante=estudiante
-    ).distinct().order_by("-fecha_publicacion", "-id")
+    # Solo PUBLICADAS y ASIGNADAS al estudiante
+    act_qs = (
+        Actividad.objects
+        .filter(es_publicada=True, asignacionactividad__estudiante=estudiante)
+        .distinct()
+        .order_by("-fecha_publicacion", "-id")
+    )
 
-    return render(request, "LevelUp/actividades/estudiante_lista.html", {"actividades": qs})
+    # Conteos de intentos por actividad para este estudiante
+    subs_counts = (
+        Submission.objects
+        .filter(estudiante=estudiante, actividad__in=act_qs)
+        .values("actividad")
+        .annotate(
+            total=Count("id"),
+            abiertos=Count("id", filter=Q(finalizado=False)),
+            finalizados=Count("id", filter=Q(finalizado=True)),
+        )
+    )
+    counts_map = {row["actividad"]: row for row in subs_counts}
+
+    # Overrides de intentos por alumno (AsignacionActividad.intentos_permitidos)
+    overrides = (
+        AsignacionActividad.objects
+        .filter(estudiante=estudiante, actividad__in=act_qs)
+        .values("actividad_id", "intentos_permitidos")
+    )
+    ov_map = {r["actividad_id"]: r["intentos_permitidos"] for r in overrides if r["intentos_permitidos"]}
+
+    now = timezone.now()
+    rows = []
+    for a in act_qs:
+        c = counts_map.get(a.id, {"total": 0, "abiertos": 0, "finalizados": 0})
+        usados = int(c["total"])
+        abiertos = int(c["abiertos"])
+        finalizados = int(c["finalizados"])
+
+        cerrada = bool(a.fecha_cierre and now > a.fecha_cierre)
+        max_for_student = ov_map.get(a.id) or (a.intentos_max or 1)
+
+        # Puede intentar si está abierta y no agotó intentos
+        puede_intentar = (not cerrada) and (usados < max_for_student)
+        tiene_abierto = abiertos > 0
+        tiene_resultados = finalizados > 0
+
+        rows.append({
+            "a": a,
+            "usados": usados,
+            "max": max_for_student,
+            "tiene_abierto": tiene_abierto,
+            "puede_intentar": puede_intentar,
+            "tiene_resultados": tiene_resultados,
+            "cerrada": cerrada,
+        })
+
+    return render(
+        request,
+        "LevelUp/actividades/estudiante_lista.html",
+        {"rows": rows, "actividades": [r["a"] for r in rows]}
+    )
+
 
 @login_required
 def actividad_resolver(request, pk):
@@ -322,72 +535,75 @@ def actividad_resolver(request, pk):
         messages.warning(request, "La actividad está cerrada.")
         return redirect("estudiante_lista")
 
-    sub, _ = Submission.objects.get_or_create(actividad=act, estudiante=estudiante)
+    # ¿Hay un intento sin finalizar?
+    sub_abierta = (Submission.objects
+                   .filter(actividad=act, estudiante=estudiante, finalizado=False)
+                   .order_by("-intento", "-id")
+                   .first())
+
+    # Intentos ya usados (finalizados o en curso)
+    intentos_usados = Submission.objects.filter(actividad=act, estudiante=estudiante).count()
+    intentos_max = act.intentos_max or 1
+
+    # Si no hay sub abierta y no quedan intentos → ver resultados del último
+    if not sub_abierta and intentos_usados >= intentos_max:
+        messages.info(request, "Ya no tienes intentos disponibles para esta actividad.")
+        return redirect("resolver_resultado", pk=act.pk)
+
+    # Si no hay sub abierta → crear nuevo intento (1-indexado)
+    if not sub_abierta:
+        sub_abierta = Submission.objects.create(
+            actividad=act, estudiante=estudiante, intento=intentos_usados + 1
+        )
+    sub = sub_abierta  # alias
+
+    # sub, _ = Submission.objects.get_or_create(actividad=act, estudiante=estudiante)
 
     if request.method == "POST":
         total_puntaje = 0
         total_obtenido = 0
 
-        # Recorremos los ítems ligados a la actividad
         for item in act.items.all():
-            campo = f"item_{item.pk}"
-            valor = request.POST.get(campo)  # radios / text; (para checkboxes usa getlist)
-
-            payload = {}
+            tipo = (item.tipo or "").lower()
             es_correcta = False
             obtenido = 0
-
-            tipo = (item.tipo or "").lower()
+            payload = {}
 
             if tipo == "mcq":
-                # Student template envía 0..5; guardado correcto es 1..6
-                if valor is not None and valor != "":
-                    try:
-                        elegido_idx0 = int(valor)
-                        elegido_idx1 = elegido_idx0 + 1
-                    except ValueError:
-                        elegido_idx1 = None
-                else:
-                    elegido_idx1 = None
-
-                payload = {"marcada": elegido_idx1}
-                correcta = item.datos.get("correcta")  # 1..6
-                es_correcta = (elegido_idx1 is not None and correcta == elegido_idx1)
-                obtenido = item.puntaje if es_correcta else 0
-
+                es_correcta, payload, ratio = _grade_mcq(item, request.POST)
+                obtenido = int(round(ratio * item.puntaje))
             elif tipo == "tf":
-                v = True if str(valor).lower() in ("true", "1", "on", "si", "sí") else False
-                payload = {"valor": v}
-                es_correcta = (bool(item.datos.get("respuesta")) is v)
-                obtenido = item.puntaje if es_correcta else 0
-
+                es_correcta, payload, ratio = _grade_tf(item, request.POST)
+                obtenido = int(round(ratio * item.puntaje))
+            elif tipo == "fib":
+                es_correcta, payload, ratio = _grade_fib(item, request.POST)
+                obtenido = int(round(ratio * item.puntaje))
+            elif tipo == "sort":
+                es_correcta, payload, ratio = _grade_sort(item, request.POST)
+                obtenido = int(round(ratio * item.puntaje))
+            elif tipo == "match":
+                es_correcta, payload, ratio = _grade_match(item, request.POST)
+                obtenido = int(round(ratio * item.puntaje))
             elif tipo == "text":
-                # Abierta: no se autocorrige, queda para revisión del docente
-                txt = (valor or "").strip()
-                payload = {"texto": txt}
-                es_correcta = False
-                obtenido = 0
-
+                es_correcta, payload, ratio = _grade_text(item, request.POST)
+                obtenido = int(round(ratio * item.puntaje))
             elif tipo in ("interactive", "game"):
-                # Por cumplimiento: se otorga puntaje completo al completar
-                payload = {"completado": True, "valor": valor}
-                es_correcta = True
-                obtenido = item.puntaje
-
+                es_correcta, payload, ratio = _grade_interactive(item, request.POST)
+                obtenido = int(round(ratio * item.puntaje))
             else:
-                # image u otros tipos: por defecto sin autocorrección
-                payload = {"valor": valor}
+                val = request.POST.get(f"item_{item.pk}")
+                payload = {"valor": val}
                 es_correcta = False
                 obtenido = 0
 
             ans, _ = Answer.objects.get_or_create(submission=sub, item=item)
             ans.respuesta = payload
-            ans.es_correcta = es_correcta
-            ans.puntaje_obtenido = obtenido
+            ans.es_correcta = bool(es_correcta)
+            ans.puntaje_obtenido = max(0, min(item.puntaje, int(obtenido)))
             ans.save()
 
-            total_puntaje += item.puntaje
-            total_obtenido += obtenido
+            total_puntaje += int(item.puntaje)
+            total_obtenido += int(ans.puntaje_obtenido)
 
         sub.finalizado = True
         sub.enviado_en = timezone.now()
@@ -395,38 +611,165 @@ def actividad_resolver(request, pk):
         sub.xp_obtenido = int((total_obtenido / max(1, total_puntaje)) * (act.xp_total or 0))
         sub.save()
 
-        # (Opcional) actualizar progreso/medallas del estudiante aquí
-
-        messages.success(request, "¡Actividad enviada! Tus puntos y progreso han sido actualizados.")
-        return redirect("estudiante_lista")
+        messages.success(request, "¡Actividad enviada! Tus respuestas fueron registradas.")
+        return redirect("resolver_resultado", pk=act.pk)
 
     return render(request, "LevelUp/actividades/estudiante_resolver.html", {
         "actividad": act,
-        "submission": sub
+        "submission": sub,
+        "intento_actual": sub.intento,
+        "intentos_max": intentos_max,
     })
 
-# views.py
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
-from LevelUp.models import Matricula, GrupoRefuerzoNivelAlumno, GrupoRefuerzoNivel
+def _letra(i):
+    # 0->A, 1->B...
+    try:
+        i = int(i)
+    except Exception:
+        return "?"
+    return chr(65 + i)
 
+@login_required
+def actividad_resultados(request, pk):
+    if not es_estudiante(request.user):
+        raise Http404
+
+    estudiante = get_object_or_404(Estudiante, usuario=request.user)
+    act = get_object_or_404(Actividad, pk=pk)
+
+    # Último intento por defecto; permite ?intento=2 para ver uno específico
+    intento_qs = Submission.objects.filter(
+        actividad=act, estudiante=estudiante, finalizado=True
+    ).order_by("-intento", "-id")
+
+    if not intento_qs.exists():
+        # Si nunca ha enviado, no hay resultados; redirige a resolver si tiene intento abierto
+        if Submission.objects.filter(
+            actividad=act, estudiante=estudiante, finalizado=False
+        ).exists():
+            return redirect("resolver", pk=act.pk)
+        messages.info(request, "Aún no has enviado esta actividad.")
+        return redirect("resolver", pk=act.pk)
+
+    intento_param = request.GET.get("intento")
+    if intento_param and str(intento_param).isdigit():
+        sub = intento_qs.filter(intento=int(intento_param)).first() or intento_qs.first()
+    else:
+        sub = intento_qs.first()
+
+    items_data = []
+    for item in act.items.all():
+        tipo = (item.tipo or "").lower()
+        ans = Answer.objects.filter(submission=sub, item=item).first()
+        respuesta = ans.respuesta if ans else {}
+        correcto = bool(ans.es_correcta) if ans else False
+
+        detalle = {
+            "tipo": tipo,
+            "correcto": correcto,
+            "puntaje": item.puntaje,
+            "obtenido": ans.puntaje_obtenido if ans else 0,
+        }
+
+        if tipo == "mcq":
+            opciones = list((item.datos or {}).get("opciones", []))
+            correctas = list((item.datos or {}).get("correctas", []))  # índices 0-based
+            multiple = bool((item.datos or {}).get("multiple", False))
+            if multiple:
+                marcadas = list(respuesta.get("marcadas") or [])
+            else:
+                marcadas = [respuesta.get("marcada")] if respuesta.get("marcada") is not None else []
+            detalle.update({
+                "opciones": opciones,
+                "correctas": correctas,
+                "marcadas": marcadas,
+                "multiple": multiple,
+                "correctas_letras": ", ".join(_letra(i) for i in correctas),
+                "marcadas_letras": ", ".join(_letra(i) for i in marcadas if i is not None),
+            })
+
+        elif tipo == "tf":
+            esperado = bool((item.datos or {}).get("respuesta"))
+            valor = bool(respuesta.get("valor"))
+            detalle.update({"esperado": esperado, "valor": valor})
+
+        elif tipo == "fib":
+            aceptadas = list((item.datos or {}).get("respuestas", []))
+            texto = (respuesta.get("texto") or "")
+            detalle.update({"aceptadas": aceptadas, "texto": texto})
+
+        elif tipo == "sort":
+            orden_ok = list((item.datos or {}).get("orden_correcto", []))
+            items_map = {x["id"]: x.get("texto") for x in (item.datos or {}).get("items", [])}
+            orden_alum = (respuesta.get("orden") or [])
+            detalle.update({
+                "orden_correcto": [items_map.get(i, i) for i in orden_ok],
+                "orden_alumno": [items_map.get(i, i) for i in orden_alum],
+            })
+
+        elif tipo == "match":
+            pares = (item.datos or {}).get("pares", [])
+            esperado_ids = [(p["left"]["id"], p["right"]["id"]) for p in pares]
+            left_map = {p["left"]["id"]: p["left"]["texto"] for p in pares}
+            right_map = {p["right"]["id"]: p["right"]["texto"] for p in pares}
+            alumno_ids = [(p.get("left"), p.get("right")) for p in (respuesta.get("pares") or [])]
+            detalle.update({
+                "pares_esperados": [(left_map.get(l, l), right_map.get(r, r)) for (l, r) in esperado_ids],
+                "pares_alumno": [(left_map.get(l, l), right_map.get(r, r)) for (l, r) in alumno_ids],
+            })
+
+        elif tipo == "text":
+            detalle.update({
+                "texto": (respuesta.get("texto") or ""),
+                "palabras_clave": (item.datos or {}).get("palabras_clave", []),
+                "long_min": (item.datos or {}).get("long_min", 0),
+            })
+
+        elif tipo in ("interactive", "game"):
+            detalle.update({"completado": bool(respuesta.get("completado", True))})
+
+        else:
+            detalle.update({"respuesta": respuesta})
+
+        items_data.append({"item": item, "detalle": detalle})
+
+    # Intentos usados / máximo y lógica de reintento SOLO si no está cerrada
+    intentos_usados = Submission.objects.filter(actividad=act, estudiante=estudiante).count()
+    intentos_max = act.intentos_max
+    now = timezone.now()
+    puede_reintentar = (
+        act.es_publicada
+        and (not act.fecha_cierre or now <= act.fecha_cierre)
+        and intentos_usados < intentos_max
+    )
+
+    return render(request, "LevelUp/actividades/estudiante_resultados.html", {
+        "actividad": act,
+        "sub": sub,
+        "items_data": items_data,
+        "intentos_usados": intentos_usados,
+        "intentos_max": intentos_max,
+        "puede_reintentar": puede_reintentar, 
+    })
+
+
+
+# -------------------------------------------------------------------
+# Portal estudiante (info de curso y docentes de refuerzo)
+# -------------------------------------------------------------------
 def _nombre_docente(obj):
     """
     Devuelve un nombre “bonito” tanto si obj es Usuario como si es Docente (con .usuario).
     """
     if not obj:
         return None
-    # Caso Docente con OneToOne a Usuario
     usuario = getattr(obj, "usuario", None)
     if usuario:
         return usuario.get_full_name() or usuario.username
-    # Caso Usuario directo
     get_full = getattr(obj, "get_full_name", None)
     if callable(get_full):
         return get_full() or getattr(obj, "username", None)
     return str(obj)
-
-
 
 @login_required
 def portal_estudiante(request):
@@ -442,7 +785,12 @@ def portal_estudiante(request):
     curso_str = None
     if matricula and matricula.curso:
         c = matricula.curso
-        curso_str = f'{c.nivel}° Básico {c.letra}'
+        # Si Curso.nivel es choice, usa display; si es int, muestra número:
+        try:
+            nivel_display = c.get_nivel_display()
+        except Exception:
+            nivel_display = f"{c.nivel}° Básico"
+        curso_str = f'{nivel_display} {c.letra}'
 
     docente_matematicas = None
     docente_ingles = None
@@ -454,7 +802,6 @@ def portal_estudiante(request):
                .first())
     if gr_alum and gr_alum.grupo:
         g = gr_alum.grupo
-        # Acepta ambos nombres de campo: profesor_* o docente_*
         dm = getattr(g, "docente_matematicas", None) or getattr(g, "profesor_matematicas", None)
         di = getattr(g, "docente_ingles", None) or getattr(g, "profesor_ingles", None)
         docente_matematicas = _nombre_docente(dm)
@@ -462,9 +809,7 @@ def portal_estudiante(request):
 
     # 2) Si no hay grupo del alumno, usa el grupo del nivel del curso (si existe)
     if (not docente_matematicas or not docente_ingles) and matricula and matricula.curso:
-        g = (GrupoRefuerzoNivel.objects
-             .filter(nivel=matricula.curso.nivel)
-             .first())
+        g = GrupoRefuerzoNivel.objects.filter(nivel=matricula.curso.nivel).first()
         if g:
             dm = getattr(g, "docente_matematicas", None) or getattr(g, "profesor_matematicas", None)
             di = getattr(g, "docente_ingles", None) or getattr(g, "profesor_ingles", None)
@@ -474,7 +819,6 @@ def portal_estudiante(request):
                 docente_ingles = _nombre_docente(di)
 
     context = {
-        # …tus otras variables…
         "curso": curso_str,
         "docente_matematicas": docente_matematicas,
         "docente_ingles": docente_ingles,

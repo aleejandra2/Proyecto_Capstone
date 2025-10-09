@@ -5,7 +5,6 @@ from .validators import validar_formato_rut
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
 
 
 USER = settings.AUTH_USER_MODEL
@@ -23,7 +22,7 @@ NIVELES = (
 # Utilidades JSONField (compat)
 # --------------------------------------------------------------------
 try:
-    from django.db.models import JSONField  # Django 3.1+
+    from django.db.models import JSONField 
 except Exception:  # pragma: no cover
     from django.contrib.postgres.fields import JSONField  # type: ignore
 
@@ -155,12 +154,19 @@ class Actividad(models.Model):
     docente = models.ForeignKey(
         Docente, on_delete=models.SET_NULL, null=True, blank=True, related_name="actividades_creadas"
     )
-
+    
     # Publicación/cierre + XP total que reparte la actividad
     es_publicada = models.BooleanField(default=False)
     fecha_publicacion = models.DateTimeField(null=True, blank=True)
     fecha_cierre = models.DateTimeField(null=True, blank=True)
     xp_total = models.PositiveIntegerField(default=100, help_text="XP base proporcional al puntaje obtenido")
+
+    # N° de Intentos
+    intentos_max = models.PositiveSmallIntegerField(
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(20)],
+        help_text="Número máximo de intentos por estudiante (1–20)."
+    )
 
     estudiantes = models.ManyToManyField(
         'Estudiante', through='AsignacionActividad', related_name='actividades', blank=True
@@ -188,6 +194,11 @@ class AsignacionActividad(models.Model):
     fecha_asignacion = models.DateField(auto_now_add=True)
     fecha_completada = models.DateField(null=True, blank=True)
 
+    intentos_permitidos = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(20)],
+        help_text="Si se define, reemplaza los intentos máximos de la actividad para este estudiante."
+    )
     class Meta:
         unique_together = ('estudiante', 'actividad')
 
@@ -207,13 +218,15 @@ class ReporteProgreso(models.Model):
 
 
 # ---------------------------------------------------------
-# Estructura de Ítems y Respuestas
+# Ítems y Respuestas (interactivo por JSON en 'datos')
 # ---------------------------------------------------------
-
 class ItemActividad(models.Model):
     class ItemType(models.TextChoices):
         MCQ = "mcq", "Opción múltiple"
         TRUE_FALSE = "tf", "Verdadero/Falso"
+        FILL_BLANK = "fib", "Completar espacios"
+        SORT = "sort", "Ordenar"
+        MATCH = "match", "Emparejar"
         TEXT = "text", "Respuesta de texto"
         IMAGE = "image", "Pregunta con imagen"
         INTERACTIVE = "interactive", "Interactiva (embed/url)"
@@ -225,13 +238,18 @@ class ItemActividad(models.Model):
     imagen = models.ImageField(upload_to="actividades/items", null=True, blank=True)
 
     # Estructura por tipo (ejemplos):
-    # mcq: {"opciones": ["A","B","C"], "correctas": [0,2]}
+    # mcq: {"opciones": ["A","B","C"], "correctas": [0,2], "multiple": true}
     # tf: {"respuesta": true}
+    # fib: {"items":[{"id":"f1","respuestas":["4","cuatro"]}]}
+    # sort: {"items":[{"id":"s1","texto":"1"},...], "orden_correcto":["s1","s3","s2"]}
+    # match: {"pares":[{"left":{"id":"l1","texto":"🐶"},"right":{"id":"rA","texto":"perro"}}, ...]}
     # text: {"palabras_clave": ["agua","ciclo"], "long_min": 0}
     # interactive/game: {"url": "https://...", "proveedor": "itch.io"}
     datos = JSONField(default=dict, blank=True)
 
-    puntaje = models.PositiveIntegerField(default=10, validators=[MinValueValidator(1), MaxValueValidator(1000)])
+    puntaje = models.PositiveIntegerField(
+        default=10, validators=[MinValueValidator(1), MaxValueValidator(1000)]
+    )
     orden = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -247,6 +265,7 @@ class Submission(models.Model):
     """
     actividad = models.ForeignKey(Actividad, on_delete=models.CASCADE, related_name="submissions")
     estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE, related_name="submissions")
+    intento = models.PositiveIntegerField(default=1)
     iniciado_en = models.DateTimeField(auto_now_add=True)
     enviado_en = models.DateTimeField(null=True, blank=True)
     finalizado = models.BooleanField(default=False)
@@ -256,7 +275,8 @@ class Submission(models.Model):
     calificacion = models.FloatField(null=True, blank=True)
 
     class Meta:
-        unique_together = ("actividad", "estudiante")
+        unique_together = ("actividad", "estudiante", "intento")
+        ordering = ["-intento", "-id"]
 
     def __str__(self):
         return f"{self.estudiante.usuario.username} → {self.actividad.titulo}"
@@ -270,10 +290,12 @@ class Answer(models.Model):
     item = models.ForeignKey(ItemActividad, on_delete=models.CASCADE)
 
     # Respuesta genérica por tipo:
-    # mcq: {"marcadas": [0,2]}
+    # mcq: {"marcadas":[0,2]}
     # tf: {"valor": true}
+    # fib: {"f1":"4", "f2":"respuesta"}
+    # sort: {"orden":["s1","s3","s2"]}
+    # match: {"pares":[{"left":"l1","right":"rA"}]}
     # text: {"texto": "..."}
-    # image: {"texto": "..."} (si se solicita)
     # interactive/game: {"completado": true, "score": 800}
     respuesta = JSONField(default=dict, blank=True)
 

@@ -1,4 +1,5 @@
 {% extends "LevelUp/base.html" %}
+{% load static %}
 {% block title %}{{ actividad.titulo }}{% endblock %}
 {% block content %}
 <div class="container py-3">
@@ -12,25 +13,36 @@
     <h1 class="h4 mb-1">{{ actividad.titulo }}</h1>
     <p class="text-muted">{{ actividad.descripcion }}</p>
 
-    <form method="post" enctype="multipart/form-data" class="card p-3">
+    <form method="post" enctype="multipart/form-data" class="card p-3" id="resolver-form" novalidate>
         {% csrf_token %}
 
         {% for item in actividad.items.all %}
-        <div class="mb-4">
+        <div class="mb-4" data-item-id="{{ item.pk }}" data-item-type="{{ item.tipo|lower }}">
             <h2 class="h6">{{ forloop.counter }}. {{ item.enunciado }}</h2>
             {% if item.imagen %}
             <img src="{{ item.imagen.url }}" class="img-fluid mb-2" alt="Imagen del ítem">
             {% endif %}
 
             {% if item.tipo == 'mcq' %}
-            {# Opción múltiple: datos.opciones y datos.correctas (índices) #}
+            {% if item.datos.multiple %}
+            {# múltiples: checkboxes #}
             {% for op in item.datos.opciones %}
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" name="item_{{ item.pk }}" value="{{ forloop.counter0 }}"
-                    id="op{{ item.pk }}_{{ forloop.counter0 }}">
-                <label class="form-check-label" for="op{{ item.pk }}_{{ forloop.counter0 }}">{{ op }}</label>
+                    id="mcq_{{ item.pk }}_{{ forloop.counter0 }}">
+                <label class="form-check-label" for="mcq_{{ item.pk }}_{{ forloop.counter0 }}">{{ op }}</label>
             </div>
             {% endfor %}
+            {% else %}
+            {# una sola: radios #}
+            {% for op in item.datos.opciones %}
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="item_{{ item.pk }}" value="{{ forloop.counter0 }}"
+                    id="mcq_{{ item.pk }}_{{ forloop.counter0 }}">
+                <label class="form-check-label" for="mcq_{{ item.pk }}_{{ forloop.counter0 }}">{{ op }}</label>
+            </div>
+            {% endfor %}
+            {% endif %}
 
             {% elif item.tipo == 'tf' %}
             <div class="form-check">
@@ -44,6 +56,35 @@
                 <label class="form-check-label" for="tf_f_{{ item.pk }}">Falso</label>
             </div>
 
+            {% elif item.tipo == 'fib' %}
+            <input type="text" name="item_{{ item.pk }}" class="form-control" placeholder="Escribe tu respuesta">
+
+            {% elif item.tipo == 'sort' %}
+            <ul class="list-group dnd-sort" id="sort_list_{{ item.pk }}">
+                {% for it in item.datos.items %}
+                <li class="list-group-item" draggable="true" data-id="{{ it.id }}">{{ it.texto }}</li>
+                {% endfor %}
+            </ul>
+            <input type="hidden" name="item_{{ item.pk }}_orden" id="sort_hidden_{{ item.pk }}">
+
+            {% elif item.tipo == 'match' %}
+            <div class="row g-3 align-items-start">
+                <div class="col-md-6">
+                    {% for p in item.datos.pares %}
+                    <div class="p-3 border rounded mb-2">
+                        <div class="fw-bold mb-2">{{ p.left.texto }}</div>
+                        <select class="form-select match-select" data-left="{{ p.left.id }}">
+                            <option value="">— Elegir —</option>
+                            {% for r in item.datos.pares %}
+                            <option value="{{ r.right.id }}">{{ r.right.texto }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <input type="hidden" name="item_{{ item.pk }}_pares" id="match_hidden_{{ item.pk }}">
+
             {% elif item.tipo == 'text' %}
             <textarea name="item_{{ item.pk }}" class="form-control" rows="3"
                 placeholder="Escribe tu respuesta"></textarea>
@@ -56,7 +97,7 @@
             {% else %}
             <div class="alert alert-warning">No hay URL configurada para este contenido.</div>
             {% endif %}
-            <input type="hidden" name="item_{{ item.pk }}" value="done">
+            <input type="hidden" name="item_{{ item.pk }}_completado" value="true">
             <small class="text-muted">Interactúa con el contenido y luego envía.</small>
 
             {% elif item.tipo == 'image' %}
@@ -79,4 +120,8 @@
         </div>
     </form>
 </div>
+
+<!-- JS -->
+<script src="{% static 'LevelUp/js/estudiante_resolver.js' %}"></script>
+
 {% endblock %}

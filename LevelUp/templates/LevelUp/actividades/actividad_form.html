@@ -6,18 +6,18 @@
 <div class="container py-3">
 
   {% if messages %}
-    {% for message in messages %}
-      <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
-    {% endfor %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
+  {% endfor %}
   {% endif %}
 
   <h1 class="h4 mb-3">{% if editar %}Editar{% else %}Nueva{% endif %} actividad</h1>
 
-  <form method="post" enctype="multipart/form-data" class="card p-3">
+  <form method="post" enctype="multipart/form-data" class="card p-3" id="actividad-form">
     {% csrf_token %}
 
     {% if form.non_field_errors %}
-      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
     {% endif %}
 
     <!-- Datos de la Actividad -->
@@ -48,6 +48,10 @@
         </div>
 
         <div class="row g-3 mt-1">
+          <div class="col-md-4">
+            <label class="form-label" for="{{ form.intentos_max.id_for_label }}">Intentos máx.</label>
+            {{ form.intentos_max }} {{ form.intentos_max.errors }}
+          </div>
           <div class="col-md-6">
             <label class="form-label" for="{{ form.recurso.id_for_label }}">Recurso</label>
             {{ form.recurso }} {{ form.recurso.errors }}
@@ -74,7 +78,6 @@
       </div>
 
       <div class="col-lg-4">
-        <!-- Ayuda dinámica -->
         <div class="border rounded p-3 bg-light" id="ayuda-tipo-actividad">
           <div class="d-flex align-items-center gap-2 mb-2">
             <span class="badge text-bg-primary">Sugerencias</span>
@@ -102,7 +105,12 @@
           <ul class="dropdown-menu">
             <li><a class="dropdown-item add-item-kind" href="#" data-kind="mcq">Opción múltiple</a></li>
             <li><a class="dropdown-item add-item-kind" href="#" data-kind="tf">Verdadero / Falso</a></li>
+            <li><a class="dropdown-item add-item-kind" href="#" data-kind="fib">Completar (FIB)</a></li>
+            <li><a class="dropdown-item add-item-kind" href="#" data-kind="sort">Ordenar</a></li>
+            <li><a class="dropdown-item add-item-kind" href="#" data-kind="match">Emparejar</a></li>
             <li><a class="dropdown-item add-item-kind" href="#" data-kind="text">Respuesta abierta</a></li>
+            <li><a class="dropdown-item add-item-kind" href="#" data-kind="interactive">Interactiva (URL)</a></li>
+            <li><a class="dropdown-item add-item-kind" href="#" data-kind="game">Juego (URL)</a></li>
           </ul>
         </div>
         <button type="button" id="btn-add-item" class="btn btn-sm btn-outline-primary">+ Agregar ítem</button>
@@ -113,110 +121,148 @@
 
     <div id="items-container">
       {% for f in formset %}
-        {% if f.non_field_errors %}
-          <div class="alert alert-danger">{{ f.non_field_errors }}</div>
-        {% endif %}
+      {% if f.non_field_errors %}
+      <div class="alert alert-danger">{{ f.non_field_errors }}</div>
+      {% endif %}
 
-        <div class="card mb-3 item-form" data-form-index="{{ forloop.counter0 }}">
-          <div class="card-body">
-            {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+      <div class="card mb-3 item-form" data-form-index="{{ forloop.counter0 }}">
+        <div class="card-body">
+          {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
 
-            <div class="row g-3">
-              <div class="col-md-4">
-                <label class="form-label" for="{{ f.tipo.id_for_label }}">Tipo de ítem</label>
-                {{ f.tipo }} {{ f.tipo.errors }}
-              </div>
-              <div class="col-md-2">
-                <label class="form-label" for="{{ f.puntaje.id_for_label }}">Puntaje</label>
-                {{ f.puntaje }} {{ f.puntaje.errors }}
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" for="{{ f.imagen.id_for_label }}">Imagen (opcional)</label>
-                {{ f.imagen }} {{ f.imagen.errors }}
-              </div>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label" for="{{ f.tipo.id_for_label }}">Tipo de ítem</label>
+              {{ f.tipo }} {{ f.tipo.errors }}
             </div>
-
-            <div class="mt-3">
-              <label class="form-label" for="{{ f.enunciado.id_for_label }}">Pregunta</label>
-              {{ f.enunciado }} {{ f.enunciado.errors }}
+            <div class="col-md-2">
+              <label class="form-label" for="{{ f.puntaje.id_for_label }}">Puntaje</label>
+              {{ f.puntaje }} {{ f.puntaje.errors }}
             </div>
-
-            <!-- MCQ (oculto por defecto, lo muestra JS) -->
-            <div class="item-mcq-block mt-3 d-none">
-              <div class="mb-2"><span class="badge text-bg-info">Opción múltiple</span></div>
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <label class="form-label" for="{{ f.alt_1.id_for_label }}">Alternativa A</label>
-                  {{ f.alt_1 }} {{ f.alt_1.errors }}
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label" for="{{ f.alt_2.id_for_label }}">Alternativa B</label>
-                  {{ f.alt_2 }} {{ f.alt_2.errors }}
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label" for="{{ f.alt_3.id_for_label }}">Alternativa C</label>
-                  {{ f.alt_3 }} {{ f.alt_3.errors }}
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label" for="{{ f.alt_4.id_for_label }}">Alternativa D</label>
-                  {{ f.alt_4 }} {{ f.alt_4.errors }}
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label" for="{{ f.alt_5.id_for_label }}">Alternativa E</label>
-                  {{ f.alt_5 }} {{ f.alt_5.errors }}
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label" for="{{ f.alt_6.id_for_label }}">Alternativa F</label>
-                  {{ f.alt_6 }} {{ f.alt_6.errors }}
-                </div>
-              </div>
-
-            <div class="mt-2">
-                <div class="form-label">¿Cuál es la correcta?</div>
-                <div class="d-flex flex-wrap gap-3">
-                    {% for val, lbl in f.correcta.field.choices %}
-                    {% with rid=f.correcta.id_for_label|add:"_"|add:forloop.counter0 %}
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="{{ f.correcta.html_name }}" id="{{ rid }}"
-                            value="{{ val }}" 
-                            {% if f.correcta.value == val %}checked{% endif %}>
-                        <label class="form-check-label" for="{{ rid }}">{{ lbl }}</label>
-                    </div>
-                    {% endwith %}
-                    {% endfor %}
-                </div>
-                {{ f.correcta.errors }}
-            </div>
-
-            </div>
-
-            <!-- True/False (oculto por defecto) -->
-            <div class="item-tf-block mt-3 d-none">
-              <div class="mb-2"><span class="badge text-bg-info">Verdadero / Falso</span></div>
-              <div class="d-flex flex-wrap gap-3">
-                {% for radio in f.tf_respuesta %}
-                  <div class="form-check">
-                    {{ radio.tag }}
-                    <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
-                  </div>
-                {% endfor %}
-              </div>
-              {{ f.tf_respuesta.errors }}
-            </div>
-
-            <div class="d-flex align-items-center gap-2 mt-3">
-              <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item">Quitar</button>
-              {% if f.DELETE %}
-                <label class="form-check small text-muted m-0">
-                  {{ f.DELETE }} Marcar para eliminar
-                </label>
-              {% endif %}
-              {% if f.instance.pk %}
-                <small class="text-muted ms-auto">ID ítem: {{ f.instance.pk }}</small>
-              {% endif %}
+            <div class="col-md-6">
+              <label class="form-label" for="{{ f.imagen.id_for_label }}">Imagen (opcional)</label>
+              {{ f.imagen }} {{ f.imagen.errors }}
             </div>
           </div>
+
+          <div class="mt-3">
+            <label class="form-label" for="{{ f.enunciado.id_for_label }}">Enunciado / Pregunta</label>
+            {{ f.enunciado }} {{ f.enunciado.errors }}
+          </div>
+
+          <!-- MCQ -->
+          <div class="item-block item-mcq mt-3 d-none">
+            <div class="mb-2 d-flex align-items-center gap-2">
+              <span class="badge text-bg-info">Opción múltiple</span>
+              <label class="form-check ms-2">
+                {{ f.allow_multiple }} Permitir múltiples correctas
+              </label>
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="{{ f.alt_1.id_for_label }}">Alternativa A</label>
+                {{ f.alt_1 }} {{ f.alt_1.errors }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ f.alt_2.id_for_label }}">Alternativa B</label>
+                {{ f.alt_2 }} {{ f.alt_2.errors }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ f.alt_3.id_for_label }}">Alternativa C</label>
+                {{ f.alt_3 }} {{ f.alt_3.errors }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ f.alt_4.id_for_label }}">Alternativa D</label>
+                {{ f.alt_4 }} {{ f.alt_4.errors }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ f.alt_5.id_for_label }}">Alternativa E</label>
+                {{ f.alt_5 }} {{ f.alt_5.errors }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ f.alt_6.id_for_label }}">Alternativa F</label>
+                {{ f.alt_6 }} {{ f.alt_6.errors }}
+              </div>
+            </div>
+
+            <div class="mt-2 mcq-single">
+              <div class="form-label">¿Cuál es la correcta?</div>
+              {{ f.correcta }} {{ f.correcta.errors }}
+            </div>
+
+            <div class="mt-2 mcq-multi d-none">
+              <div class="form-label">Marca las correctas</div>
+              {{ f.correctas_multi }} {{ f.correctas_multi.errors }}
+            </div>
+          </div>
+
+          <!-- True/False -->
+          <div class="item-block item-tf mt-3 d-none">
+            <div class="mb-2"><span class="badge text-bg-info">Verdadero / Falso</span></div>
+            {{ f.tf_respuesta }} {{ f.tf_respuesta.errors }}
+          </div>
+
+          <!-- FIB -->
+          <div class="item-block item-fib mt-3 d-none">
+            <div class="mb-2"><span class="badge text-bg-info">Completar (FIB)</span></div>
+            <label class="form-label">Respuestas aceptadas (una por línea)</label>
+            {{ f.fib_respuestas }} {{ f.fib_respuestas.errors }}
+            <div class="form-check mt-2">{{ f.fib_case_insensitive }} <label class="form-check-label">Ignorar
+                mayúsculas/minúsculas</label></div>
+          </div>
+
+          <!-- SORT -->
+          <div class="item-block item-sort mt-3 d-none">
+            <div class="mb-2"><span class="badge text-bg-info">Ordenar</span></div>
+            <label class="form-label">Elementos a ordenar (uno por línea, en el orden correcto)</label>
+            {{ f.sort_items }} {{ f.sort_items.errors }}
+          </div>
+
+          <!-- MATCH -->
+          <div class="item-block item-match mt-3 d-none">
+            <div class="mb-2"><span class="badge text-bg-info">Emparejar</span></div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Columna izquierda (uno por línea)</label>
+                {{ f.match_left }} {{ f.match_left.errors }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Columna derecha (uno por línea)</label>
+                {{ f.match_right }} {{ f.match_right.errors }}
+              </div>
+            </div>
+          </div>
+
+          <!-- TEXT -->
+          <div class="item-block item-text mt-3 d-none">
+            <div class="mb-2"><span class="badge text-bg-info">Respuesta abierta</span></div>
+            <label class="form-label">Palabras clave (opcional)</label>
+            {{ f.text_keywords }} {{ f.text_keywords.errors }}
+            <label class="form-label mt-2">Largo mínimo</label>
+            {{ f.text_minlen }} {{ f.text_minlen.errors }}
+          </div>
+
+          <!-- INTERACTIVE / GAME -->
+          <div class="item-block item-ext mt-3 d-none">
+            <div class="mb-2"><span class="badge text-bg-info">Interactiva / Juego (URL)</span></div>
+            <label class="form-label">URL del recurso (embed)</label>
+            {{ f.ext_url }} {{ f.ext_url.errors }}
+            <label class="form-label mt-2">Proveedor (ej: youtube, genially, itch.io)</label>
+            {{ f.ext_provider }} {{ f.ext_provider.errors }}
+          </div>
+
+          <div class="d-flex align-items-center gap-2 mt-3">
+            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item">Quitar</button>
+            {% if f.DELETE %}
+            <label class="form-check small text-muted m-0">
+              {{ f.DELETE }} Marcar para eliminar
+            </label>
+            {% endif %}
+            {% if f.instance.pk %}
+            <small class="text-muted ms-auto">ID ítem: {{ f.instance.pk }}</small>
+            {% endif %}
+          </div>
         </div>
+      </div>
       {% endfor %}
     </div>
 
@@ -230,92 +276,98 @@
           <div class="row g-3">
             <div class="col-md-4">
               <label class="form-label" for="{{ ef.tipo.id_for_label }}">Tipo de ítem</label>
-              {{ ef.tipo }} {{ ef.tipo.errors }}
+              {{ ef.tipo }}
             </div>
             <div class="col-md-2">
               <label class="form-label" for="{{ ef.puntaje.id_for_label }}">Puntaje</label>
-              {{ ef.puntaje }} {{ ef.puntaje.errors }}
+              {{ ef.puntaje }}
             </div>
             <div class="col-md-6">
               <label class="form-label" for="{{ ef.imagen.id_for_label }}">Imagen (opcional)</label>
-              {{ ef.imagen }} {{ ef.imagen.errors }}
+              {{ ef.imagen }}
             </div>
           </div>
 
           <div class="mt-3">
-            <label class="form-label" for="{{ ef.enunciado.id_for_label }}">Pregunta</label>
-            {{ ef.enunciado }} {{ ef.enunciado.errors }}
+            <label class="form-label" for="{{ ef.enunciado.id_for_label }}">Enunciado / Pregunta</label>
+            {{ ef.enunciado }}
           </div>
 
-          <!-- MCQ (oculto por defecto) -->
-          <div class="item-mcq-block mt-3 d-none">
-            <div class="mb-2"><span class="badge text-bg-info">Opción múltiple</span></div>
+          <!-- MCQ -->
+          <div class="item-block item-mcq mt-3 d-none">
+            <div class="mb-2 d-flex align-items-center gap-2">
+              <span class="badge text-bg-info">Opción múltiple</span>
+              <label class="form-check ms-2">{{ ef.allow_multiple }} Permitir múltiples correctas</label>
+            </div>
             <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label" for="{{ ef.alt_1.id_for_label }}">Alternativa A</label>
-                {{ ef.alt_1 }} {{ ef.alt_1.errors }}
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" for="{{ ef.alt_2.id_for_label }}">Alternativa B</label>
-                {{ ef.alt_2 }} {{ ef.alt_2.errors }}
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" for="{{ ef.alt_3.id_for_label }}">Alternativa C</label>
-                {{ ef.alt_3 }} {{ ef.alt_3.errors }}
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" for="{{ ef.alt_4.id_for_label }}">Alternativa D</label>
-                {{ ef.alt_4 }} {{ ef.alt_4.errors }}
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" for="{{ ef.alt_5.id_for_label }}">Alternativa E</label>
-                {{ ef.alt_5 }} {{ ef.alt_5.errors }}
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" for="{{ ef.alt_6.id_for_label }}">Alternativa F</label>
-                {{ ef.alt_6 }} {{ ef.alt_6.errors }}
-              </div>
+              <div class="col-md-6"><label class="form-label">Alternativa A</label>{{ ef.alt_1 }}</div>
+              <div class="col-md-6"><label class="form-label">Alternativa B</label>{{ ef.alt_2 }}</div>
+              <div class="col-md-6"><label class="form-label">Alternativa C</label>{{ ef.alt_3 }}</div>
+              <div class="col-md-6"><label class="form-label">Alternativa D</label>{{ ef.alt_4 }}</div>
+              <div class="col-md-6"><label class="form-label">Alternativa E</label>{{ ef.alt_5 }}</div>
+              <div class="col-md-6"><label class="form-label">Alternativa F</label>{{ ef.alt_6 }}</div>
             </div>
-            <div class="mt-2">
-                <div class="form-label">¿Cuál es la correcta?</div>
-                <div class="d-flex flex-wrap gap-3">
-                    {% with ef=formset.empty_form %}
-                    {% for val, lbl in ef.correcta.field.choices %}
-                    {% with rid=ef.correcta.id_for_label|add:"_"|add:forloop.counter0 %}
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="{{ ef.correcta.html_name }}" id="{{ rid }}"
-                            value="{{ val }}">
-                        <label class="form-check-label" for="{{ rid }}">{{ lbl }}</label>
-                    </div>
-                    {% endwith %}
-                    {% endfor %}
-                    {% endwith %}
-                </div>
-                {{ formset.empty_form.correcta.errors }}
+            <div class="mt-2 mcq-single">
+              <div class="form-label">¿Cuál es la correcta?</div>
+              {{ ef.correcta }}
             </div>
+            <div class="mt-2 mcq-multi d-none">
+              <div class="form-label">Marca las correctas</div>
+              {{ ef.correctas_multi }}
+            </div>
+          </div>
 
-
-
-          <!-- V/F (oculto por defecto) -->
-          <div class="item-tf-block mt-3 d-none">
+          <!-- TF -->
+          <div class="item-block item-tf mt-3 d-none">
             <div class="mb-2"><span class="badge text-bg-info">Verdadero / Falso</span></div>
-            <div class="d-flex flex-wrap gap-3">
-              {% for radio in ef.tf_respuesta %}
-                <div class="form-check">
-                  {{ radio.tag }}
-                  <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
-                </div>
-              {% endfor %}
+            {{ ef.tf_respuesta }}
+          </div>
+
+          <!-- FIB -->
+          <div class="item-block item-fib mt-3 d-none">
+            <div class="mb-2"><span class="badge text-bg-info">Completar (FIB)</span></div>
+            <label class="form-label">Respuestas aceptadas (una por línea)</label>
+            {{ ef.fib_respuestas }}
+            <div class="form-check mt-2">{{ ef.fib_case_insensitive }} <label class="form-check-label">Ignorar
+                mayúsculas/minúsculas</label></div>
+          </div>
+
+          <!-- SORT -->
+          <div class="item-block item-sort mt-3 d-none">
+            <div class="mb-2"><span class="badge text-bg-info">Ordenar</span></div>
+            <label class="form-label">Elementos a ordenar (uno por línea, en el orden correcto)</label>
+            {{ ef.sort_items }}
+          </div>
+
+          <!-- MATCH -->
+          <div class="item-block item-match mt-3 d-none">
+            <div class="mb-2"><span class="badge text-bg-info">Emparejar</span></div>
+            <div class="row g-3">
+              <div class="col-md-6"><label class="form-label">Columna izquierda</label>{{ ef.match_left }}</div>
+              <div class="col-md-6"><label class="form-label">Columna derecha</label>{{ ef.match_right }}</div>
             </div>
-            {{ ef.tf_respuesta.errors }}
+          </div>
+
+          <!-- TEXT -->
+          <div class="item-block item-text mt-3 d-none">
+            <div class="mb-2"><span class="badge text-bg-info">Respuesta abierta</span></div>
+            <label class="form-label">Palabras clave (opcional)</label>{{ ef.text_keywords }}
+            <label class="form-label mt-2">Largo mínimo</label>{{ ef.text_minlen }}
+          </div>
+
+          <!-- INTERACTIVE / GAME -->
+          <div class="item-block item-ext mt-3 d-none">
+            <div class="mb-2"><span class="badge text-bg-info">Interactiva / Juego (URL)</span></div>
+            <label class="form-label">URL del recurso (embed)</label>{{ ef.ext_url }}
+            <label class="form-label mt-2">Proveedor</label>{{ ef.ext_provider }}
           </div>
 
           <div class="d-flex align-items-center gap-2 mt-3">
             <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item">Quitar</button>
             {% if ef.DELETE %}
-              <label class="form-check small text-muted m-0">
-                {{ ef.DELETE }} Marcar para eliminar
-              </label>
+            <label class="form-check small text-muted m-0">
+              {{ ef.DELETE }} Marcar para eliminar
+            </label>
             {% endif %}
           </div>
         </div>
@@ -333,4 +385,5 @@
 <!-- JS -->
 <script src="{% static 'LevelUp/js/actividad_formset.js' %}"></script>
 <script src="{% static 'LevelUp/js/actividad_dynamic.js' %}"></script>
+
 {% endblock %}

@@ -21,14 +21,18 @@ urlpatterns = [
     path("perfil/editar/", views.perfil_editar_view, name="perfil_editar"),
     path("perfil/cambiar-password/", views.cambiar_password_view, name="cambiar_password"),
 
-    # Docente
+    # Docente (crear/editar actividades con formset)
     path("actividades/docente/", views.actividades_docente_lista, name="docente_lista"),
     path("actividades/docente/nueva/", views.actividad_crear, name="crear"),
     path("actividades/docente/<int:pk>/editar/", views.actividad_editar, name="editar"),
 
-    # Estudiante
+    # Estudiante (resolver con autocorrección)
     path("actividades/estudiante/", views.estudiante_mis_actividades, name="estudiante_lista"),
     path("actividades/estudiante/<int:pk>/resolver/", views.actividad_resolver, name="resolver"),
+    path("actividades/estudiante/<int:pk>/resultado/", views.actividad_resultados, name="resolver_resultado"),
+
+    # Portal de estudiante con asignaciones y docentes de refuerzo
+    path("portal/estudiante/", views.portal_estudiante, name="portal_estudiante"),
 
     # Recuperar / Restablecer contraseña
     path(
