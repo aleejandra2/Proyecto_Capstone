@@ -38,9 +38,15 @@ class Usuario(AbstractUser):
     Hereda: username, first_name, last_name, email, password, is_staff, etc.
     """
     class Rol(models.TextChoices):
-        ESTUDIANTE = "Estudiante", "Estudiante"
-        DOCENTE = "Docente", "Docente"
-        ADMINISTRADOR = "Administrador", "Administrador"
+        ESTUDIANTE    = "ESTUDIANTE", "Estudiante"
+        DOCENTE       = "DOCENTE", "Docente"
+        ADMINISTRADOR = "ADMINISTRADOR", "Administrador"
+
+    rol = models.CharField(
+        max_length=20,
+        choices=Rol.choices,
+        default=Rol.ESTUDIANTE,
+    )
 
     # RUT con validación y unicidad; se guardará normalizado por señal pre_save
     rut = models.CharField(max_length=12, unique=True, validators=[validar_formato_rut])

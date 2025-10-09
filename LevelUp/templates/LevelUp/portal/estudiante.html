@@ -45,9 +45,28 @@
             </div>
           </div>
         </div>
-        <div class="mt-2 text-muted">
-          Curso: <strong>{{ curso|default:"Sin curso" }}</strong>
-        </div>
+        <!-- Info de curso y docentes (estilo stats) -->
+<div class="row g-3 mt-1">
+  <div class="col-12 col-md-6">
+    <div class="border rounded p-3 h-100">
+      <div class="text-muted small">Curso</div>
+      <div class="fw-semibold">{{ curso|default:"Sin curso" }}</div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-6">
+    <div class="border rounded p-3 h-100">
+      <div class="text-muted small">Docentes asignados</div>
+      <div class="fw-semibold">
+        Matemáticas: {{ docente_matematicas|default:"—" }}<br>
+        Inglés: {{ docente_ingles|default:"—" }}
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
       </div>
     </div>
 
