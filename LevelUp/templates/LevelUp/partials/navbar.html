@@ -1,0 +1,87 @@
+{% load static %}
+<nav class="navbar navbar-expand-lg bg-body-tertiary">
+  <div class="container">
+    <div class="d-none d-lg-flex align-items-center gap-3 mx-auto order-0">
+      <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+        <img src="{% static 'LevelUp/images/logo.jpg' %}" width="32" height="32"
+             class="d-inline-block align-text-top me-2" style="object-fit:contain;">
+        <span>LevelUp</span>
+      </a>
+      <a class="nav-link px-2 {% if request.resolver_match.url_name == 'actividades' %}active{% endif %}"
+         href="{% url 'actividades' %}">Actividades</a>
+      <a class="nav-link px-2 {% if request.resolver_match.url_name == 'ranking' %}active{% endif %}"
+         href="{% url 'ranking' %}">Ranking</a>
+    </div>
+
+    <button class="navbar-toggler order-1" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain"
+            aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    {# Menú colapsable (móvil + resto de items) #}
+    <div class="collapse navbar-collapse order-2" id="navbarMain">
+      {% with current=request.resolver_match.url_name %}
+
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        {# Duplicamos tabs para móvil (no se ven en desktop) #}
+        <li class="nav-item d-lg-none">
+          <a class="nav-link {% if current == 'actividades' %}active{% endif %}"
+             href="{% url 'actividades' %}">Actividades</a>
+        </li>
+        <li class="nav-item d-lg-none">
+          <a class="nav-link {% if current == 'ranking' %}active{% endif %}"
+             href="{% url 'ranking' %}">Ranking</a>
+        </li>
+      </ul>
+
+      {# Menú de usuario tipo Facebook (avatar dropdown) #}
+      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+        {% if user.is_authenticated %}
+          {% with display_name=user.apodo|default:user.get_full_name|default:user.username %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle p-0 d-flex align-items-center" href="#" id="userMenu" role="button"
+               data-bs-toggle="dropdown" aria-expanded="false">
+              <span class="avatar avatar-sm">
+                {% if user.avatar_url %}
+                  <img src="{{ user.avatar_url }}" alt="Avatar">
+                {% else %}
+                  <span class="avatar-initial">{{ display_name|slice:":1"|upper }}</span>
+                {% endif %}
+              </span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userMenu" style="min-width:240px;">
+              <li class="px-3 py-2">
+                <div class="d-flex align-items-center">
+                  <span class="avatar me-2">
+                    {% if user.avatar_url %}
+                      <img src="{{ user.avatar_url }}" alt="Avatar">
+                    {% else %}
+                      <span class="avatar-initial">{{ display_name|slice:":1"|upper }}</span>
+                    {% endif %}
+                  </span>
+                  <div class="small">
+                    <div class="fw-semibold">{{ display_name }}</div>
+                    <div class="text-muted">{{ user.email }}</div>
+                  </div>
+                </div>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="{% url 'perfil' %}">Perfil</a></li>
+              <li><a class="dropdown-item" href="{% url 'perfil_editar' %}">Configuración</a></li>
+              <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">Cerrar sesión</a></li>
+            </ul>
+          </li>
+          {% endwith %}
+        {% else %}
+          <li class="nav-item me-2">
+            <a class="btn btn-outline-primary" href="{% url 'login' %}">Iniciar sesión</a>
+          </li>
+          <li class="nav-item">
+            <a class="btn btn-primary" href="{% url 'register' %}">Registrarme</a>
+          </li>
+        {% endif %}
+      </ul>
+      {% endwith %}
+    </div>
+  </div>
+</nav>

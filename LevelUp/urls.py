@@ -1,15 +1,19 @@
 from django.urls import path, reverse_lazy
 from django.contrib.auth import views as auth_views
 from . import views
-from .views import register_view, login_view, logout_view, home_view
 from .forms import PasswordResetFormVisible
 
 urlpatterns = [
-    # Home / Auth
-    path("", home_view, name="home"),
-    path("ingresar/", login_view, name="login"),
-    path("registro/", register_view, name="register"),
-    path("salir/", logout_view, name="logout"),
+    # Home pública
+    path("", views.home, name="home"),
+
+    # Auth
+    path("ingresar/", views.login_view, name="login"),
+    path("registro/", views.register_view, name="register"),
+    path("salir/", views.logout_view, name="logout"),
+
+    # Portal por rol
+    path("inicio/", views.home_view, name="dashboard"),
 
     # Catálogo/Ranking/Reportes
     path("actividades/", views.actividades_view, name="actividades"),
@@ -30,9 +34,6 @@ urlpatterns = [
     path("actividades/estudiante/", views.estudiante_mis_actividades, name="estudiante_lista"),
     path("actividades/estudiante/<int:pk>/resolver/", views.actividad_resolver, name="resolver"),
     path("actividades/estudiante/<int:pk>/resultado/", views.actividad_resultados, name="resolver_resultado"),
-
-    # Portal de estudiante con asignaciones y docentes de refuerzo
-    path("portal/estudiante/", views.portal_estudiante, name="portal_estudiante"),
 
     # Recuperar / Restablecer contraseña
     path(
