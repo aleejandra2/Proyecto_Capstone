@@ -1,0 +1,123 @@
+{% extends "LevelUp/base.html" %}
+{% block title %}Resultados: {{ actividad.titulo }}{% endblock %}
+{% block content %}
+<div class="container py-3">
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-end">
+        <div>
+            <h1 class="h4 mb-1">Resultados: {{ actividad.titulo }}</h1>
+            <div class="small text-muted">
+                Intento {{ sub.intento }} · Nota: {{ sub.calificacion }}% · XP obtenido: {{ sub.xp_obtenido }}
+            </div>
+            <div class="small text-muted">
+                Intentos usados: {{ intentos_usados }}/{{ intentos_max }}
+            </div>
+        </div>
+        <div class="text-end">
+            {% if puede_reintentar %}
+            <a class="btn btn-primary" href="{% url 'resolver' actividad.pk %}">Intentar de nuevo</a>
+            {% else %}
+            <button class="btn btn-secondary" disabled>Sin intentos disponibles</button>
+            {% endif %}
+            <a class="btn btn-outline-secondary" href="{% url 'estudiante_lista' %}">Volver</a>
+        </div>
+
+    </div>
+
+    <hr>
+
+    {% for row in items_data %}
+    {% with item=row.item d=row.detalle %}
+    <div class="mb-4">
+        <h2 class="h6 d-flex align-items-center gap-2">
+            {{ forloop.counter }}. {{ item.enunciado }}
+            {% if d.correcto %}
+            <span class="badge text-bg-success">Correcta</span>
+            {% else %}
+            <span class="badge text-bg-danger">Incorrecta</span>
+            {% endif %}
+            <span class="badge text-bg-light">Puntaje: {{ d.obtenido }}/{{ d.puntaje }}</span>
+        </h2>
+
+        {% if item.imagen %}
+        <img src="{{ item.imagen.url }}" class="img-fluid mb-2" alt="Imagen del ítem">
+        {% endif %}
+
+        {% if d.tipo == 'mcq' %}
+        {% if d.multiple %}
+        <div class="small">Tus respuestas: {{ d.marcadas_letras|default:'—' }}</div>
+        <div class="small">Correctas: {{ d.correctas_letras }}</div>
+        <ul class="mt-2">
+            {% for op in d.opciones %}
+            {% with idx=forloop.counter0 letra=idx|add:""|slice:":0" %}
+            <li>
+                {{ forloop.counter|add:-1|add:65|stringformat:"c" }}. {{ op }}
+            </li>
+            {% endwith %}
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="small">Tu respuesta: {{ d.marcadas_letras|default:'—' }}</div>
+        <div class="small">Correcta: {{ d.correctas_letras }}</div>
+        {% endif %}
+
+        {% elif d.tipo == 'tf' %}
+        <div class="small">Tu respuesta: {{ d.valor|yesno:"Verdadero,Falso" }}</div>
+        <div class="small">Correcta: {{ d.esperado|yesno:"Verdadero,Falso" }}</div>
+
+        {% elif d.tipo == 'fib' %}
+        <div class="small">Tu respuesta: <em>{{ d.texto|default:"—" }}</em></div>
+        <div class="small">Se acepta: {{ d.aceptadas|join:", " }}</div>
+
+        {% elif d.tipo == 'sort' %}
+        <div class="small">Tu orden: {{ d.orden_alumno|join:" → " }}</div>
+        <div class="small">Orden correcto: {{ d.orden_correcto|join:" → " }}</div>
+
+        {% elif d.tipo == 'match' %}
+        <div class="row">
+            <div class="col-md-6">
+                <div class="fw-bold small">Tus pares</div>
+                <ul class="small m-0 ps-3">
+                    {% for l,r in d.pares_alumno %}
+                    <li>{{ l }} → {{ r }}</li>
+                    {% empty %}
+                    <li>—</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <div class="fw-bold small">Pares correctos</div>
+                <ul class="small m-0 ps-3">
+                    {% for l,r in d.pares_esperados %}
+                    <li>{{ l }} → {{ r }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        {% elif d.tipo == 'text' %}
+        <div class="small">Tu respuesta:</div>
+        <div class="border rounded p-2 mb-2">{{ d.texto|linebreaksbr }}</div>
+        {% if d.palabras_clave and d.palabras_clave|length > 0 %}
+        <div class="small text-muted">Sugerencia: palabras clave esperadas: {{ d.palabras_clave|join:", " }}</div>
+        {% endif %}
+
+        {% elif d.tipo == 'interactive' or d.tipo == 'game' %}
+        <div class="small">Completado: {{ d.completado|yesno:"Sí,No" }}</div>
+
+        {% else %}
+        <pre class="small bg-light p-2">{{ d.respuesta|default:"" }}</pre>
+        {% endif %}
+    </div>
+    <hr>
+    {% endwith %}
+    {% endfor %}
+
+</div>
+{% endblock %}

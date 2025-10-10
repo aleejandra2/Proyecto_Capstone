@@ -25,13 +25,16 @@
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         {# Duplicamos tabs para móvil (no se ven en desktop) #}
         <li class="nav-item d-lg-none">
-          <a class="nav-link {% if current == 'actividades' %}active{% endif %}" href="{% url 'actividades' %}">Actividades</a>
+          <a class="nav-link {% if current == 'actividades' %}active{% endif %}"
+             href="{% url 'actividades' %}">Actividades</a>
         </li>
         <li class="nav-item d-lg-none">
-          <a class="nav-link {% if current == 'ranking' %}active{% endif %}" href="{% url 'ranking' %}">Ranking</a>
+          <a class="nav-link {% if current == 'ranking' %}active{% endif %}"
+             href="{% url 'ranking' %}">Ranking</a>
         </li>
       </ul>
 
+      {# Menú de usuario tipo Facebook (avatar dropdown) #}
       <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
         {% if user.is_authenticated %}
           {% with display_name=user.apodo|default:user.get_full_name|default:user.username %}
@@ -78,7 +81,6 @@
           </li>
         {% endif %}
       </ul>
-
       {% endwith %}
     </div>
   </div>

@@ -16,8 +16,9 @@
         <a class="list-group-item list-group-item-action" href="{% url 'resolver' a.pk %}">
             <div class="d-flex w-100 justify-content-between">
                 <h5 class="mb-1">{{ a.titulo }}</h5>
-                {% if a.fecha_cierre %}<small class="text-nowrap">Cierra: {{ a.fecha_cierre|date:"d/m/Y H:i"
-                    }}</small>{% endif %}
+                {% if a.fecha_cierre %}
+                <small class="text-nowrap">Cierra: {{ a.fecha_cierre|date:"d/m/Y H:i" }}</small>
+                {% endif %}
             </div>
             <div class="small text-muted">{{ a.get_dificultad_display }} · XP: {{ a.xp_total }}</div>
         </a>

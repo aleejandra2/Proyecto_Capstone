@@ -10,11 +10,11 @@ from django.utils import timezone
 from django.db import transaction, models
 import json
 from django.db.models import Count, Q
-
-
 from .forms import RegistrationForm, LoginForm, ProfileForm
-# Formularios de actividades
 from .forms import ActividadForm, ItemFormSet
+
+# Formularios de actividades
+
 
 # Modelos
 from .models import (
@@ -35,25 +35,25 @@ def es_estudiante(user) -> bool:
 
 
 # -------------------------------------------------------------------
-# Home 
+# Home pública (sin login)
 # -------------------------------------------------------------------
 def home(request):
-    return render(request, 'LevelUp/index.html')
+    # Renderiza una homepage simple (puedes poner tu landing aquí)
+    return render(request, "LevelUp/home.html")
 
+
+# -------------------------------------------------------------------
+# Catálogo / Ranking / Reportes (con login)
+# -------------------------------------------------------------------
 @login_required
 def actividades_view(request):
-    # Lista simple (general) — puedes mantener como catálogo
     actividades = Actividad.objects.all().order_by("-id")[:20]
-    return render(request, "LevelUp/actividades/lista.html", {
-        "actividades": actividades
-    })
+    return render(request, "LevelUp/actividades/lista.html", {"actividades": actividades})
 
 @login_required
 def ranking_view(request):
     estudiantes_top = Estudiante.objects.order_by("-puntos").select_related("usuario")[:20]
-    return render(request, "LevelUp/ranking.html", {
-        "estudiantes_top": estudiantes_top
-    })
+    return render(request, "LevelUp/ranking.html", {"estudiantes_top": estudiantes_top})
 
 @login_required
 def reportes_docente_view(request):
@@ -74,7 +74,8 @@ def register_view(request):
             user = form.save()
             login(request, user)
             messages.success(request, "¡Cuenta creada con éxito! Bienvenido/a a LevelUp.")
-            return redirect("home")
+            # ⬇⬇ redirige al portal por rol
+            return redirect("dashboard")
         else:
             messages.error(request, "Por favor corrige los errores del formulario.")
     else:
@@ -84,7 +85,8 @@ def register_view(request):
 
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect("home")
+        # ⬇⬇ si ya está logueado, al portal por rol
+        return redirect("dashboard")
 
     if request.method == "POST":
         form = LoginForm(request.POST)
@@ -104,7 +106,8 @@ def login_view(request):
                 if not remember:
                     request.session.set_expiry(0)
                 messages.success(request, f"¡Hola {user.first_name or user.username}!")
-                return redirect("home")
+                # ⬇⬇ al portal por rol
+                return redirect("dashboard")
             else:
                 messages.error(request, "Credenciales inválidas. Verifica tu email y contraseña.")
     else:
@@ -120,6 +123,9 @@ def logout_view(request):
     return redirect("login")
 
 
+# -------------------------------------------------------------------
+# Portal por rol (ahora en /inicio/)
+# -------------------------------------------------------------------
 @login_required(login_url='login')
 def home_view(request):
     """
@@ -152,8 +158,8 @@ def home_view(request):
         ctx.update({
             "total_estudiantes": Estudiante.objects.count(),
             "total_actividades": Actividad.objects.count(),
-            "promedio_general": "—",  # placeholder
-            "dias_activos": 7,        # placeholder
+            "promedio_general": "—",
+            "dias_activos": 7,
         })
 
     elif rol == Usuario.Rol.ADMINISTRADOR:
@@ -166,6 +172,7 @@ def home_view(request):
 
     template = template_by_role.get(rol, "LevelUp/portal/estudiante.html")
     return render(request, template, ctx)
+
 
 
 # -------------------------------------------------------------------
