@@ -157,4 +157,90 @@ nav.navbar{ background:#fff; border-bottom:1px solid var(--border); }
 .center-page { min-height: calc(100vh - 140px); display:flex; align-items:center; justify-content:center; padding: 2rem 1rem; }
 
 
+/* ====== Página principal ====== */
+
+:root{
+  --bp-ink:#1E1B2E;
+  --bp-primary:#867cc4;    
+  --bp-primary-600:#6f64a3; 
+  --bp-blue:#3A81F6;
+  --bp-accent:#988bb6;
+  --bp-hero:#bfbaf7;       
+  --bp-soft:#EAF0FF;
+  --bp-cream:#fbeaff;
+}
+
+/* Navbar */
+.navbar-bp{
+  background: var(--bp-primary) !important; /* sin gradiente */
+}
+
+/* Botones principales */
+.btn-bp-primary{
+  --bs-btn-bg: var(--bp-primary);
+  --bs-btn-border-color: var(--bp-primary);
+  --bs-btn-hover-bg: var(--bp-primary-600);
+  --bs-btn-hover-border-color: var(--bp-primary-600);
+  --bs-btn-color:#fff;
+}
+
+/* Buscador (si quieres que también sea lila, descomenta la línea) */
+.bp-search-btn{
+  background: var(--bp-primary); /* <- sólido */
+  /* background: #ff7b3a;  // quita esta si ya no quieres el naranja */
+  color:#fff; border:none;
+}
+
+/* Héroe (sin gradientes) */
+.bp-hero{
+  background: var(--bp-hero);    /* sólido */
+  color:#fff;
+}
+.bp-hero-band{ background: var(--bp-soft); }
+
+/* Categorías (tarjeta e icono sin gradiente) */
+.bp-cat{
+  background: var(--bp-primary); /* sólido */
+}
+.bp-cat-icon{
+  background: var(--bp-primary); /* sólido */
+}
+
+/* (Opcional) Links estilo “suscríbete” en lila */
+.btn-bp-link{ color: var(--bp-primary); }
+
+/* CATEGORÍAS */
+.bp-cats{ background: var(--bp-soft); padding: 1.25rem 0 1.75rem; }
+.bp-cat{
+  display:block; text-align:center; text-decoration:none; color:#fff;
+  background:#654ea3; border-radius:.6rem; padding: .9rem .6rem;
+  border: 0; box-shadow: 0 6px 14px rgba(17,12,38,.12);
+}
+.bp-cat span{
+  display:block; margin-top:.55rem; font-weight:700; font-size:.9rem;
+  text-shadow: 0 1px 0 rgba(0,0,0,.1);
+}
+.bp-cat-icon{
+  width: 100%; aspect-ratio: 1 / 1; border-radius:.35rem;
+  background-size: cover; background-position:center;
+}
+/* Colores por tarjeta (tonos morado/azul) */
+.bp-cat-1{ background: linear-gradient(135deg,#6c9cff,#3A81F6); }
+.bp-cat-2{ background: linear-gradient(135deg,#b58cff,#6F4AB5); }
+.bp-cat-3{ background: linear-gradient(135deg,#70e1f5,#82a1ff); }
+.bp-cat-4{ background: linear-gradient(135deg,#ffc9ff,#b798ff); }
+.bp-cat-5{ background: linear-gradient(135deg,#8ddad5,#6c9cff); }
+.bp-cat-6{ background: linear-gradient(135deg,#6f4ab5,#3f8bff); }
+
+/* ACTIVIDAD DEL DÍA */
+.bp-day{ background: var(--bp-cream); }
+.bp-day-card{
+  background:#fff; border-radius: 18px;
+  box-shadow: 0 12px 28px rgba(17,12,38,.08);
+}
+
+/* Utilidades */
+.text-secondary{ color:#6b6b88 !important; }
+
+
 
