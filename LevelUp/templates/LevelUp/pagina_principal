@@ -1,0 +1,10 @@
+{% extends "LevelUp/base.html" %}
+{% block title %}Inicio · LevelUp{% endblock %}
+
+{% block content %}
+<main class="min-h-screen">
+  <div class="container py-4">
+    <h1>Hello world</h1>
+  </div>
+</main>
+{% endblock %}
