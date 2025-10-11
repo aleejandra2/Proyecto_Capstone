@@ -1,30 +1,79 @@
 {% extends "LevelUp/base.html" %}
 {% block title %}Mis actividades{% endblock %}
+
 {% block content %}
 <div class="container py-3">
 
-    {% if messages %}
+  {% if messages %}
     {% for message in messages %}
-    <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
+      <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
     {% endfor %}
-    {% endif %}
+  {% endif %}
 
-    <h1 class="h4 mb-3">Actividades asignadas</h1>
+  <h1 class="h4 mb-3">Actividades asignadas</h1>
 
-    <div class="list-group">
-        {% for a in actividades %}
-        <a class="list-group-item list-group-item-action" href="{% url 'resolver' a.pk %}">
-            <div class="d-flex w-100 justify-content-between">
-                <h5 class="mb-1">{{ a.titulo }}</h5>
-                {% if a.fecha_cierre %}
-                <small class="text-nowrap">Cierra: {{ a.fecha_cierre|date:"d/m/Y H:i" }}</small>
-                {% endif %}
+  <div class="list-group">
+    {# Usamos rows, que trae: a, usados, max, tiene_abierto, puede_intentar, tiene_resultados, cerrada #}
+    {% for r in rows %}
+      {% with a=r.a %}
+      <div class="list-group-item">
+        <div class="d-flex w-100 justify-content-between align-items-start">
+          <div>
+            <h5 class="mb-1">{{ a.titulo }}</h5>
+            <div class="small text-muted">
+              {{ a.get_dificultad_display }} · XP: {{ a.xp_total }}
+              {% if a.fecha_cierre %} · Cierra: {{ a.fecha_cierre|date:"d/m/Y H:i" }}{% endif %}
+              · Intentos: {{ r.usados }}/{{ r.max }}
             </div>
-            <div class="small text-muted">{{ a.get_dificultad_display }} · XP: {{ a.xp_total }}</div>
-        </a>
-        {% empty %}
-        <div class="alert alert-info">No tienes actividades por ahora.</div>
-        {% endfor %}
-    </div>
+            <div class="mt-1">
+              {% if r.cerrada %}
+                <span class="badge text-bg-secondary">Cerrada</span>
+              {% else %}
+                <span class="badge text-bg-success">Abierta</span>
+              {% endif %}
+
+              {% if r.tiene_abierto %}
+                <span class="badge text-bg-info">Intento en curso</span>
+              {% endif %}
+
+              {% if r.tiene_resultados %}
+                <span class="badge text-bg-primary">Con resultados</span>
+              {% endif %}
+
+              {% if not r.puede_intentar and not r.tiene_abierto %}
+                <span class="badge text-bg-warning text-dark">Sin intentos disponibles</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="d-flex flex-wrap gap-2">
+            {# Resolver (form clásico). Habilitado si puede_intentar o hay intento abierto #}
+            <a
+              class="btn btn-sm {% if r.puede_intentar or r.tiene_abierto %}btn-primary{% else %}btn-outline-secondary disabled{% endif %}"
+              href="{% if r.puede_intentar or r.tiene_abierto %}{% url 'resolver' a.pk %}{% else %}#{% endif %}">
+              Resolver
+            </a>
+
+            {# Modo Juego (play) — misma vista con ?modo=play #}
+            <a
+              class="btn btn-sm {% if r.puede_intentar or r.tiene_abierto %}btn-success{% else %}btn-outline-secondary disabled{% endif %}"
+              href="{% if r.puede_intentar or r.tiene_abierto %}{% url 'resolver' a.pk %}?modo=play{% else %}#{% endif %}">
+              Jugar
+            </a>
+
+            {# Resultados — visible si ya tiene envíos finalizados #}
+            <a
+              class="btn btn-sm {% if r.tiene_resultados %}btn-outline-primary{% else %}btn-outline-secondary disabled{% endif %}"
+              href="{% if r.tiene_resultados %}{% url 'resolver_resultado' a.pk %}{% else %}#{% endif %}">
+              Resultados
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endwith %}
+    {% empty %}
+      <div class="alert alert-info">No tienes actividades por ahora.</div>
+    {% endfor %}
+  </div>
 </div>
 {% endblock %}
