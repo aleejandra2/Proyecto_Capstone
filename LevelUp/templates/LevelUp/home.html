@@ -1,72 +1,117 @@
 {% extends "LevelUp/base.html" %}
-{% block title %}LevelUp — Nunca se detiene el aprendizaje{% endblock %}
+{% load static %}
+{% block title %}LevelUp — Aprende, juega y progresa{% endblock %}
+{% block navbar %}{% endblock %}
 
 {% block content %}
-<main class="home-bp">
-
+<main class="landing">
   <!-- HERO -->
-  <section class="bp-hero py-5">
-    <div class="container py-4">
+  <section class="landing-hero">
+    <div class="container">
       <div class="row align-items-center g-4">
         <div class="col-lg-6">
-          <h1 class="display-5 fw-bold mb-3">Cuando el aprendizaje comienza<br>con LevelUp, nunca se detiene</h1>
-          <p class="lead mb-4">A veces me equivoco… ¡Mucho! Pero nunca me rindo. Aprender también es reírse de los errores</p>
-          <!-- <div class="d-flex flex-wrap gap-3">
-            {% if not request.user.is_authenticated %}
-              <a href="{% url 'login' %}" class="btn btn-bp-primary">Inicia sesión</a>
-              <a href="{% url 'register' %}" class="btn btn-bp-link">Suscríbete</a>
-            {% else %}
-              <a href="{% url 'actividades' %}" class="btn btn-bp-primary">Comenzar</a>
-              <a href="{% url 'perfil' %}" class="btn btn-bp-link">Mi perfil</a>
-            {% endif %}
+          <h1 class="display-5 fw-800 font-merienda">Aprender es una <span class="grad-ink">aventura</span></h1>
+          <p class="lead text-edu-ink-700 ">
+            LevelUp te motiva con puntos, niveles,  misiones interactivas y celebra sus logros
+          </p>
+          <div class="d-flex gap-3 flex-wrap ">
+            <a href="{% url 'login' %}" class="btn btn-edu btn-lg">Solicita más información</a>
           </div>
-        </div>--> 
-      </div>
-    </div>
-    <div class="bp-hero-band"></div>
-  </section>
-
-  <!-- CATEGORÍAS -->
-  <section class="bp-cats">
-    <div class="container py-4">
-      <div class="row g-3 g-md-4 justify-content-center">
-        {% comment %} Ejemplos; cambia href/labels si quieres {% endcomment %}
-        <div class="col-6 col-md-4 col-lg-2">
-          <a class="bp-cat" href="{% url 'login' %}?area=ingles">
-            <div class="bp-cat-icon bp-cat-1"></div>
-            <span>Inglés</span>
-          </a>
+          <ul class="mini-bullets mt-4">
+            <li>Para Docentes y Estudiantes</li>
+            <li>Quizzes, retos y recompensas</li>
+          </ul>
         </div>
-        <div class="col-6 col-md-4 col-lg-2">
-          <a class="bp-cat" href="{% url 'login' %}?area=matematica">
-            <div class="bp-cat-icon bp-cat-2"></div>
-            <span>Matemáticas</span>
-          </a>
+        <div class="col-lg-6">
+          <div class="hero-illustration">
+            <img src="{% static 'LevelUp/img/landing/hero-edu.svg' %}" alt="Aprender jugando" onerror="this.style.display='none'">
+            <div class="hero-fallback">📚🧩🎯</div>
+          </div>
         </div>
       </div>
     </div>
-  </section>
 
-  <!-- ACTIVIDAD DEL DÍA -->
-  <section class="py-5 bp-day">
+
+  <section class="landing-features section-pad">
     <div class="container">
-      <div class="text-center mb-3">
-        <div class="small text-muted"><i class="bi bi-calendar2-event"></i></div>
-        <h2 class="h4 fw-bold m-0">Actividad del Día</h2>
+      <div class="text-center mb-4">
+        <h2 class="fw-800">Todo lo que necesitas para <span class="grad-ink">enseñar mejor</span></h2>
       </div>
-
-      <div class="bp-day-card p-4 p-md-5">
-        <h3 class="h3 fw-bold mb-2">
-          :Ds
-        </h3>
-        <p class="mb-4 text-secondary">Organiza y presenta un argumento sólido.</p>
-        <div class="d-flex flex-wrap gap-3">
-          <a href="{% url 'actividades' %}?id=destacada" class="btn btn-bp-primary">Ver actividad</a>
-          <a href="{% url 'actividades' %}" class="btn btn-bp-link">Explorar más</a>
+      <div class="row g-4 justify-content-center">
+        <div class="col-md-6 col-lg-3">
+          <div class="feature-card">
+            <div class="icon">🧠</div>
+            <h3>Actividades</h3>
+            <p>Quizzes, retos y videos interactivos con niveles de dificultad.</p>
+          </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <div class="feature-card">
+            <div class="icon">🏅</div>
+            <h3>Recompensas</h3>
+            <p>Otorga puntos, medallas y niveles para mantener la motivación.</p>
+          </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <div class="feature-card">
+            <div class="icon">👩‍🏫</div>
+            <h3>Fácil para docentes</h3>
+            <p>Asigna, corrige e itera con flujos pensados para el aula.</p>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
+  <!-- CÓMO FUNCIONA -->
+  <section class="landing-how section-pad">
+    <div class="container">
+      <div class="row g-4 align-items-center">
+        <div class="col-lg-5">
+          <h2 class="fw-800">¿Cómo funciona?</h2>
+          <p class="text-edu-ink-700">En tres pasos estás listo para gamificar tus clases.</p>
+        </div>
+        <div class="col-lg-6">
+          <div class="steps">
+            <div class="step"><span>1</span><b>Crea tu clase</b><small>Invita estudiantes y define objetivos.</small></div>
+            <div class="step"><span>2</span><b>Diseña actividades</b><small>Quizzes, tareas y minijuegos.</small></div>
+            <div class="step"><span>3</span><b>Motiva y mide</b><small>Otorga puntos, ve rankings y progreso.</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PARA QUIÉN ES -->
+  <section class="landing-split section-pad">
+    <div class="container">
+      <div class="row g-4">
+        <div class="col-md-6">
+          <div class="split-card">
+            <div class="tag">Docentes</div>
+            <h3>Planifica y evalúa sin fricción</h3>
+            <p>Plantillas, rúbricas y reportes para ahorrar tiempo.</p>
+            <a href="{% url 'register' %}" class="btn btn-edu">Entrar al portal</a>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="split-card">
+            <div class="tag alt">Estudiantes</div>
+            <h3>Aprende jugando y sube de nivel</h3>
+            <p>Gana medallas, colecciona logros y mejora tu ranking.</p>
+            <a href="{% url 'login' %}" class="btn btn-edu-ghost">Entrar al portal</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA FINAL -->
+  <section class="landing-cta">
+    <div class="container text-center">
+      <h2 class="fw-800">¿Listo para <span class="grad-ink">LevelUp</span> en tu aula?</h2>
+      <p class="text-edu-ink-700 mb-4">Prueba gratis y descubre el poder de la gamificación.</p>
+    </div>
+  </section>
 </main>
 {% endblock %}
