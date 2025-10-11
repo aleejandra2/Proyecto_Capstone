@@ -28,12 +28,17 @@ urlpatterns = [
     # Docente (crear/editar actividades con formset)
     path("actividades/docente/", views.actividades_docente_lista, name="docente_lista"),
     path("actividades/docente/nueva/", views.actividad_crear, name="crear"),
-    path("actividades/docente/<int:pk>/editar/", views.actividad_editar, name="editar"),
+    #path("actividades/docente/<int:pk>/editar/", views.actividad_editar, name="editar"),
+    path("actividades/docente/<int:pk>/editar/", views.actividad_editar, name="actividad_editar"),
+    path("actividades/docente/<int:pk>/asignar/", views.actividad_asignar, name="actividad_asignar"),
 
     # Estudiante (resolver con autocorrección)
     path("actividades/estudiante/", views.estudiante_mis_actividades, name="estudiante_lista"),
     path("actividades/estudiante/<int:pk>/resolver/", views.actividad_resolver, name="resolver"),
     path("actividades/estudiante/<int:pk>/resultado/", views.actividad_resultados, name="resolver_resultado"),
+    path("actividades/estudiante/<int:pk>/play/", views.actividad_play, name="resolver_play"),
+    path("api/actividades/<int:pk>/answer/<int:item_id>/", views.api_item_answer, name="api_item_answer"),
+    path("api/actividades/<int:pk>/hint/<int:item_id>/", views.api_item_hint, name="api_item_hint"),  # opcional
 
     # Recuperar / Restablecer contraseña
     path(

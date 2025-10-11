@@ -122,6 +122,17 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
+// mini-script local: cambia el hidden para que la vista sepa a dónde redirigir
+  document.addEventListener('DOMContentLoaded', function () {
+    const next = document.getElementById('next_action');
+    const btnAssign = document.getElementById('btn-save-assign');
+    btnAssign?.addEventListener('click', function () {
+      if (next) next.value = 'assign';
+      // dispara el submit del form
+      document.getElementById('actividad-form')?.submit();
+    });
+  });
+  
     // Inicializar ya existentes
     container.querySelectorAll(".item-form").forEach(initItemCard);
 });
