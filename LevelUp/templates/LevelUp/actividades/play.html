@@ -1,10 +1,9 @@
 {% extends "LevelUp/base.html" %}
 {% load static %}
-{% block title %}{{ actividad.titulo }}{% endblock %}
+{% block title %}{{ actividad.titulo }} · Modo Juego{% endblock %}
 
 {% block content %}
 <div class="container py-3">
-
   {% if messages %}
     {% for message in messages %}
       <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
@@ -22,11 +21,28 @@
     </div>
     <div class="d-flex gap-2">
       <a class="btn btn-outline-secondary btn-sm" href="{% url 'estudiante_lista' %}">Volver</a>
-      <a class="btn btn-outline-primary btn-sm" href="{% url 'resolver' actividad.pk %}?modo=play">Jugar</a>
       <a class="btn btn-outline-success btn-sm" href="{% url 'resolver_resultado' actividad.pk %}">Resultados</a>
     </div>
   </div>
 
+  <!-- HUD / Progreso -->
+  <div class="card mb-3">
+    <div class="card-body d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center gap-3">
+        <div><span class="badge text-bg-primary">Modo Juego</span></div>
+        <div class="small text-muted">Responde y gana XP. Algunas preguntas otorgan puntaje parcial.</div>
+      </div>
+      <div class="text-end">
+        <div class="small">Progreso</div>
+        <div class="progress" style="width:220px; height:10px;">
+          <div id="play-progress" class="progress-bar" role="progressbar" style="width:0%;" aria-valuenow="0"
+               aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form clásico de respaldo (POST a resolver) -->
   <form id="play-form" method="post" action="{% url 'resolver' actividad.pk %}" class="card p-3">
     {% csrf_token %}
 
@@ -45,39 +61,49 @@
           <img src="{{ item.imagen.url }}" class="img-fluid my-2" alt="Imagen del ítem">
         {% endif %}
 
-        {# ================ MCQ ================ #}
+        {# ---------------- MCQ ---------------- #}
         {% if tipo == "mcq" %}
+          {% with opciones=datos.opciones %}
           <div class="mt-2">
             {% if datos.multiple %}
-              {% for op in datos.opciones %}
-              <div class="form-check">
-                <input class="form-check-input mcq-option"
-                       type="checkbox"
-                       name="item_{{ item.pk }}"
-                       value="{{ forloop.counter0 }}"
-                       id="op{{ item.pk }}_{{ forloop.counter0 }}">
-                <label class="form-check-label" for="op{{ item.pk }}_{{ forloop.counter0 }}">{{ op }}</label>
-              </div>
-              {% empty %}
-              <div class="text-muted small">Sin opciones configuradas.</div>
-              {% endfor %}
+              {% if opciones %}
+                {% for op in opciones %}
+                <div class="form-check">
+                  <input class="form-check-input mcq-option"
+                         type="checkbox"
+                         name="item_{{ item.pk }}"
+                         value="{{ forloop.counter0 }}"
+                         id="op{{ item.pk }}_{{ forloop.counter0 }}">
+                  <label class="form-check-label" for="op{{ item.pk }}_{{ forloop.counter0 }}">{{ op }}</label>
+                </div>
+                {% empty %}
+                  <div class="text-muted small">Sin opciones configuradas.</div>
+                {% endfor %}
+              {% else %}
+                <div class="text-muted small">Sin opciones configuradas.</div>
+              {% endif %}
             {% else %}
-              {% for op in datos.opciones %}
-              <div class="form-check">
-                <input class="form-check-input mcq-option"
-                       type="radio"
-                       name="item_{{ item.pk }}"
-                       value="{{ forloop.counter0 }}"
-                       id="op{{ item.pk }}_{{ forloop.counter0 }}">
-                <label class="form-check-label" for="op{{ item.pk }}_{{ forloop.counter0 }}">{{ op }}</label>
-              </div>
-              {% empty %}
-              <div class="text-muted small">Sin opciones configuradas.</div>
-              {% endfor %}
+              {% if opciones %}
+                {% for op in opciones %}
+                <div class="form-check">
+                  <input class="form-check-input mcq-option"
+                         type="radio"
+                         name="item_{{ item.pk }}"
+                         value="{{ forloop.counter0 }}"
+                         id="op{{ item.pk }}_{{ forloop.counter0 }}">
+                  <label class="form-check-label" for="op{{ item.pk }}_{{ forloop.counter0 }}">{{ op }}</label>
+                </div>
+                {% empty %}
+                  <div class="text-muted small">Sin opciones configuradas.</div>
+                {% endfor %}
+              {% else %}
+                <div class="text-muted small">Sin opciones configuradas.</div>
+              {% endif %}
             {% endif %}
           </div>
+          {% endwith %}
 
-        {# ================ True/False ================ #}
+        {# ---------------- Verdadero/Falso ---------------- #}
         {% elif tipo == "tf" %}
           <div class="mt-2 d-flex gap-4">
             <div class="form-check">
@@ -90,53 +116,57 @@
             </div>
           </div>
 
-        {# ================ FIB ================ #}
+        {# ---------------- FIB ---------------- #}
         {% elif tipo == "fib" %}
           <input type="text" name="item_{{ item.pk }}" class="form-control mt-2" placeholder="Escribe tu respuesta…">
 
-        {# ================ SORT ================ #}
+        {# ---------------- Sort ---------------- #}
         {% elif tipo == "sort" %}
+          {% with items=datos.items %}
           <ul class="list-group mt-2 play-sort-list" data-input-id="orden_{{ item.pk }}">
-            {% for it in datos.items %}
+            {% if items %}
+              {% for it in items %}
               <li class="list-group-item d-flex align-items-center gap-2" draggable="true" data-id="{{ it.id }}">
                 <span class="bi bi-grip-vertical"></span>
                 <span>{{ it.texto }}</span>
               </li>
-            {% empty %}
-              <li class="list-group-item text-muted">Sin elementos para ordenar.</li>
-            {% endfor %}
+              {% endfor %}
+            {% endif %}
           </ul>
           <input type="hidden" name="item_{{ item.pk }}_orden" id="orden_{{ item.pk }}" value="">
+          {% endwith %}
 
-        {# ================ MATCH ================ #}
+        {# ---------------- Match ---------------- #}
         {% elif tipo == "match" %}
+          {% with pares=datos.pares %}
           <div class="row g-3 mt-2">
             <div class="col-md-6">
               <div class="border rounded p-2 play-match-left">
-                {% for p in datos.pares %}
-                  <div class="play-match-left-item" data-id="{{ p.left.id }}">{{ p.left.texto }}</div>
-                {% empty %}
-                  <div class="text-muted small">Sin ítems a la izquierda.</div>
-                {% endfor %}
+                {% if pares %}
+                  {% for p in pares %}
+                    <div class="play-match-left-item" data-id="{{ p.left.id }}">{{ p.left.texto }}</div>
+                  {% endfor %}
+                {% endif %}
               </div>
             </div>
             <div class="col-md-6">
               <div class="border rounded p-2 play-match-right">
-                {% for p in datos.pares %}
-                  <div class="play-match-right-item" data-id="{{ p.right.id }}">{{ p.right.texto }}</div>
-                {% empty %}
-                  <div class="text-muted small">Sin ítems a la derecha.</div>
-                {% endfor %}
+                {% if pares %}
+                  {% for p in pares %}
+                    <div class="play-match-right-item" data-id="{{ p.right.id }}">{{ p.right.texto }}</div>
+                  {% endfor %}
+                {% endif %}
               </div>
             </div>
           </div>
           <input type="hidden" name="item_{{ item.pk }}_pares" id="pares_{{ item.pk }}" value="[]">
+          {% endwith %}
 
-        {# ================ TEXTO ABIERTO ================ #}
+        {# ---------------- Respuesta abierta ---------------- #}
         {% elif tipo == "text" %}
           <textarea name="item_{{ item.pk }}" class="form-control mt-2" rows="3" placeholder="Escribe tu respuesta…"></textarea>
 
-        {# ================ INTERACTIVE/GAME ================ #}
+        {# ---------------- Interactivo/Juego ---------------- #}
         {% elif tipo == "interactive" or tipo == "game" %}
           {% if datos.url %}
             <div class="ratio ratio-16x9 my-2">
@@ -151,23 +181,27 @@
           </div>
           <input type="hidden" name="item_{{ item.pk }}_completado" id="hidden_done_{{ item.pk }}" value="true">
 
+        {# ---------------- Imagen / otro ---------------- #}
+        {% elif tipo == "image" %}
+          <input type="text" name="item_{{ item.pk }}" class="form-control mt-2" placeholder="Describe la imagen o responde la pregunta">
+
         {% else %}
           <div class="alert alert-secondary mt-2">Tipo no soportado: {{ tipo }}</div>
         {% endif %}
       </div>
       {% endwith %}
     {% empty %}
-      <div class="alert alert-info m-0">Esta actividad aún no tiene ítems.</div>
+      <div class="alert alert-info">Esta actividad aún no tiene ítems.</div>
     {% endfor %}
 
     <div class="d-flex gap-2">
       <button class="btn btn-success" type="submit">Enviar intento</button>
       <a class="btn btn-outline-secondary" href="{% url 'estudiante_lista' %}">Volver</a>
-      <a class="btn btn-outline-primary" href="{% url 'resolver' actividad.pk %}?modo=play">Jugar</a>
     </div>
   </form>
 </div>
 
+<!-- CSS mínimo -->
 <style>
   .play-match-left, .play-match-right { min-height: 160px; }
   .play-match-left-item, .play-match-right-item {
@@ -176,6 +210,10 @@
   }
   .play-sort-list .list-group-item { cursor: grab; }
 </style>
+{% endblock %}
 
-<script src="{% static 'LevelUp/js/actividad_play.js' %}"></script>
+{% block extra_js %}
+  {% if modo_play %}
+    <script src="{% static 'LevelUp/js/actividad_play.js' %}"></script>
+  {% endif %}
 {% endblock %}
