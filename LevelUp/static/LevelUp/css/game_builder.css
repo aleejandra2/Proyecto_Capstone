@@ -1,0 +1,15 @@
+/* Estilos mínimos para el constructor visual */
+.gbuilder { border: 1px dashed #e5e7eb; border-radius: .5rem; padding: .75rem; background: #fafafa; }
+.gb-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .5rem; }
+.gb-table { width: 100%; }
+.gb-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: .5rem; margin-bottom: .5rem; }
+.gb-row-h { font-weight: 700; color: #6b7280; }
+.gb-cell { display: flex; align-items: center; }
+.gb-cell-min { display: flex; align-items: center; justify-content: flex-end; }
+
+.gb-q-list { display: grid; gap: .75rem; }
+.gb-q-card { background: #fff; border: 1px solid #e5e7eb; border-radius: .5rem; padding: .75rem; }
+.gb-opts { display: grid; gap: .5rem; margin-top: .5rem; }
+.gb-opt-row { display: grid; grid-template-columns: 24px 1fr auto; gap: .5rem; align-items: center; }
+
+.gb-raw textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }

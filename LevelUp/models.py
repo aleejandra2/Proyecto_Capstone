@@ -85,9 +85,42 @@ class Estudiante(models.Model):
     curso = models.CharField(max_length=50)
     puntos = models.IntegerField(default=0)
     medallas = models.IntegerField(default=0)
+    # --- nuevo: progresión y avatar ---
+    xp = models.PositiveIntegerField(default=0)
+    coins = models.PositiveIntegerField(default=0)
+    avatar_kind = models.CharField(max_length=20, default="otter")        # especie
+    avatar_slug = models.CharField(max_length=40, default="otter")        # archivo base en /static/LevelUp/img/avatars/otter.png
+    accesorios_desbloqueados = models.JSONField(default=list, blank=True) # ["gafas_azules", "mochila_lvl1"]
+    accesorios_equipados = models.JSONField(default=dict, blank=True)      # {"cabeza":"gorra_roja","cara":"gafas_azules","espalda":"mochila_lvl1"}
+    habilidades = models.JSONField(default=dict, blank=True)               # {"memoria_boost":2}
+
+    def nivel(self):
+        # curva simple: nivel n cuando xp >= n^2 * 100
+        n = 1
+        while self.xp >= (n * n * 100):
+            n += 1
+        return max(1, n - 1)
+
+    def add_xp(self, amount: int):
+        self.xp = max(0, self.xp + int(amount))
+        return self.nivel()
+
+    def add_coins(self, amount: int):
+        self.coins = max(0, self.coins + int(amount))
+        return self.coins
+
+    def equip_default_if_empty(self):
+        if not self.accesorios_equipados:
+            # 3 slots iniciales
+            self.accesorios_equipados = {"cara": "gafas_azules", "cabeza": "", "espalda": "mochila_lvl1"}
+        if "gafas_azules" not in self.accesorios_desbloqueados:
+            self.accesorios_desbloqueados.append("gafas_azules")
 
     def __str__(self):
-        return f"Estudiante: {self.usuario.get_full_name() or self.usuario.username} ({self.curso})"
+        u = self.usuario
+        nombre = (getattr(u, "get_full_name", lambda: "")() or getattr(u, "username", "") or getattr(u, "email", "")).strip()
+        return f"{nombre} · {self.curso} · Nivel {self.nivel()} ({self.xp} XP)"
+
 
 
 # ---------------------------------------------------------

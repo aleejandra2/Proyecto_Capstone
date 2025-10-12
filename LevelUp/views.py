@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse, Http404, JsonResponse
+from django.http import HttpResponse, Http404, JsonResponse, HttpResponseBadRequest
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -15,6 +15,7 @@ from .forms import RegistrationForm, LoginForm, ProfileForm
 from .forms import ActividadForm, ItemFormSet
 from django.views.decorators.http import require_POST
 from django import forms
+from .rewards import compute_rewards, apply_rewards
 
 # Formularios de actividades
 
@@ -237,13 +238,16 @@ def actividades_docente_lista(request):
 
 @login_required
 def actividad_crear(request):
-    if not getattr(request.user, "rol", None) == "DOCENTE":
+    # Solo docentes
+    if getattr(request.user, "rol", None) != "DOCENTE":
         raise Http404
 
     docente = get_object_or_404(Docente, usuario=request.user)
 
     if request.method == "POST":
         form = ActividadForm(request.POST, request.FILES)
+
+        # formset contra un objeto "temporal" sin guardar (para validar campos)
         temp_act = Actividad(docente=docente)
         formset = ItemFormSet(request.POST, request.FILES, instance=temp_act)
 
@@ -255,12 +259,13 @@ def actividad_crear(request):
                     act.fecha_publicacion = timezone.now()
                 act.save()
                 form.save_m2m()
+
+                # ahora sí, asociamos y guardamos los ítems
                 formset.instance = act
                 formset.save()
 
             messages.success(request, "Actividad creada correctamente.")
 
-            # Si el botón fue "Guardar y asignar…"
             if request.POST.get("accion") == "guardar_y_asignar":
                 return redirect(f"/actividades/docente/{act.pk}/editar/?open=asignar")
 
@@ -276,14 +281,14 @@ def actividad_crear(request):
     ctx = {
         "form": form,
         "formset": formset,
-        "editar": False,            # <— importante
+        "editar": False,
+        "abrir_asignar": request.GET.get("abrir_asignar") == "1",
         "cursos": Curso.objects.all().order_by("nivel", "letra"),
         "estudiantes": Estudiante.objects.select_related("usuario").order_by(
             "usuario__first_name", "usuario__last_name"
         ),
     }
     return render(request, "LevelUp/actividades/actividad_form.html", ctx)
-
 
 @login_required
 def actividad_editar(request, pk):
@@ -317,11 +322,14 @@ def actividad_editar(request, pk):
             form.fields["docente"].disabled = True
         formset = ItemFormSet(instance=act)
 
+    abrir_asignar = (request.GET.get("open") == "asignar")  # <-- clave
+
     ctx = {
         "form": form,
         "formset": formset,
-        "editar": True,             # <— importante
-        "act": act,                 # <— pasa el objeto para usar act.pk en el template
+        "editar": True,
+        "act": act,
+        "abrir_asignar": abrir_asignar,                    # <-- pásalo al template
         "cursos": Curso.objects.all().order_by("nivel", "letra"),
         "estudiantes": Estudiante.objects.select_related("usuario").order_by(
             "usuario__first_name", "usuario__last_name"
@@ -332,10 +340,11 @@ def actividad_editar(request, pk):
 @login_required
 @require_POST
 def actividad_asignar(request, pk):
-    if not getattr(request.user, "rol", None) == "DOCENTE":
+    if getattr(request.user, "rol", None) != "DOCENTE":
         raise Http404
 
-    act = get_object_or_404(Actividad, pk=pk)
+    docente = get_object_or_404(Docente, usuario=request.user)
+    act = get_object_or_404(Actividad, pk=pk, docente=docente)
 
     cursos_ids = [int(x) for x in request.POST.getlist("cursos") if x.strip()]
     alumnos_ids = [int(x) for x in request.POST.getlist("alumnos") if x.strip()]  # Usuario.id
@@ -372,8 +381,8 @@ def actividad_asignar(request, pk):
         request,
         f"Actividad asignada correctamente: {creadas} nuevas, {existentes} ya existían."
     )
-    return redirect("actividad_editar", pk=act.pk)
-
+    # Volvemos a la edición con el modal abierto por si quieren seguir asignando
+    return redirect(reverse("actividad_editar", args=[act.pk]) + "?abrir_asignar=1")
 
 # -----------------------
 # Helpers de corrección (estudiante)
@@ -586,7 +595,6 @@ def estudiante_mis_actividades(request):
         {"rows": rows, "actividades": [r["a"] for r in rows]}
     )
 
-
 @login_required
 def actividad_resolver(request, pk):
     if not es_estudiante(request.user):
@@ -594,6 +602,9 @@ def actividad_resolver(request, pk):
 
     estudiante = get_object_or_404(Estudiante, usuario=request.user)
     act = get_object_or_404(Actividad, pk=pk, es_publicada=True)
+
+    # Fallback seguro para el JSON de accesorios del avatar
+    avatar_equip = getattr(estudiante, "accesorios_equipados", None) or {}
 
     # ¿Se pidió modo play por querystring?
     modo_play = (request.GET.get("modo") == "play")
@@ -698,7 +709,9 @@ def actividad_resolver(request, pk):
         "intento_actual": sub.intento,
         "intentos_max": intentos_max,
         "modo_play": modo_play,
+        "avatar_equip": avatar_equip, 
     })
+
 
 def _letra(i):
     # 0->A, 1->B...
@@ -962,67 +975,60 @@ def _eval_item(item: ItemActividad, payload: dict):
     return False, 0, meta
 
 
-@require_POST
 @login_required
+@require_POST
 def api_item_answer(request, pk, item_id):
-    """Recibe la respuesta de un ítem, corrige, guarda y responde JSON (modo play)."""
-    if not es_estudiante(request.user):
-        return JsonResponse({"ok": False, "error": "No autorizado."}, status=403)
-
-    estudiante = get_object_or_404(Estudiante, usuario=request.user)
-    act = get_object_or_404(Actividad, pk=pk, es_publicada=True)
-    item = get_object_or_404(ItemActividad, pk=item_id, actividad=act)
-
-    # Validar asignación
-    if not AsignacionActividad.objects.filter(estudiante=estudiante, actividad=act).exists():
-        return JsonResponse({"ok": False, "error": "No asignada."}, status=403)
-
-    # Intento abierto
-    sub = (Submission.objects
-           .filter(actividad=act, estudiante=estudiante, finalizado=False)
-           .order_by("-intento", "-id").first())
-    if not sub:
-        return JsonResponse({"ok": False, "error": "Intento no disponible."}, status=400)
-
-    # Payload
+    """
+    Recibe: {"payload": {"completado": true, "meta": {...}, "kind":"memory|dragmatch|trivia"}}
+    Guarda telemetría en Submission.detalle y otorga XP/coins/desbloqueos.
+    """
     try:
-        data = json.loads(request.body.decode("utf-8"))
+        body = json.loads(request.body.decode("utf-8"))
     except Exception:
-        data = request.POST.dict()
+        return HttpResponseBadRequest("JSON inválido")
+    payload = body.get("payload") or {}
+    meta = payload.get("meta") or {}
+    completado = bool(payload.get("completado"))
+    kind = (payload.get("kind") or "").lower()
 
-    payload = data.get("payload") or {}
-    es_ok, pts, meta = _eval_item(item, payload)
+    actividad = get_object_or_404(Actividad, pk=pk)
+    try:
+        estudiante = Estudiante.objects.get(usuario=request.user)
+    except Estudiante.DoesNotExist:
+        return HttpResponseBadRequest("Solo estudiantes pueden responder")
 
-    ans, _ = Answer.objects.get_or_create(submission=sub, item=item)
-    ans.respuesta = payload
-    ans.es_correcta = es_ok
-    # conserva la mejor puntuación para el ítem dentro del mismo intento
-    ans.puntaje_obtenido = max(int(ans.puntaje_obtenido or 0), int(pts or 0))
-    ans.save()
+    # Obtén o crea submission para esta actividad
+    sub, _ = Submission.objects.get_or_create(
+        actividad=actividad,
+        estudiante=request.user,  # si tu Submission usa Usuario
+        defaults={"started_at": timezone.now(), "detalle": {}}
+    )
 
-    # Progreso y calificación parcial
-    items = list(act.items.all())
-    total_puntaje = sum(i.puntaje for i in items) or 1
-    obtenido = Answer.objects.filter(submission=sub).aggregate(s=models.Sum("puntaje_obtenido"))["s"] or 0
-    progreso = round(100 * (obtenido / total_puntaje), 1)
+    # Guarda telemetría por ítem
+    detalle = sub.detalle or {}
+    detalle[str(item_id)] = {
+        "completado": completado,
+        "kind": kind or "game",
+        "meta": meta,
+        "at": timezone.now().isoformat()
+    }
+    sub.detalle = detalle
 
-    # XP proporcional
-    xp_total = act.xp_total or 0
-    xp_actual = int(xp_total * (obtenido / total_puntaje))
-    sub.xp_obtenido = xp_actual
-    sub.calificacion = progreso
-    sub.save(update_fields=["xp_obtenido", "calificacion"])
+    # puntajes básicos (opcional)
+    sub.score = int(sub.score or 0) + int(meta.get("hits", meta.get("found", 0)) or 0) * 10
+    sub.correctas = int(sub.correctas or 0) + int(meta.get("hits", meta.get("found", 0)) or 0)
+    sub.incorrectas = int(sub.incorrectas or 0) + int(meta.get("misses", 0))
+    sub.finished_at = timezone.now()
+    sub.save()
+
+    # Recompensas
+    outcome = compute_rewards(meta)
+    res = apply_rewards(estudiante, outcome)
 
     return JsonResponse({
         "ok": True,
-        "correcto": es_ok,
-        "puntaje_item": item.puntaje,
-        "puntaje_obtenido_item": int(pts or 0),
-        "meta": meta,
-        "progreso": progreso,
-        "xp_actual": xp_actual,
-        "hechas": Answer.objects.filter(submission=sub).count(),
-        "total": len(items),
+        "submission_id": sub.id,
+        "reward": {"xp": outcome.xp, "coins": outcome.coins, "unlocks": outcome.unlocks, **res},
     })
 
 

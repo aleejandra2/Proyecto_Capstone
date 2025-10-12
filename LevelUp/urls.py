@@ -40,6 +40,9 @@ urlpatterns = [
     path("api/actividades/<int:pk>/answer/<int:item_id>/", views.api_item_answer, name="api_item_answer"),
     path("api/actividades/<int:pk>/hint/<int:item_id>/", views.api_item_hint, name="api_item_hint"),  # opcional
 
+    #Juegos
+    path("api/actividades/<int:pk>/answer/<int:item_id>/", views.api_item_answer, name="api_item_answer"),
+
     # Recuperar / Restablecer contraseña
     path(
         "password/recuperar/",

@@ -4,6 +4,7 @@
 
 {% block content %}
 <div class="container py-3">
+
   {% if messages %}
     {% for message in messages %}
       <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
@@ -25,12 +26,12 @@
     </div>
   </div>
 
-  <!-- HUD / Progreso -->
+  <!-- HUD / Progreso general -->
   <div class="card mb-3">
     <div class="card-body d-flex align-items-center justify-content-between">
       <div class="d-flex align-items-center gap-3">
         <div><span class="badge text-bg-primary">Modo Juego</span></div>
-        <div class="small text-muted">Responde y gana XP. Algunas preguntas otorgan puntaje parcial.</div>
+        <div class="small text-muted">Resuelve los minijuegos y gana XP/monedas. Algunas consignas otorgan bonus por racha o velocidad.</div>
       </div>
       <div class="text-end">
         <div class="small">Progreso</div>
@@ -42,16 +43,11 @@
     </div>
   </div>
 
-  <!-- Form clásico de respaldo (POST a resolver) -->
-  <form id="play-form" method="post" action="{% url 'resolver' actividad.pk %}" class="card p-3">
-    {% csrf_token %}
-
+  <!-- Contenido de la actividad: solo GAME/INTERACTIVE -->
+  <div class="card p-3">
     {% for item in actividad.items.all %}
       {% with tipo=item.tipo|lower datos=item.datos %}
-      <div class="mb-4 p-3 border rounded play-item"
-           data-item-id="{{ item.pk }}"
-           data-item-type="{{ tipo }}"
-           data-item-multiple="{% if datos.multiple %}1{% else %}0{% endif %}">
+      <div class="mb-4 p-3 border rounded">
         <div class="d-flex align-items-start justify-content-between">
           <h2 class="h6 m-0">{{ forloop.counter }}. {{ item.enunciado }}</h2>
           <span class="badge text-bg-light text-muted">Puntaje: {{ item.puntaje }}</span>
@@ -61,159 +57,60 @@
           <img src="{{ item.imagen.url }}" class="img-fluid my-2" alt="Imagen del ítem">
         {% endif %}
 
-        {# ---------------- MCQ ---------------- #}
-        {% if tipo == "mcq" %}
-          {% with opciones=datos.opciones %}
-          <div class="mt-2">
-            {% if datos.multiple %}
-              {% if opciones %}
-                {% for op in opciones %}
-                <div class="form-check">
-                  <input class="form-check-input mcq-option"
-                         type="checkbox"
-                         name="item_{{ item.pk }}"
-                         value="{{ forloop.counter0 }}"
-                         id="op{{ item.pk }}_{{ forloop.counter0 }}">
-                  <label class="form-check-label" for="op{{ item.pk }}_{{ forloop.counter0 }}">{{ op }}</label>
-                </div>
-                {% empty %}
-                  <div class="text-muted small">Sin opciones configuradas.</div>
-                {% endfor %}
-              {% else %}
-                <div class="text-muted small">Sin opciones configuradas.</div>
-              {% endif %}
-            {% else %}
-              {% if opciones %}
-                {% for op in opciones %}
-                <div class="form-check">
-                  <input class="form-check-input mcq-option"
-                         type="radio"
-                         name="item_{{ item.pk }}"
-                         value="{{ forloop.counter0 }}"
-                         id="op{{ item.pk }}_{{ forloop.counter0 }}">
-                  <label class="form-check-label" for="op{{ item.pk }}_{{ forloop.counter0 }}">{{ op }}</label>
-                </div>
-                {% empty %}
-                  <div class="text-muted small">Sin opciones configuradas.</div>
-                {% endfor %}
-              {% else %}
-                <div class="text-muted small">Sin opciones configuradas.</div>
-              {% endif %}
-            {% endif %}
-          </div>
-          {% endwith %}
-
-        {# ---------------- Verdadero/Falso ---------------- #}
-        {% elif tipo == "tf" %}
-          <div class="mt-2 d-flex gap-4">
-            <div class="form-check">
-              <input class="form-check-input" type="radio" name="item_{{ item.pk }}" value="true" id="tf_t_{{ item.pk }}">
-              <label class="form-check-label" for="tf_t_{{ item.pk }}">Verdadero</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="radio" name="item_{{ item.pk }}" value="false" id="tf_f_{{ item.pk }}">
-              <label class="form-check-label" for="tf_f_{{ item.pk }}">Falso</label>
-            </div>
-          </div>
-
-        {# ---------------- FIB ---------------- #}
-        {% elif tipo == "fib" %}
-          <input type="text" name="item_{{ item.pk }}" class="form-control mt-2" placeholder="Escribe tu respuesta…">
-
-        {# ---------------- Sort ---------------- #}
-        {% elif tipo == "sort" %}
-          {% with items=datos.items %}
-          <ul class="list-group mt-2 play-sort-list" data-input-id="orden_{{ item.pk }}">
-            {% if items %}
-              {% for it in items %}
-              <li class="list-group-item d-flex align-items-center gap-2" draggable="true" data-id="{{ it.id }}">
-                <span class="bi bi-grip-vertical"></span>
-                <span>{{ it.texto }}</span>
-              </li>
-              {% endfor %}
-            {% endif %}
-          </ul>
-          <input type="hidden" name="item_{{ item.pk }}_orden" id="orden_{{ item.pk }}" value="">
-          {% endwith %}
-
-        {# ---------------- Match ---------------- #}
-        {% elif tipo == "match" %}
-          {% with pares=datos.pares %}
-          <div class="row g-3 mt-2">
-            <div class="col-md-6">
-              <div class="border rounded p-2 play-match-left">
-                {% if pares %}
-                  {% for p in pares %}
-                    <div class="play-match-left-item" data-id="{{ p.left.id }}">{{ p.left.texto }}</div>
-                  {% endfor %}
-                {% endif %}
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="border rounded p-2 play-match-right">
-                {% if pares %}
-                  {% for p in pares %}
-                    <div class="play-match-right-item" data-id="{{ p.right.id }}">{{ p.right.texto }}</div>
-                  {% endfor %}
-                {% endif %}
-              </div>
-            </div>
-          </div>
-          <input type="hidden" name="item_{{ item.pk }}_pares" id="pares_{{ item.pk }}" value="[]">
-          {% endwith %}
-
-        {# ---------------- Respuesta abierta ---------------- #}
-        {% elif tipo == "text" %}
-          <textarea name="item_{{ item.pk }}" class="form-control mt-2" rows="3" placeholder="Escribe tu respuesta…"></textarea>
-
-        {# ---------------- Interactivo/Juego ---------------- #}
-        {% elif tipo == "interactive" or tipo == "game" %}
+        {# --------- INTERACTIVE (embed externo) --------- #}
+        {% if tipo == "interactive" %}
           {% if datos.url %}
             <div class="ratio ratio-16x9 my-2">
-              <iframe src="{{ datos.url }}" title="Contenido interactivo" allowfullscreen></iframe>
+              <iframe src="{{ datos.url }}" allowfullscreen></iframe>
             </div>
           {% else %}
-            <div class="alert alert-warning mt-2">No hay URL configurada para este contenido.</div>
+            <div class="alert alert-warning mt-2">No hay URL para embeber.</div>
           {% endif %}
-          <div class="form-check mt-2">
-            <input class="form-check-input" type="checkbox" id="done_{{ item.pk }}" checked>
-            <label class="form-check-label" for="done_{{ item.pk }}">He completado esta interacción</label>
-          </div>
-          <input type="hidden" name="item_{{ item.pk }}_completado" id="hidden_done_{{ item.pk }}" value="true">
 
-        {# ---------------- Imagen / otro ---------------- #}
-        {% elif tipo == "image" %}
-          <input type="text" name="item_{{ item.pk }}" class="form-control mt-2" placeholder="Describe la imagen o responde la pregunta">
+        {# --------- GAME (minijuegos) --------- #}
+        {% elif tipo == "game" %}
+          {% if datos.url %}
+            <div class="ratio ratio-16x9 my-2">
+              <iframe src="{{ datos.url }}" allowfullscreen></iframe>
+            </div>
+          {% elif datos.kind %}
+            {% with cfgid="gamecfg_"|add:item.pk %}
+              {{ datos|json_script:cfgid }}
+              <div class="game-host my-2"
+                   data-actividad="{{ actividad.pk }}"
+                   data-item="{{ item.pk }}"
+                   data-kind="{{ datos.kind }}"
+                   data-config-id="{{ cfgid }}">
+                <div class="game-skeleton">Cargando minijuego…</div>
+              </div>
+            {% endwith %}
+          {% else %}
+            <div class="alert alert-warning mt-2">No hay configuración de juego.</div>
+          {% endif %}
 
         {% else %}
-          <div class="alert alert-secondary mt-2">Tipo no soportado: {{ tipo }}</div>
+          <div class="alert alert-secondary mt-2">Tipo no soportado en modo juego: {{ tipo }}</div>
         {% endif %}
       </div>
       {% endwith %}
     {% empty %}
       <div class="alert alert-info">Esta actividad aún no tiene ítems.</div>
     {% endfor %}
-
-    <div class="d-flex gap-2">
-      <button class="btn btn-success" type="submit">Enviar intento</button>
-      <a class="btn btn-outline-secondary" href="{% url 'estudiante_lista' %}">Volver</a>
-    </div>
-  </form>
+  </div>
 </div>
-
-<!-- CSS mínimo -->
-<style>
-  .play-match-left, .play-match-right { min-height: 160px; }
-  .play-match-left-item, .play-match-right-item {
-    background: #f8f9fa; border: 1px solid #e9ecef; border-radius: .375rem;
-    padding: .25rem .5rem; margin-bottom: .5rem; cursor: grab;
-  }
-  .play-sort-list .list-group-item { cursor: grab; }
-</style>
 {% endblock %}
 
 {% block extra_js %}
-  {% if modo_play %}
-    <script src="{% static 'LevelUp/js/actividad_play.js' %}"></script>
-  {% endif %}
+  <link rel="stylesheet" href="{% static 'LevelUp/css/games.css' %}">
+
+  {# Solo DATA del avatar (sin JS inline) #}
+  <div id="game-avatar-data"
+       data-img="{% static 'LevelUp/img/avatars/otter.png' %}"
+       data-nivel="{{ request.user.estudiante.nivel|default:1 }}"
+       data-xp="{{ request.user.estudiante.xp|default:0 }}">
+  </div>
+  {{ request.user.estudiante.accesorios_equipados|default:{}|json_script:"game-avatar-equip" }}
+
+  <script type="module" src="{% static 'LevelUp/js/games/bootstrap.js' %}"></script>
+  <script type="module" src="{% static 'LevelUp/js/games/loader.js' %}"></script>
 {% endblock %}
