@@ -136,3 +136,51 @@ document.addEventListener("DOMContentLoaded", function () {
     // Inicializar ya existentes
     container.querySelectorAll(".item-form").forEach(initItemCard);
 });
+
+/* === Fallback Game Builder -> textarea al enviar =================================== */
+(function () {
+    document.addEventListener('DOMContentLoaded', function () {
+        var form = document.getElementById('actividad-form');
+        if (!form) return;
+
+        form.addEventListener('submit', function () {
+            document.querySelectorAll('.item-form').forEach(function (card) {
+                var kindSel = card.querySelector('select[name$="-game_kind"]');
+                var rawTA = card.querySelector('textarea[name$="-game_pairs"]');
+                var gb = card.querySelector('.gbuilder');
+                if (!kindSel || !rawTA || !gb) return;
+                if (rawTA.value.trim()) return;
+
+                var kind = (kindSel.value || '').toLowerCase();
+
+                function getVals(sel) {
+                    return Array.from(gb.querySelectorAll(sel))
+                        .map(function (i) { return (i.value || '').trim(); })
+                        .filter(Boolean);
+                }
+
+                if (kind === 'trivia') {
+                    var items = Array.from(gb.querySelectorAll('.gb-trivia-item')).map(function (it) {
+                        var q = it.querySelector('.gb-q');
+                        q = q ? (q.value || '').trim() : '';
+                        var opts = Array.from(it.querySelectorAll('.gb-opt'))
+                            .map(function (o) { return (o.value || '').trim(); })
+                            .filter(Boolean);
+                        var ansIdx = Array.from(it.querySelectorAll('.gb-opt'))
+                            .findIndex(function (o) { return o.classList.contains('is-correct') || o.dataset.correct === '1'; });
+                        if (!q || opts.length < 2) return null;
+                        if (ansIdx < 0) ansIdx = 0;
+                        return [q].concat(opts.map(function (t, i) { return i === ansIdx ? (t + '*') : t; })).join(' | ');
+                    }).filter(Boolean);
+                    if (items.length) rawTA.value = items.join('\n');
+                } else {
+                    var A = getVals('.gb-a input, .gb-a textarea, [data-col="A"] input, [data-col="A"] textarea');
+                    var B = getVals('.gb-b input, .gb-b textarea, [data-col="B"] input, [data-col="B"] textarea');
+                    if (A.length && B.length && A.length === B.length) {
+                        rawTA.value = A.map(function (v, i) { return v + '|' + B[i]; }).join('\n');
+                    }
+                }
+            });
+        });
+    });
+})();

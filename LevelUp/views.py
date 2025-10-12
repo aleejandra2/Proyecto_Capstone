@@ -292,7 +292,8 @@ def actividad_crear(request):
 
 @login_required
 def actividad_editar(request, pk):
-    if not getattr(request.user, "rol", None) == "DOCENTE":
+    # Solo docentes
+    if getattr(request.user, "rol", None) != "DOCENTE":
         raise Http404
 
     docente = get_object_or_404(Docente, usuario=request.user)
@@ -322,14 +323,19 @@ def actividad_editar(request, pk):
             form.fields["docente"].disabled = True
         formset = ItemFormSet(instance=act)
 
-    abrir_asignar = (request.GET.get("open") == "asignar")  # <-- clave
+    # Acepta ambos parámetros para abrir el modal
+    abrir_asignar = (
+        request.GET.get("open") == "asignar"
+    ) or (
+        request.GET.get("abrir_asignar") == "1"
+    )
 
     ctx = {
         "form": form,
         "formset": formset,
         "editar": True,
         "act": act,
-        "abrir_asignar": abrir_asignar,                    # <-- pásalo al template
+        "abrir_asignar": abrir_asignar,
         "cursos": Curso.objects.all().order_by("nivel", "letra"),
         "estudiantes": Estudiante.objects.select_related("usuario").order_by(
             "usuario__first_name", "usuario__last_name"
@@ -340,37 +346,50 @@ def actividad_editar(request, pk):
 @login_required
 @require_POST
 def actividad_asignar(request, pk):
+    # Solo docentes
     if getattr(request.user, "rol", None) != "DOCENTE":
         raise Http404
 
     docente = get_object_or_404(Docente, usuario=request.user)
     act = get_object_or_404(Actividad, pk=pk, docente=docente)
 
-    cursos_ids = [int(x) for x in request.POST.getlist("cursos") if x.strip()]
-    alumnos_ids = [int(x) for x in request.POST.getlist("alumnos") if x.strip()]  # Usuario.id
+    # IDs que vienen del formulario
+    cursos_ids = [int(x) for x in request.POST.getlist("cursos") if str(x).strip()]
+    alumnos_usuario_ids = [int(x) for x in request.POST.getlist("alumnos") if str(x).strip()]
+    # OJO: "alumnos" envía Usuario.id (no Estudiante.id)
 
-    target_usuario_ids = set()
-
-    if alumnos_ids:
-        target_usuario_ids.update(
-            Estudiante.objects.filter(usuario_id__in=alumnos_ids).values_list("usuario_id", flat=True)
-        )
+    # 1) Junta todos los Usuario.id objetivo
+    usuario_ids = set(alumnos_usuario_ids)
 
     if cursos_ids:
-        target_usuario_ids.update(
-            Matricula.objects.filter(curso_id__in=cursos_ids).values_list("estudiante_id", flat=True)
+        # Matricula.estudiante_id -> Usuario.id
+        usuario_ids.update(
+            Matricula.objects
+            .filter(curso_id__in=cursos_ids)
+            .values_list("estudiante_id", flat=True)
         )
 
-    if not target_usuario_ids:
-        messages.warning(request, "No se seleccionaron alumnos ni cursos.")
-        return redirect("actividad_editar", pk=act.pk)
+    if not usuario_ids:
+        messages.warning(request, "Selecciona al menos un curso o un alumno.")
+        return redirect(reverse("actividad_editar", args=[act.pk]) + "?open=asignar")
 
-    alumnos_est = Estudiante.objects.filter(usuario_id__in=target_usuario_ids)
-    creadas, existentes = 0, 0
-    for est in alumnos_est:
-        obj, created = AsignacionActividad.objects.get_or_create(
-            estudiante=est,
+    # 2) Limita a Estudiantes que EXISTEN (su PK = usuario_id)
+    est_pks = set(
+        Estudiante.objects
+        .filter(usuario_id__in=usuario_ids)
+        .values_list("usuario_id", flat=True)   # <-- PK de Estudiante
+    )
+
+    if not est_pks:
+        messages.warning(request, "No se encontraron perfiles de estudiante para la selección.")
+        return redirect(reverse("actividad_editar", args=[act.pk]) + "?open=asignar")
+
+    # 3) Crea asignaciones evitando duplicados
+    creadas = existentes = 0
+    for est_pk in est_pks:
+        _, created = AsignacionActividad.objects.get_or_create(
             actividad=act,
+            estudiante_id=est_pk,  # FK directa al PK de Estudiante (usuario_id)
         )
         if created:
             creadas += 1
@@ -379,10 +398,9 @@ def actividad_asignar(request, pk):
 
     messages.success(
         request,
-        f"Actividad asignada correctamente: {creadas} nuevas, {existentes} ya existían."
+        f"Actividad asignada: {creadas} nuevas, {existentes} ya existían."
     )
-    # Volvemos a la edición con el modal abierto por si quieren seguir asignando
-    return redirect(reverse("actividad_editar", args=[act.pk]) + "?abrir_asignar=1")
+    return redirect(reverse("actividad_editar", args=[act.pk]) + "?open=asignar")
 
 # -----------------------
 # Helpers de corrección (estudiante)
