@@ -85,24 +85,20 @@
 ## Pasar todo de la rama al main
 
 1. Primero asegúrate de tener todo listo en tu rama:
-- git status
+   - git status
 
 1.1 Si hay archivos modificados, confírmalos:
-- git add .
-- git commit -m "Mis últimos cambios en la rama"
+   - git add .
+   - git commit -m "Mis últimos cambios en la rama"
 
 2. Cambia a la rama main
-- git checkout main
+   - git checkout main
 
 3. Actualiza el main desde el remoto
-- git pull origin main
+   - git pull origin main
 
 4. Une tu rama con el main
+   - git merge tu-rama
 
-Tienes dos formas según lo que prefieras 👇
-
-5. Merge (recomendada si estás trabajando con otros)
-git merge tu-rama
-
-6. Sube el main actualizado al remoto
-git push origin main
+5. Sube el main actualizado al remoto
+   - git push origin main
