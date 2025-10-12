@@ -56,3 +56,49 @@
 
    - git branch -d nombre_rama           # borrar rama local
    - git push origin --delete nombre_rama  # borrar rama remota
+
+
+## Traer todo del main a la rama
+
+1. Verifica en qué rama estás
+- git status
+
+1.1 Si no estás en tu rama, cámbiate a ella:
+
+- git checkout tu-rama
+
+2. Asegúrate de tener el main actualizado
+- git fetch origin
+- git checkout main
+- git pull origin main
+
+3. Vuelve a tu rama
+- git checkout tu-rama
+
+4. Trae los cambios del main a tu rama
+- git merge main
+
+5. Sube tu rama actualizada al remoto
+- git push origin tu-rama
+
+
+## Pasar todo de la rama al main
+
+1. Primero asegúrate de tener todo listo en tu rama:
+   - git status
+
+1.1 Si hay archivos modificados, confírmalos:
+   - git add .
+   - git commit -m "Mis últimos cambios en la rama"
+
+2. Cambia a la rama main
+   - git checkout main
+
+3. Actualiza el main desde el remoto
+   - git pull origin main
+
+4. Une tu rama con el main
+   - git merge tu-rama
+
+5. Sube el main actualizado al remoto
+   - git push origin main
