@@ -13,6 +13,7 @@ export default async function initTrivia(host, cfg = {}) {
     const h = document.createElement('div'); h.className = 'tr-q'; h.textContent = `${idx+1}. ${q.q}`;
     const opts = document.createElement('div'); opts.className = 'tr-opts';
 
+    let answered = false;
     q.opts.forEach((o, i) => {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -21,6 +22,32 @@ export default async function initTrivia(host, cfg = {}) {
       btn.addEventListener('click', () => {
         if (i === q.ans) { btn.classList.replace('btn-outline-secondary', 'btn-success'); }
         else            { btn.classList.replace('btn-outline-secondary', 'btn-danger');  }
+        answered = true;
+        // si todas las preguntas fueron respondidas al menos una vez, marca completado
+        const cards = Array.from(container.querySelectorAll('.tr-card'));
+        let correct = 0; let answeredCount = 0;
+        const detail = [];
+        cards.forEach(c => {
+          const sel = c.querySelector('.btn-success, .btn-danger');
+          if (sel) {
+            answeredCount++;
+            const ok = sel.classList.contains('btn-success');
+            if (ok) correct++;
+            const qi = cards.indexOf(c);
+            const qq = items[qi]?.q || '';
+            const corrIdx = items[qi]?.ans ?? 0;
+            const corrText = items[qi]?.opts?.[corrIdx] || '';
+            detail.push({ q: qq, selected: sel.textContent, correct: corrText, ok });
+          }
+        });
+        const host = container.closest('.game-host');
+        if (host) {
+          host.dataset.gameScore = String(correct / Math.max(1, items.length));
+          host.dataset.gameCorrect = String(correct);
+          host.dataset.gameTotal = String(items.length);
+          try { host.dataset.gameDetail = JSON.stringify({ qa: detail }); } catch {}
+          if (answeredCount >= items.length) host.dataset.gameComplete = '1';
+        }
       });
       opts.appendChild(btn);
     });

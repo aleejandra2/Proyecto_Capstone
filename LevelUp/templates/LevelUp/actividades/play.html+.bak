@@ -1,6 +1,6 @@
 {% extends "LevelUp/base.html" %}
 {% load static %}
-{% block title %}{{ actividad.titulo }} - Modo Juego{% endblock %}
+{% block title %}{{ actividad.titulo }} · Modo Juego{% endblock %}
 
 {% block content %}
 <div class="container py-3">
@@ -61,9 +61,8 @@
     </div>
   </div>
 
-  <!-- Contenido: solo GAME/INTERACTIVE -->
-  <form id="play-form" class="card p-3" method="post">
-    {% csrf_token %}
+  <!-- Contenido de la actividad: solo GAME/INTERACTIVE -->
+  <div class="card p-3">
     {% for item in actividad.items.all %}
       {% with tipo=item.tipo|lower datos=item.datos %}
       <div class="mb-4 p-3 border rounded">
@@ -76,6 +75,7 @@
           <img src="{{ item.imagen.url }}" class="img-fluid my-2" alt="Imagen del ítem">
         {% endif %}
 
+        {# --------- INTERACTIVE (embed externo) --------- #}
         {% if tipo == "interactive" %}
           {% if datos.url %}
             <div class="ratio ratio-16x9 my-2">
@@ -85,6 +85,7 @@
             <div class="alert alert-warning mt-2">No hay URL para embeber.</div>
           {% endif %}
 
+        {# --------- GAME (minijuegos) --------- #}
         {% elif tipo == "game" %}
           {% if datos.url %}
             <div class="ratio ratio-16x9 my-2">
@@ -113,18 +114,14 @@
     {% empty %}
       <div class="alert alert-info">Esta actividad aún no tiene ítems.</div>
     {% endfor %}
-
-    <div class="d-flex align-items-center justify-content-between mt-2">
-      <div class="text-muted small">Cuando termines, envía para ver tus resultados.</div>
-      <button class="btn btn-primary" type="submit" id="btnSubmit">Enviar actividad</button>
-    </div>
-  </form>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
   <link rel="stylesheet" href="{% static 'LevelUp/css/games.css' %}">
 
+  {# Solo DATA del avatar (sin JS inline) #}
   <div id="game-avatar-data"
        data-img="{% static 'LevelUp/img/avatars/otter.png' %}"
        data-nivel="{{ request.user.estudiante.nivel|default:1 }}"
@@ -138,4 +135,5 @@
   <script type="module" src="{% static 'LevelUp/js/games/loader.js' %}"></script>
   <script src="{% static 'LevelUp/js/play_hud.js' %}"></script>
 {% endblock %}
+
 

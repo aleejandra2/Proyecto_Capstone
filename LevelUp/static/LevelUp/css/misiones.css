@@ -1,0 +1,55 @@
+﻿.ms-levels{ display:flex; gap:14px; flex-wrap:wrap; }
+.ms-node{ display:grid; place-items:center; width:80px; height:80px; border-radius:16px; background:#f8fafc; color:#0f172a; text-decoration:none; border:1px solid #e2e8f0; font-weight:800; box-shadow:0 6px 16px rgba(0,0,0,.06); }
+.ms-node.disabled{ opacity:.5; pointer-events:none; }
+
+.ms-stage{ border:1px solid #e2e8f0; border-radius:16px; padding:10px; min-height:360px; 
+  /* Fondo: textura del nivel */
+  background:url('/static/LevelUp/img/misiones/nivel.png') center/cover no-repeat; 
+  position:relative; overflow:hidden; }
+.ms-stage:before{ content:""; position:absolute; left:-10%; right:-10%; top:55%; height:60px; background:#bbf7d0; border-radius:50%; filter:blur(20px); opacity:.5; }
+.ms-grid{ display:grid; grid-template-columns:repeat(12,1fr); grid-auto-rows:28px; gap:4px; position:relative; z-index:1; }
+.ms-tile{ background:#93c5fd; border-radius:6px; box-shadow:inset 0 2px 0 rgba(255,255,255,.6); }
+.ms-avatar-wrap{ position:absolute; width:36px; height:36px; z-index:2; transform-origin:center; }
+.ms-avatar-wrap.left{ transform: scaleX(-1); }
+.ms-avatar{ width:36px; height:36px; border-radius:8px;
+  background: url('/static/LevelUp/img/misiones/personaje.png') center/contain no-repeat;
+  /* Sin borde para evitar el cuadro blanco del marco */
+  border:none; box-shadow:0 6px 16px rgba(0,0,0,.2);
+  position:absolute;
+  /* Mezcla para disimular fondos blancos del PNG contra el fondo */
+  mix-blend-mode: multiply;
+  /* Animación por defecto (idle) suave */
+  animation: msIdle 1.4s ease-in-out infinite;
+}
+.ms-avatar.walk{ animation: msWalk 0.9s ease-in-out infinite; }
+.ms-coin{ width:24px; height:24px; background:url('/static/LevelUp/img/misiones/coin.png') center/contain no-repeat; filter: drop-shadow(0 1px 1px rgba(0,0,0,.15)); animation: spin 1.2s linear infinite; }
+.ms-enemy{ width:26px; height:26px; background:url('/static/LevelUp/img/misiones/enemigo1_math.png') center/contain no-repeat; filter: drop-shadow(0 1px 1px rgba(0,0,0,.15)); }
+.ms-q{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.35); z-index:3; }
+.ms-q > div{ background:#fff; border-radius:12px; padding:16px; max-width:520px; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+
+/* tarjetas de mundos */
+.ms-card{ padding:18px; border-radius:16px; border:1px solid #e2e8f0; box-shadow:0 8px 20px rgba(0,0,0,.05); display:flex; align-items:center; gap:12px; height:100%; background:linear-gradient(180deg,#f8fafc,#ffffff), url('/static/LevelUp/img/misiones/mapa.png') right center/contain no-repeat; }
+.ms-card .ms-icon{ width:36px; height:36px; border-radius:10px; display:grid; place-items:center; font-size:18px; }
+
+@keyframes spin{ from{ transform:rotate(0) } to{ transform:rotate(360deg) } }
+.ms-q{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.35); }
+.ms-q > div{ background:#fff; border-radius:12px; padding:16px; max-width:520px; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+.ms-enemy{ animation: msFloat 2.2s ease-in-out infinite; }
+.ms-enemy.alert{ animation: msFloat 1.2s ease-in-out infinite, msPulse 1.2s ease-in-out infinite; filter: drop-shadow(0 2px 2px rgba(0,0,0,.2)) brightness(1.05); }
+.ms-enemy.trigger{ animation: msGlow .6s ease-in-out infinite alternate; }
+.ms-enemy.defeat{ animation: msSpinOut .5s ease forwards; }
+.ms-hud{ position:absolute; top:8px; left:10px; background:rgba(255,255,255,.8); padding:6px 10px; border-radius:999px; font-weight:800; box-shadow:0 6px 16px rgba(0,0,0,.08); z-index:6; }
+@keyframes msFloat{ 0%{ transform: translateY(0) } 50%{ transform: translateY(-4px) } 100%{ transform: translateY(0) } }
+@keyframes msPulse{ 0%{ transform: scale(1) } 50%{ transform: scale(1.04) } 100%{ transform: scale(1) } }
+@keyframes msGlow{ 0%{ filter: drop-shadow(0 0 0 rgba(255,255,0,.0)); } 100%{ filter: drop-shadow(0 0 6px rgba(255,200,0,.6)); } }
+@keyframes msSpinOut{ 0%{ transform: rotate(0) scale(1); opacity:1 } 100%{ transform: rotate(420deg) scale(.4); opacity:0 } }
+/* Avatar idle: leve flotación (parado) */
+@keyframes msIdle{ 0%{ transform: translateY(0) } 50%{ transform: translateY(-2px) } 100%{ transform: translateY(0) } }
+/* Avatar walk: paso corto y balanceo sutil */
+@keyframes msWalk{ 
+  0%{ transform: translateY(0) rotate(0deg) }
+  25%{ transform: translateY(-2px) rotate(-1.2deg) }
+  50%{ transform: translateY(0) rotate(0deg) }
+  75%{ transform: translateY(-2px) rotate(1.2deg) }
+  100%{ transform: translateY(0) rotate(0deg) }
+}

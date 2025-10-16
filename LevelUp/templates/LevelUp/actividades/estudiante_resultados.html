@@ -1,4 +1,4 @@
-{% extends "LevelUp/base.html" %}
+﻿{% extends "LevelUp/base.html" %}
 {% block title %}Resultados: {{ actividad.titulo }}{% endblock %}
 {% block content %}
 <div class="container py-3">
@@ -13,7 +13,7 @@
         <div>
             <h1 class="h4 mb-1">Resultados: {{ actividad.titulo }}</h1>
             <div class="small text-muted">
-                Intento {{ sub.intento }} · Nota: {{ sub.calificacion }}% · XP obtenido: {{ sub.xp_obtenido }}
+                Intento {{ sub.intento }} Â· Nota: {{ sub.calificacion }}% Â· XP obtenido: {{ sub.xp_obtenido }}
             </div>
             <div class="small text-muted">
                 Intentos usados: {{ intentos_usados }}/{{ intentos_max }}
@@ -29,6 +29,21 @@
         </div>
 
     </div>
+
+    {% if intentos and intentos|length > 1 %}
+    <div class="mt-3 mb-2">
+      <div class="small text-muted mb-1">Ver otros intentos</div>
+      <div class="d-flex flex-wrap gap-2">
+        {% for s in intentos %}
+          {% if s.intento == sub.intento %}
+            <span class="badge text-bg-primary">Intento {{ s.intento }}</span>
+          {% else %}
+            <a class="badge text-bg-light" href="?intento={{ s.intento }}">Intento {{ s.intento }}</a>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
 
     <hr>
 
@@ -46,12 +61,12 @@
         </h2>
 
         {% if item.imagen %}
-        <img src="{{ item.imagen.url }}" class="img-fluid mb-2" alt="Imagen del ítem">
+        <img src="{{ item.imagen.url }}" class="img-fluid mb-2" alt="Imagen del Ã­tem">
         {% endif %}
 
         {% if d.tipo == 'mcq' %}
         {% if d.multiple %}
-        <div class="small">Tus respuestas: {{ d.marcadas_letras|default:'—' }}</div>
+        <div class="small">Tus respuestas: {{ d.marcadas_letras|default:'â€”' }}</div>
         <div class="small">Correctas: {{ d.correctas_letras }}</div>
         <ul class="mt-2">
             {% for op in d.opciones %}
@@ -63,7 +78,7 @@
             {% endfor %}
         </ul>
         {% else %}
-        <div class="small">Tu respuesta: {{ d.marcadas_letras|default:'—' }}</div>
+        <div class="small">Tu respuesta: {{ d.marcadas_letras|default:'â€”' }}</div>
         <div class="small">Correcta: {{ d.correctas_letras }}</div>
         {% endif %}
 
@@ -72,12 +87,12 @@
         <div class="small">Correcta: {{ d.esperado|yesno:"Verdadero,Falso" }}</div>
 
         {% elif d.tipo == 'fib' %}
-        <div class="small">Tu respuesta: <em>{{ d.texto|default:"—" }}</em></div>
+        <div class="small">Tu respuesta: <em>{{ d.texto|default:"â€”" }}</em></div>
         <div class="small">Se acepta: {{ d.aceptadas|join:", " }}</div>
 
         {% elif d.tipo == 'sort' %}
-        <div class="small">Tu orden: {{ d.orden_alumno|join:" → " }}</div>
-        <div class="small">Orden correcto: {{ d.orden_correcto|join:" → " }}</div>
+        <div class="small">Tu orden: {{ d.orden_alumno|join:" â†’ " }}</div>
+        <div class="small">Orden correcto: {{ d.orden_correcto|join:" â†’ " }}</div>
 
         {% elif d.tipo == 'match' %}
         <div class="row">
@@ -85,9 +100,9 @@
                 <div class="fw-bold small">Tus pares</div>
                 <ul class="small m-0 ps-3">
                     {% for l,r in d.pares_alumno %}
-                    <li>{{ l }} → {{ r }}</li>
+                    <li>{{ l }} â†’ {{ r }}</li>
                     {% empty %}
-                    <li>—</li>
+                    <li>â€”</li>
                     {% endfor %}
                 </ul>
             </div>
@@ -95,7 +110,7 @@
                 <div class="fw-bold small">Pares correctos</div>
                 <ul class="small m-0 ps-3">
                     {% for l,r in d.pares_esperados %}
-                    <li>{{ l }} → {{ r }}</li>
+                    <li>{{ l }} â†’ {{ r }}</li>
                     {% endfor %}
                 </ul>
             </div>
@@ -109,7 +124,7 @@
         {% endif %}
 
         {% elif d.tipo == 'interactive' or d.tipo == 'game' %}
-        <div class="small">Completado: {{ d.completado|yesno:"Sí,No" }}</div>
+        <div class="small">Completado: {{ d.completado|yesno:"Sí,No" }}\n        {% if d.score %}\n        <div class="small">Puntaje parcial: {{ d.score|floatformat:2 }} ({{ d.correctas|default:"?" }}/{{ d.total|default:"?" }})</div>\n        {% endif %}</div>
 
         {% else %}
         <pre class="small bg-light p-2">{{ d.respuesta|default:"" }}</pre>
@@ -121,3 +136,4 @@
 
 </div>
 {% endblock %}
+

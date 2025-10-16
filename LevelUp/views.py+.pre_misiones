@@ -1,4 +1,4 @@
-﻿from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, Http404, JsonResponse, HttpResponseBadRequest
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
@@ -39,15 +39,15 @@ def es_estudiante(user) -> bool:
 
 
 # -------------------------------------------------------------------
-# Home pÃºblica (sin login)
+# Home pública (sin login)
 # -------------------------------------------------------------------
 def home(request):
-    # Renderiza una homepage simple (puedes poner tu landing aquÃ­)
+    # Renderiza una homepage simple (puedes poner tu landing aquí)
     return render(request, "LevelUp/home.html")
 
 
 # -------------------------------------------------------------------
-# CatÃ¡logo / Ranking / Reportes (con login)
+# Catálogo / Ranking / Reportes (con login)
 # -------------------------------------------------------------------
 @login_required
 def actividades_view(request):
@@ -77,8 +77,8 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            messages.success(request, "Â¡Cuenta creada con Ã©xito! Bienvenido/a a LevelUp.")
-            # â¬‡â¬‡ redirige al portal por rol
+            messages.success(request, "¡Cuenta creada con éxito! Bienvenido/a a LevelUp.")
+            # ⬇⬇ redirige al portal por rol
             return redirect("dashboard")
         else:
             messages.error(request, "Por favor corrige los errores del formulario.")
@@ -89,7 +89,7 @@ def register_view(request):
 
 def login_view(request):
     if request.user.is_authenticated:
-        # â¬‡â¬‡ si ya estÃ¡ logueado, al portal por rol
+        # ⬇⬇ si ya está logueado, al portal por rol
         return redirect("dashboard")
 
     if request.method == "POST":
@@ -109,11 +109,11 @@ def login_view(request):
                 login(request, user)
                 if not remember:
                     request.session.set_expiry(0)
-                messages.success(request, f"Â¡Hola {user.first_name or user.username}!")
-                # â¬‡â¬‡ al portal por rol
+                messages.success(request, f"¡Hola {user.first_name or user.username}!")
+                # ⬇⬇ al portal por rol
                 return redirect("dashboard")
             else:
-                messages.error(request, "Credenciales invÃ¡lidas. Verifica tu email y contraseÃ±a.")
+                messages.error(request, "Credenciales inválidas. Verifica tu email y contraseña.")
     else:
         form = LoginForm()
 
@@ -123,7 +123,7 @@ def login_view(request):
 @login_required
 def logout_view(request):
     logout(request)
-    messages.info(request, "SesiÃ³n cerrada correctamente.")
+    messages.info(request, "Sesión cerrada correctamente.")
     return redirect("login")
 
 
@@ -133,8 +133,8 @@ def logout_view(request):
 @login_required(login_url='login')
 def home_view(request):
     """
-    Enruta a una plantilla distinta segÃºn el rol del usuario
-    y arma el contexto bÃ¡sico de cada portal.
+    Enruta a una plantilla distinta según el rol del usuario
+    y arma el contexto básico de cada portal.
     """
     rol = getattr(request.user, "rol", None)
     ctx = {}
@@ -162,7 +162,7 @@ def home_view(request):
         ctx.update({
             "total_estudiantes": Estudiante.objects.count(),
             "total_actividades": Actividad.objects.count(),
-            "promedio_general": "â€”",
+            "promedio_general": "—",
             "dias_activos": 7,
         })
 
@@ -189,7 +189,7 @@ def perfil_view(request):
 
 @login_required
 def perfil_editar_view(request):
-    """Editar datos bÃ¡sicos del perfil (nombre, apellido, email, RUT)."""
+    """Editar datos básicos del perfil (nombre, apellido, email, RUT)."""
     if request.method == "POST":
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
@@ -204,16 +204,16 @@ def perfil_editar_view(request):
 
 @login_required
 def cambiar_password_view(request):
-    """Cambiar contraseÃ±a (mantiene la sesiÃ³n activa al cambiarla)."""
+    """Cambiar contraseña (mantiene la sesión activa al cambiarla)."""
     if request.method == "POST":
         form = PasswordChangeForm(user=request.user, data=request.POST)
         if form.is_valid():
             user = form.save()
-            update_session_auth_hash(request, user)  # mantener sesiÃ³n
-            messages.success(request, "Tu contraseÃ±a fue actualizada.")
+            update_session_auth_hash(request, user)  # mantener sesión
+            messages.success(request, "Tu contraseña fue actualizada.")
             return redirect("perfil")
         else:
-            messages.error(request, "Corrige los errores e intÃ©ntalo nuevamente.")
+            messages.error(request, "Corrige los errores e inténtalo nuevamente.")
     else:
         form = PasswordChangeForm(user=request.user)
     return render(request, "LevelUp/perfil/cambiar_password.html", {"form": form})
@@ -260,7 +260,7 @@ def actividad_crear(request):
                 act.save()
                 form.save_m2m()
 
-                # ahora sÃ­, asociamos y guardamos los Ã­tems
+                # ahora sí, asociamos y guardamos los ítems
                 formset.instance = act
                 formset.save()
 
@@ -271,7 +271,7 @@ def actividad_crear(request):
 
             return redirect("docente_lista")
         else:
-            messages.error(request, "Revisa los errores en el formulario y los Ã­tems.")
+            messages.error(request, "Revisa los errores en el formulario y los ítems.")
     else:
         form = ActividadForm()
         if "docente" in form.fields:
@@ -316,14 +316,14 @@ def actividad_editar(request, pk):
             messages.success(request, "Actividad actualizada.")
             return redirect("docente_lista")
         else:
-            messages.error(request, "Revisa los errores en el formulario y los Ã­tems.")
+            messages.error(request, "Revisa los errores en el formulario y los ítems.")
     else:
         form = ActividadForm(instance=act)
         if "docente" in form.fields:
             form.fields["docente"].disabled = True
         formset = ItemFormSet(instance=act)
 
-    # Acepta ambos parÃ¡metros para abrir el modal
+    # Acepta ambos parámetros para abrir el modal
     abrir_asignar = (
         request.GET.get("open") == "asignar"
     ) or (
@@ -356,7 +356,7 @@ def actividad_asignar(request, pk):
     # IDs que vienen del formulario
     cursos_ids = [int(x) for x in request.POST.getlist("cursos") if str(x).strip()]
     alumnos_usuario_ids = [int(x) for x in request.POST.getlist("alumnos") if str(x).strip()]
-    # OJO: "alumnos" envÃ­a Usuario.id (no Estudiante.id)
+    # OJO: "alumnos" envía Usuario.id (no Estudiante.id)
 
     # 1) Junta todos los Usuario.id objetivo
     usuario_ids = set(alumnos_usuario_ids)
@@ -381,7 +381,7 @@ def actividad_asignar(request, pk):
     )
 
     if not est_pks:
-        messages.warning(request, "No se encontraron perfiles de estudiante para la selecciÃ³n.")
+        messages.warning(request, "No se encontraron perfiles de estudiante para la selección.")
         return redirect(reverse("actividad_editar", args=[act.pk]) + "?open=asignar")
 
     # 3) Crea asignaciones evitando duplicados
@@ -398,12 +398,12 @@ def actividad_asignar(request, pk):
 
     messages.success(
         request,
-        f"Actividad asignada: {creadas} nuevas, {existentes} ya existÃ­an."
+        f"Actividad asignada: {creadas} nuevas, {existentes} ya existían."
     )
     return redirect(reverse("actividad_editar", args=[act.pk]) + "?open=asignar")
 
 # -----------------------
-# Helpers de correcciÃ³n (estudiante)
+# Helpers de corrección (estudiante)
 # -----------------------
 def _norm(s):
     return str(s or "").strip()
@@ -412,7 +412,7 @@ def _norm_lower(s):
     return _norm(s).lower()
 
 def _post_bool(v):
-    return str(v).lower() in ("true", "1", "on", "si", "sÃ­")
+    return str(v).lower() in ("true", "1", "on", "si", "sí")
 
 def _grade_mcq(item, POST):
     """
@@ -424,7 +424,7 @@ def _grade_mcq(item, POST):
     """
     name = f"item_{item.pk}"
     datos = item.datos or {}
-    correctas = list(datos.get("correctas", []))  # Ã­ndices 0-based
+    correctas = list(datos.get("correctas", []))  # índices 0-based
     multiple = bool(datos.get("multiple", False))
 
     if multiple:
@@ -623,7 +623,7 @@ def estudiante_mis_actividades(request):
         cerrada = bool(a.fecha_cierre and now > a.fecha_cierre)
         max_for_student = ov_map.get(a.id) or (a.intentos_max or 1)
 
-        # Puede intentar si estÃ¡ abierta y no agotÃ³ intentos
+        # Puede intentar si está abierta y no agotó intentos
         puede_intentar = (not cerrada) and (usados < max_for_student)
         tiene_abierto = abiertos > 0
         tiene_resultados = finalizados > 0
@@ -655,7 +655,7 @@ def actividad_resolver(request, pk):
     # Fallback seguro para el JSON de accesorios del avatar
     avatar_equip = getattr(estudiante, "accesorios_equipados", None) or {}
 
-    # Â¿Se pidiÃ³ modo play por querystring?
+    # ¿Se pidió modo play por querystring?
     modo_play = (request.GET.get("modo") == "play")
     template_name = (
         "LevelUp/actividades/play.html"
@@ -663,16 +663,16 @@ def actividad_resolver(request, pk):
         "LevelUp/actividades/estudiante_resolver.html"
     )
 
-    # Validar asignaciÃ³n al estudiante
+    # Validar asignación al estudiante
     if not AsignacionActividad.objects.filter(estudiante=estudiante, actividad=act).exists():
         raise Http404
 
     # Cierre
     if getattr(act, "fecha_cierre", None) and timezone.now() > act.fecha_cierre:
-        messages.warning(request, "La actividad estÃ¡ cerrada.")
+        messages.warning(request, "La actividad está cerrada.")
         return redirect("estudiante_lista")
 
-    # Â¿Hay un intento sin finalizar?
+    # ¿Hay un intento sin finalizar?
     sub_abierta = (
         Submission.objects
         .filter(actividad=act, estudiante=estudiante, finalizado=False)
@@ -684,12 +684,12 @@ def actividad_resolver(request, pk):
     intentos_usados = Submission.objects.filter(actividad=act, estudiante=estudiante).count()
     intentos_max = act.intentos_max or 1
 
-    # Si no hay sub abierta y no quedan intentos â†’ ver resultados del Ãºltimo
+    # Si no hay sub abierta y no quedan intentos → ver resultados del último
     if not sub_abierta and intentos_usados >= intentos_max:
         messages.info(request, "Ya no tienes intentos disponibles para esta actividad.")
         return redirect("resolver_resultado", pk=act.pk)
 
-    # Si no hay sub abierta â†’ crear nuevo intento (1-indexado)
+    # Si no hay sub abierta → crear nuevo intento (1-indexado)
     if not sub_abierta:
         sub_abierta = Submission.objects.create(
             actividad=act, estudiante=estudiante, intento=intentos_usados + 1
@@ -748,10 +748,10 @@ def actividad_resolver(request, pk):
         sub.xp_obtenido = int((total_obtenido / max(1, total_puntaje)) * (act.xp_total or 0))
         sub.save()
 
-        messages.success(request, "Â¡Actividad enviada! Tus respuestas fueron registradas.")
+        messages.success(request, "¡Actividad enviada! Tus respuestas fueron registradas.")
         return redirect("resolver_resultado", pk=act.pk)
 
-    # GET â†’ renderizar el template correspondiente (play o clÃ¡sico)
+    # GET → renderizar el template correspondiente (play o clásico)
     return render(request, template_name, {
         "actividad": act,
         "submission": sub,
@@ -778,7 +778,7 @@ def actividad_resultados(request, pk):
     estudiante = get_object_or_404(Estudiante, usuario=request.user)
     act = get_object_or_404(Actividad, pk=pk)
 
-    # Ãšltimo intento por defecto; permite ?intento=2 para ver uno especÃ­fico
+    # Último intento por defecto; permite ?intento=2 para ver uno específico
     intento_qs = Submission.objects.filter(
         actividad=act, estudiante=estudiante, finalizado=True
     ).order_by("-intento", "-id")
@@ -789,7 +789,7 @@ def actividad_resultados(request, pk):
             actividad=act, estudiante=estudiante, finalizado=False
         ).exists():
             return redirect("resolver", pk=act.pk)
-        messages.info(request, "AÃºn no has enviado esta actividad.")
+        messages.info(request, "Aún no has enviado esta actividad.")
         return redirect("resolver", pk=act.pk)
 
     intento_param = request.GET.get("intento")
@@ -814,7 +814,7 @@ def actividad_resultados(request, pk):
 
         if tipo == "mcq":
             opciones = list((item.datos or {}).get("opciones", []))
-            correctas = list((item.datos or {}).get("correctas", []))  # Ã­ndices 0-based
+            correctas = list((item.datos or {}).get("correctas", []))  # índices 0-based
             multiple = bool((item.datos or {}).get("multiple", False))
             if multiple:
                 marcadas = list(respuesta.get("marcadas") or [])
@@ -891,7 +891,7 @@ def actividad_resultados(request, pk):
 
         items_data.append({"item": item, "detalle": detalle})
 
-    # Intentos usados / mÃ¡ximo y lÃ³gica de reintento SOLO si no estÃ¡ cerrada
+    # Intentos usados / máximo y lógica de reintento SOLO si no está cerrada
     intentos_usados = Submission.objects.filter(actividad=act, estudiante=estudiante).count()
     intentos_max = act.intentos_max
     now = timezone.now()
@@ -917,19 +917,19 @@ def actividad_resultados(request, pk):
 
 @login_required
 def actividad_play(request, pk):
-    """Vista interactiva tipo juego: un Ã­tem a la vez con feedback inmediato vÃ­a AJAX."""
+    """Vista interactiva tipo juego: un ítem a la vez con feedback inmediato vía AJAX."""
     if not es_estudiante(request.user):
         raise Http404
     estudiante = get_object_or_404(Estudiante, usuario=request.user)
     act = get_object_or_404(Actividad, pk=pk, es_publicada=True)
 
-    # Validar asignaciÃ³n
+    # Validar asignación
     if not AsignacionActividad.objects.filter(estudiante=estudiante, actividad=act).exists():
         raise Http404
 
     # Cierre
     if act.fecha_cierre and timezone.now() > act.fecha_cierre:
-        messages.warning(request, "La actividad estÃ¡ cerrada.")
+        messages.warning(request, "La actividad está cerrada.")
         return redirect("estudiante_lista")
 
     # Intentos
@@ -966,7 +966,7 @@ def actividad_play(request, pk):
 
 def _eval_item(item: ItemActividad, payload: dict):
     """
-    EvalÃºa payload por tipo. Devuelve (es_correcta, puntaje_obtenido, meta_extra)
+    Evalúa payload por tipo. Devuelve (es_correcta, puntaje_obtenido, meta_extra)
     """
     t = (item.tipo or "").lower()
     datos = item.datos or {}
@@ -1047,12 +1047,12 @@ def _eval_item(item: ItemActividad, payload: dict):
 def api_item_answer(request, pk, item_id):
     """
     Recibe: {"payload": {"completado": true, "meta": {...}, "kind":"memory|dragmatch|trivia"}}
-    Guarda telemetrÃ­a en Submission.detalle y otorga XP/coins/desbloqueos.
+    Guarda telemetría en Submission.detalle y otorga XP/coins/desbloqueos.
     """
     try:
         body = json.loads(request.body.decode("utf-8"))
     except Exception:
-        return HttpResponseBadRequest("JSON invÃ¡lido")
+        return HttpResponseBadRequest("JSON inválido")
     payload = body.get("payload") or {}
     meta = payload.get("meta") or {}
     completado = bool(payload.get("completado"))
@@ -1064,14 +1064,14 @@ def api_item_answer(request, pk, item_id):
     except Estudiante.DoesNotExist:
         return HttpResponseBadRequest("Solo estudiantes pueden responder")
 
-    # ObtÃ©n o crea submission para esta actividad
+    # Obtén o crea submission para esta actividad
     sub, _ = Submission.objects.get_or_create(
         actividad=actividad,
         estudiante=request.user,  # si tu Submission usa Usuario
         defaults={"started_at": timezone.now(), "detalle": {}}
     )
 
-    # Guarda telemetrÃ­a por Ã­tem
+    # Guarda telemetría por ítem
     detalle = sub.detalle or {}
     detalle[str(item_id)] = {
         "completado": completado,
@@ -1081,7 +1081,7 @@ def api_item_answer(request, pk, item_id):
     }
     sub.detalle = detalle
 
-    # puntajes bÃ¡sicos (opcional)
+    # puntajes básicos (opcional)
     sub.score = int(sub.score or 0) + int(meta.get("hits", meta.get("found", 0)) or 0) * 10
     sub.correctas = int(sub.correctas or 0) + int(meta.get("hits", meta.get("found", 0)) or 0)
     sub.incorrectas = int(sub.incorrectas or 0) + int(meta.get("misses", 0))
@@ -1102,7 +1102,7 @@ def api_item_answer(request, pk, item_id):
 @require_POST
 @login_required
 def api_item_hint(request, pk, item_id):
-    """Devuelve pista (si existe en datos.hint) para el Ã­tem en modo play."""
+    """Devuelve pista (si existe en datos.hint) para el ítem en modo play."""
     if not es_estudiante(request.user):
         return JsonResponse({"ok": False, "error": "No autorizado."}, status=403)
 
@@ -1122,7 +1122,7 @@ def api_item_hint(request, pk, item_id):
 # -------------------------------------------------------------------
 def _nombre_docente(obj):
     """
-    Devuelve un nombre â€œbonitoâ€ tanto si obj es Usuario como si es Docente (con .usuario).
+    Devuelve un nombre “bonito” tanto si obj es Usuario como si es Docente (con .usuario).
     """
     if not obj:
         return None
@@ -1138,7 +1138,7 @@ def _nombre_docente(obj):
 def portal_estudiante(request):
     u = request.user
 
-    # Curso actual (toma la matrÃ­cula mÃ¡s reciente)
+    # Curso actual (toma la matrícula más reciente)
     matricula = (Matricula.objects
                  .select_related("curso")
                  .filter(estudiante=u)
@@ -1148,17 +1148,17 @@ def portal_estudiante(request):
     curso_str = None
     if matricula and matricula.curso:
         c = matricula.curso
-        # Si Curso.nivel es choice, usa display; si es int, muestra nÃºmero:
+        # Si Curso.nivel es choice, usa display; si es int, muestra número:
         try:
             nivel_display = c.get_nivel_display()
         except Exception:
-            nivel_display = f"{c.nivel}Â° BÃ¡sico"
+            nivel_display = f"{c.nivel}° Básico"
         curso_str = f'{nivel_display} {c.letra}'
 
     docente_matematicas = None
     docente_ingles = None
 
-    # 1) Si el alumno estÃ¡ en un grupo de refuerzo, usamos ese grupo
+    # 1) Si el alumno está en un grupo de refuerzo, usamos ese grupo
     gr_alum = (GrupoRefuerzoNivelAlumno.objects
                .select_related("grupo")
                .filter(alumno=u)
@@ -1195,7 +1195,7 @@ def portal_estudiante(request):
 @login_required
 def misiones_mapa(request):
     mundos = [
-        {"slug": "matematicas", "nombre": "Matemáticas", "color": "#22c55e"},
+        {"slug": "matematicas", "nombre": "Matem�ticas", "color": "#22c55e"},
         {"slug": "lenguaje", "nombre": "Lenguaje", "color": "#3b82f6"},
         {"slug": "ciencias", "nombre": "Ciencias", "color": "#a855f7"},
     ]
@@ -1210,44 +1210,20 @@ def misiones_mundo(request, slug):
         {"n": 3, "bloqueado": True},
         {"n": 4, "bloqueado": True},
     ]
-    acts = Actividad.objects.filter(es_publicada=True).order_by("-id")[:12]
-    return render(request, "LevelUp/misiones/niveles.html", {"mundo": slug, "niveles": niveles, "actividades": acts})
+    return render(request, "LevelUp/misiones/niveles.html", {"mundo": slug, "niveles": niveles})
 
 
 @login_required
 def misiones_jugar(request, slug, nivel):
-    """Carga preguntas desde una Actividad (?act=ID) o usa demo si no hay."""
-    preguntas = []
-    act_id = request.GET.get("act")
-    if act_id:
-        try:
-            act = Actividad.objects.get(pk=int(act_id), es_publicada=True)
-            for it in act.items.all():
-                t = (it.tipo or "").lower()
-                d = it.datos or {}
-                if t == "mcq":
-                    opts = list(d.get("opciones") or [])
-                    corr = list(d.get("correctas") or [])
-                    ans = corr[0] if corr else 0
-                    if opts and 0 <= ans < len(opts):
-                        preguntas.append({"q": it.enunciado or "Pregunta", "opts": opts, "ans": int(ans)})
-                elif t == "game" and (d.get("kind") == "trivia"):
-                    for q in (d.get("trivia") or []):
-                        opts = list(q.get("opts") or [])
-                        ans = int(q.get("ans") or 0)
-                        if opts and 0 <= ans < len(opts):
-                            preguntas.append({"q": q.get("q") or "Pregunta", "opts": opts, "ans": ans})
-        except Exception:
-            preguntas = []
-    if not preguntas:
-        preguntas = [
-            {"q": "¿Cuánto es 3 + 4?", "opts": ["5", "7", "9"], "ans": 1},
-            {"q": "Selecciona vocal", "opts": ["b", "a", "k"], "ans": 1},
-        ]
+    preguntas = [
+        {"q": "�Cu�nto es 3 + 4?", "opts": ["5", "7", "9"], "ans": 1},
+        {"q": "Selecciona vocal", "opts": ["b", "a", "k"], "ans": 1},
+    ]
     return render(request, "LevelUp/misiones/jugar.html", {"mundo": slug, "nivel": nivel, "preguntas": preguntas})
 
 
 @login_required
 def misiones_logros(request):
     return render(request, "LevelUp/misiones/logros.html")
+
 

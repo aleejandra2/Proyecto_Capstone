@@ -94,7 +94,7 @@ class Estudiante(models.Model):
     accesorios_equipados = models.JSONField(default=dict, blank=True)      # {"cabeza":"gorra_roja","cara":"gafas_azules","espalda":"mochila_lvl1"}
     habilidades = models.JSONField(default=dict, blank=True)               # {"memoria_boost":2}
 
-    def nivel(self):
+    def nivel_calculado(self):
         # curva simple: nivel n cuando xp >= n^2 * 100
         n = 1
         while self.xp >= (n * n * 100):
@@ -103,7 +103,7 @@ class Estudiante(models.Model):
 
     def add_xp(self, amount: int):
         self.xp = max(0, self.xp + int(amount))
-        return self.nivel()
+        return self.nivel_calculado()
 
     def add_coins(self, amount: int):
         self.coins = max(0, self.coins + int(amount))
@@ -119,7 +119,7 @@ class Estudiante(models.Model):
     def __str__(self):
         u = self.usuario
         nombre = (getattr(u, "get_full_name", lambda: "")() or getattr(u, "username", "") or getattr(u, "email", "")).strip()
-        return f"{nombre} · {self.curso} · Nivel {self.nivel()} ({self.xp} XP)"
+        return f"{nombre} · {self.curso} · Nivel {self.nivel} ({self.xp} XP)"
 
 
 
@@ -478,4 +478,5 @@ class GrupoRefuerzoNivelAlumno(models.Model):
 
     def __str__(self):
         return f"{self.alumno} → {self.grupo} ({self.asignatura})"
+
 

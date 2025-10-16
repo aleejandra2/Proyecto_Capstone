@@ -40,8 +40,14 @@ urlpatterns = [
     path("api/actividades/<int:pk>/answer/<int:item_id>/", views.api_item_answer, name="api_item_answer"),
     path("api/actividades/<int:pk>/hint/<int:item_id>/", views.api_item_hint, name="api_item_hint"),  # opcional
 
-    #Juegos
+    #Juegos (duplicado conservado por compatibilidad)
     path("api/actividades/<int:pk>/answer/<int:item_id>/", views.api_item_answer, name="api_item_answer"),
+
+    # Misiones (mapa -> mundo -> nivel -> jugar -> logros)
+    path("misiones/", views.misiones_mapa, name="misiones_mapa"),
+    path("misiones/mundo/<slug:slug>/", views.misiones_mundo, name="misiones_mundo"),
+    path("misiones/jugar/<slug:slug>/<int:nivel>/", views.misiones_jugar, name="misiones_jugar"),
+    path("misiones/logros/", views.misiones_logros, name="misiones_logros"),
 
     # Recuperar / Restablecer contraseña
     path(
