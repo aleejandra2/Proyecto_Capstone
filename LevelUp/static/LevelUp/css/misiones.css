@@ -2,16 +2,111 @@
 .ms-node{ display:grid; place-items:center; width:80px; height:80px; border-radius:16px; background:#f8fafc; color:#0f172a; text-decoration:none; border:1px solid #e2e8f0; font-weight:800; box-shadow:0 6px 16px rgba(0,0,0,.06); }
 .ms-node.disabled{ opacity:.5; pointer-events:none; }
 
-.ms-stage{ border:1px solid #e2e8f0; border-radius:16px; padding:10px; min-height:360px; 
-  /* Fondo: textura del nivel */
-  background:url('/static/LevelUp/img/misiones/nivel.png') center/cover no-repeat; 
+.ms-stage{ --floor-ratio: 0.78; /* 0..1 altura del piso (ajustable por nivel) */
+  --floor-px: 360px; /* seteado por JS */
+  --grass-h: 64px;
+  border:1px solid #e2e8f0; border-radius:16px; padding:10px; min-height:520px; 
+  /* Fondo generado (sin imagen) */
+  background: none; 
   position:relative; overflow:hidden; }
-.ms-stage:before{ content:""; position:absolute; left:-10%; right:-10%; top:55%; height:60px; background:#bbf7d0; border-radius:50%; filter:blur(20px); opacity:.5; }
-.ms-grid{ display:grid; grid-template-columns:repeat(12,1fr); grid-auto-rows:28px; gap:4px; position:relative; z-index:1; }
+.ms-stage.retro{ image-rendering: pixelated; }
+.ms-stage.retro::after{ content:""; position:absolute; inset:0; pointer-events:none; 
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.06) 0px,
+    rgba(0,0,0,0.06) 2px,
+    rgba(0,0,0,0) 3px,
+    rgba(0,0,0,0) 6px
+  ); mix-blend-mode: multiply; z-index:5; }
+/* Fondo responsivo por capas */
+.ms-bg{ position:absolute; inset:0; z-index:0; }
+.ms-bg .ms-sky{ position:absolute; left:0; right:0; top:0; bottom:calc(100% - var(--floor-px));
+  background:
+    radial-gradient(180px 140px at 18% 18%, rgba(255,255,255,.9) 0%, rgba(255,255,255,.75) 20%, rgba(255,255,255,0) 60%),
+    linear-gradient(180deg,#63c8ff 0%, #7fd5ff 40%, #bff1ff 100%);
+  mask-image: linear-gradient(180deg, rgba(0,0,0,.85), rgba(0,0,0,.9));
+}
+/* Sol con glow y drift muy lento */
+.ms-bg .ms-sky::before{ content:""; position:absolute; width:240px; height:240px; left:6%; top:8%;
+  background: radial-gradient(circle at 50% 50%, rgba(255,241,178,.9) 0%, rgba(255,241,178,.55) 18%, rgba(255,241,178,0) 60%);
+  border-radius:50%; filter: blur(1px); opacity:.6; animation: sunDrift 22s ease-in-out infinite alternate; }
+.ms-bg .ms-hills-back{ position:absolute; left:-12%; right:-12%; height:34%; bottom: calc(100% - var(--floor-px) + 34px);
+  background:
+    radial-gradient(85% 110% at 15% 110%, #66c277 0%, #46a45d 60%, transparent 61%) left bottom/36% 100% no-repeat,
+    radial-gradient(80% 110% at 55% 110%, #65be75 0%, #459f5c 60%, transparent 61%) center bottom/40% 100% no-repeat,
+    radial-gradient(85% 110% at 90% 110%, #66c277 0%, #46a45d 60%, transparent 61%) right bottom/36% 100% no-repeat;
+  filter: blur(0.5px) saturate(0.95);
+}
+.ms-bg .ms-hills-front{ position:absolute; left:-12%; right:-12%; height:26%; bottom: calc(100% - var(--floor-px) + 16px);
+  background:
+    radial-gradient(90% 120% at 20% 120%, #47ab5f 0%, #2d8e4a 60%, transparent 61%) left bottom/36% 100% no-repeat,
+    radial-gradient(90% 120% at 58% 120%, #47ab5f 0%, #2d8e4a 60%, transparent 61%) center bottom/40% 100% no-repeat,
+    radial-gradient(90% 120% at 92% 120%, #47ab5f 0%, #2d8e4a 60%, transparent 61%) right bottom/36% 100% no-repeat;
+  filter: blur(0.2px) saturate(1.05);
+}
+.ms-bg .ms-hills{ position:absolute; left:-12%; right:-12%; height:28%; bottom: calc(100% - var(--floor-px) + 24px);
+  background:
+    radial-gradient(80% 100% at 10% 100%, #5bbf6a 0%, #3ea85b 60%, transparent 61%) left bottom/40% 100% no-repeat,
+    radial-gradient(70% 100% at 50% 100%, #58b967 0%, #3aa258 60%, transparent 61%) center bottom/42% 100% no-repeat,
+    radial-gradient(70% 100% at 90% 100%, #58b967 0%, #3aa258 60%, transparent 61%) right bottom/40% 100% no-repeat;
+}
+.ms-bg .ms-grass{ position:absolute; left:-5%; right:-5%; height: var(--grass-h); top: calc(var(--floor-px) - var(--grass-h));
+  background:
+    linear-gradient(180deg, #b5f89d 0%, #84e47e 45%, #2ea24c 65%, #187337 100%),
+    repeating-conic-gradient(from 0deg, #c9ffb7 0 10deg, rgba(255,255,255,0) 10deg 20deg);
+  box-shadow: 0 -6px 0 #c7ffb4 inset, 0 -18px 18px rgba(0,0,0,.08) inset;
+  border-radius: 50% / 18px;
+}
+.ms-bg .ms-grass::before{ content:""; position:absolute; left:0; right:0; top:0; height: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,.6), rgba(255,255,255,0)); opacity:.5; }
+.ms-bg .ms-grass::after{ content:""; position:absolute; inset:0; background:
+  repeating-linear-gradient(45deg, rgba(255,255,255,.05) 0 8px, rgba(255,255,255,0) 8px 16px);
+  opacity:.25; mix-blend-mode: overlay; }
+/* Hojas del borde superior del césped */
+.ms-bg .ms-grass-blades{ position:absolute; left:-5%; right:-5%; top: calc(var(--floor-px) - var(--grass-h) - 8px); height: 28px; pointer-events:none;
+  background:
+    repeating-conic-gradient(from 180deg at 12px 100%, rgba(46,162,76,.85) 0 6deg, rgba(46,162,76,0) 6deg 12deg) 0 0/ 24px 100% repeat-x,
+    repeating-conic-gradient(from 180deg at 24px 100%, rgba(34,140,66,.9) 0 6deg, rgba(34,140,66,0) 6deg 12deg) 0 0/ 32px 100% repeat-x;
+  mask-image: linear-gradient(to bottom, black, rgba(0,0,0,0));
+  filter: blur(0.6px) saturate(1.05);
+  opacity:.85; animation: bladesWave 6s ease-in-out infinite alternate; }
+/* Brillo que recorre el césped */
+.ms-bg .ms-grass-shine{ position:absolute; left:-5%; right:-5%; top: calc(var(--floor-px) - var(--grass-h)); height: var(--grass-h); pointer-events:none;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.22) 50%, rgba(255,255,255,0) 100%);
+  background-size: 220% 100%; opacity:.18; mix-blend-mode: overlay; animation: grassShine 8s linear infinite; }
+.ms-bg .ms-dirt{ position:absolute; left:0; right:0; top: var(--floor-px); bottom:0;
+  background:
+    radial-gradient(60px 30px at 15% 28%, #a45b2f 0%, rgba(164,91,47,0) 60%) no-repeat,
+    radial-gradient(80px 40px at 55% 56%, #a45b2f 0%, rgba(164,91,47,0) 60%) no-repeat,
+    radial-gradient(60px 34px at 80% 40%, #a45b2f 0%, rgba(164,91,47,0) 60%) no-repeat,
+    linear-gradient(180deg, #d27c3b 0%, #c56f35 40%, #a4582e 70%, #854722 100%);
+  opacity: .98;
+}
+.ms-bg .ms-dirt::before{ content:""; position:absolute; left:0; right:0; bottom:0; height:26%;
+  background: radial-gradient(50% 100% at 50% 100%, rgba(0,0,0,.25), rgba(0,0,0,0)); opacity:.35; }
+.ms-bg .ms-dirt::after{ content:""; position:absolute; inset:0; background:
+  repeating-linear-gradient(45deg, rgba(0,0,0,.03) 0 6px, rgba(0,0,0,0) 6px 12px);
+  opacity:.6; mix-blend-mode: multiply; pointer-events:none; }
+
+/* Sprites decorativos (nubes y rocas) */
+.ms-sprite{ position:absolute; will-change: transform; z-index:1; }
+.ms-cloud{ width:var(--w,120px); height:var(--h,48px); filter: drop-shadow(0 2px 0 rgba(255,255,255,.4));
+  background:
+    radial-gradient(40px 26px at 25% 64%, #ffffff 0%, rgba(255,255,255,0) 60%),
+    radial-gradient(48px 28px at 45% 58%, #ffffff 0%, rgba(255,255,255,0) 60%),
+    radial-gradient(36px 22px at 65% 66%, #ffffff 0%, rgba(255,255,255,0) 60%);
+  opacity:.92; border-radius: 30px; }
+.ms-rock{ width:var(--w,42px); height:var(--h,28px); filter: drop-shadow(0 2px 0 rgba(0,0,0,.15));
+  background: radial-gradient(90% 120% at 40% 120%, var(--rock-a,#f0a15e) 0%, var(--rock-b,#d37b3a) 60%, var(--rock-c,#bd6528) 80%);
+  border-radius: 16px 14px 10px 10px; }
+@keyframes grassShine{ 0%{ background-position: -110% 0 } 100%{ background-position: 110% 0 } }
+@keyframes bladesWave{ 0%{ transform: translateY(0) } 100%{ transform: translateY(-2px) } }
+@keyframes sunDrift{ 0%{ transform: translate(0,0) } 100%{ transform: translate(10px, -6px) } }
+.ms-grid{ display:grid; grid-template-columns:repeat(12,1fr); grid-auto-rows:28px; gap:4px; position:absolute; left:10px; right:10px; bottom: var(--grid-bottom, 56px); z-index:1; }
 .ms-tile{ background:#93c5fd; border-radius:6px; box-shadow:inset 0 2px 0 rgba(255,255,255,.6); }
-.ms-avatar-wrap{ position:absolute; width:36px; height:36px; z-index:2; transform-origin:center; }
+.ms-avatar-wrap{ position:absolute; width:72px; height:72px; z-index:2; transform-origin:center; }
 .ms-avatar-wrap.left{ transform: scaleX(-1); }
-.ms-avatar{ width:36px; height:36px; border-radius:8px;
+.ms-avatar{ width:72px; height:72px; border-radius:12px;
   background: url('/static/LevelUp/img/misiones/personaje.png') center/contain no-repeat;
   /* Sin borde para evitar el cuadro blanco del marco */
   border:none; box-shadow:0 6px 16px rgba(0,0,0,.2);
@@ -22,10 +117,48 @@
   animation: msIdle 1.4s ease-in-out infinite;
 }
 .ms-avatar.walk{ animation: msWalk 0.9s ease-in-out infinite; }
-.ms-coin{ width:24px; height:24px; background:url('/static/LevelUp/img/misiones/coin.png') center/contain no-repeat; filter: drop-shadow(0 1px 1px rgba(0,0,0,.15)); animation: spin 1.2s linear infinite; }
-.ms-enemy{ width:26px; height:26px; background:url('/static/LevelUp/img/misiones/enemigo1_math.png') center/contain no-repeat; filter: drop-shadow(0 1px 1px rgba(0,0,0,.15)); }
+.ms-coin{ width:36px; height:36px; background:url('/static/LevelUp/img/misiones/coin.png') center/contain no-repeat; filter: drop-shadow(0 1px 1px rgba(0,0,0,.15)); animation: spin 1.2s linear infinite; }
+.ms-enemy{ width:50px; height:50px; background:url('/static/LevelUp/img/misiones/enemigo1_math.png') center/contain no-repeat; filter: drop-shadow(0 1px 1px rgba(0,0,0,.15)); }
 .ms-q{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.35); z-index:3; }
 .ms-q > div{ background:#fff; border-radius:12px; padding:16px; max-width:520px; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+
+/* Retro Bits: tarjeta tipo panel CRT/pixel */
+.ms-q .ms-q-card{ 
+  background: linear-gradient(180deg,#0b1020,#0d1226 60%);
+  color: #e2e8f0;
+  border-radius: 0;
+  padding: 18px 16px;
+  max-width: 560px;
+  width: min(92vw, 560px);
+  border: 4px solid #0ea5a5;
+  outline: 4px solid #111827;
+  outline-offset: -6px;
+  box-shadow: 0 0 0 4px #0ea5a5 inset, 0 12px 30px rgba(0,0,0,.45);
+  position: relative;
+}
+.ms-q.show .ms-q-card{ animation: retroIn .22s ease-out; }
+.ms-q .ms-q-card::after{ content:""; position:absolute; inset:0; pointer-events:none; opacity:.12; 
+  background: repeating-linear-gradient( to bottom, rgba(255,255,255,.9) 0 1px, rgba(255,255,255,0) 2px 4px ); }
+
+/* Texto retro (simulado) */
+.ms-q .ms-q-card, .ms-hud{ font-family: 'Press Start 2P','VT323', monospace; letter-spacing: 0.5px; text-shadow: 0 0 1px rgba(14,165,165,.5), 0 0 4px rgba(14,165,165,.25); }
+.ms-q #qText{ font-weight: 700; margin-bottom: 10px; color:#7dd3fc; text-shadow: 0 0 6px rgba(125,211,252,.35); }
+
+/* Botones 8-bit */
+.ms-q .btn{ border-radius: 0 !important; border: 4px solid #111827 !important; 
+  background: #0ea5a5; color:#0f172a; font-weight:800; text-transform: uppercase;
+  box-shadow: 0 0 0 4px #064e3b inset, 0 6px 0 #0f172a, 0 10px 20px rgba(0,0,0,.4);
+  transform: translateY(0); transition: transform .06s ease, box-shadow .06s ease, filter .06s ease;
+}
+.ms-q .btn:hover{ filter: brightness(1.1); }
+.ms-q .btn:active{ transform: translateY(4px); box-shadow: 0 0 0 4px #064e3b inset, 0 2px 0 #0f172a; }
+.ms-q .btn.btn-danger{ background:#ef4444; box-shadow: 0 0 0 4px #7f1d1d inset, 0 6px 0 #0f172a, 0 10px 20px rgba(0,0,0,.4); }
+
+/* HUD retro */
+.ms-hud{ border-radius: 0; border: 4px solid #111827; box-shadow: 0 0 0 4px #064e3b inset, 0 8px 16px rgba(0,0,0,.35); background: linear-gradient(180deg, rgba(14,165,165,.85), rgba(13,148,136,.9)); color:#0f172a; }
+.ms-hud b{ color:#052e2b; text-shadow: 0 0 2px rgba(255,255,255,.5); }
+
+@keyframes retroIn{ 0%{ transform: scale(.92); opacity:0 } 100%{ transform: scale(1); opacity:1 } }
 
 /* tarjetas de mundos */
 .ms-card{ padding:18px; border-radius:16px; border:1px solid #e2e8f0; box-shadow:0 8px 20px rgba(0,0,0,.05); display:flex; align-items:center; gap:12px; height:100%; background:linear-gradient(180deg,#f8fafc,#ffffff), url('/static/LevelUp/img/misiones/mapa.png') right center/contain no-repeat; }
