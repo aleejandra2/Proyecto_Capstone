@@ -2,8 +2,8 @@
   const root = document.getElementById('msGame');
   if (!root) return;
 
-  // Activa tema retro por defecto
-  root.classList.add('retro');
+  // Activa tema retro + arcade por defecto
+  root.classList.add('retro','theme-arcade');
 
   // Fondo responsivo por capas
   const bg = document.createElement('div');
@@ -14,20 +14,26 @@
   const bgHillsBack = bg.querySelector('.ms-hills-back');
   const bgHillsFront = bg.querySelector('.ms-hills-front');
   const bgGrass = bg.querySelector('.ms-grass');
+  // (tiles decorativos desactivados)
   // Sprites decorativos (nubes y rocas)
   const deco = { clouds: [], rocks: [] };
   function makeCloud(){ const c=document.createElement('div'); c.className='ms-sprite ms-cloud'; bg.appendChild(c); return c; }
   function makeRock(){ const r=document.createElement('div'); r.className='ms-sprite ms-rock'; bg.appendChild(r); return r; }
   for(let i=0;i<8;i++) deco.clouds.push(makeCloud());
   for(let i=0;i<10;i++) deco.rocks.push(makeRock());
+  // (sin árboles de tiles)
 
-  // Construcción del suelo visual
-  const cols = 12;
-  const grid = document.createElement('div');
-  grid.className = 'ms-grid';
-  root.appendChild(grid);
-  for (let i=0;i<cols;i++){
-    const t = document.createElement('div'); t.className='ms-tile'; grid.appendChild(t);
+  // Construcción del suelo visual (tiles). Desactivado para no mostrar la barra azul.
+  const SHOW_TILES = false;
+  let grid = null;
+  if (SHOW_TILES){
+    const cols = 12;
+    grid = document.createElement('div');
+    grid.className = 'ms-grid';
+    root.appendChild(grid);
+    for (let i=0;i<cols;i++){
+      const t = document.createElement('div'); t.className='ms-tile'; grid.appendChild(t);
+    }
   }
 
   // Estado del mundo (pixeles)
@@ -36,22 +42,23 @@
   function floorRatio(){ const v = parseFloat(getComputedStyle(root).getPropertyValue('--floor-ratio')); return isFinite(v)&&v>0&&v<1 ? v : 0.78; }
   let FLOOR_Y = Math.round(H * floorRatio()); // altura del césped (relativa al fondo)
   const AV_W = 72, AV_H = 72;
-  const ENEMY_W = 50, ENEMY_H = 50;
-  const COIN_S = 36;
+  const AV_YOFF = -20; // levanta un poco al avatar para alinearlo al enemigo
+  const ENEMY_W = 64, ENEMY_H = 64;
+  const COIN_S = 148;
   const TILE_H = 28;
   // Velocidades más lentas para caminar lentamente
-  const SPEED = 0.7, GRAV = 0.6, JUMP = -9.8;
+  const SPEED = 1.05, GRAV = 0.6, JUMP = -9.8;
 
   // Avatar + HUD
   // Usamos un contenedor para poder voltear (flip) sin interferir con la animación del avatar
-  const avWrap = document.createElement('div'); avWrap.className = 'ms-avatar-wrap'; avWrap.style.left = '0px'; avWrap.style.top = (FLOOR_Y-6-AV_H)+'px'; root.appendChild(avWrap);
+  const avWrap = document.createElement('div'); avWrap.className = 'ms-avatar-wrap'; avWrap.style.left = '0px'; avWrap.style.top = (FLOOR_Y-6-AV_H + AV_YOFF)+'px'; root.appendChild(avWrap);
   const av = document.createElement('div'); av.className='ms-avatar'; avWrap.appendChild(av);
   const hud = document.createElement('div'); hud.className='ms-hud'; hud.innerHTML='🪙 <b id="msCoins">0</b>'; root.appendChild(hud);
   function coinsGet(){ return parseInt(localStorage.getItem('ms_coins')||'0',10)||0; }
   function coinsSet(v){ localStorage.setItem('ms_coins', String(Math.max(0, v|0))); document.getElementById('msCoins').textContent = String(v|0); }
   coinsSet(coinsGet());
 
-  let x = 16, y = FLOOR_Y-6-AV_H, vx = 0, vy = 0; const keys = {}; let paused=false;
+  let x = 16, y = FLOOR_Y-6-AV_H + AV_YOFF, vx = 0, vy = 0; const keys = {}; let paused=true;
 
   // Objetos (moneda y enemigo)
   const coin = document.createElement('div'); coin.className='ms-coin'; root.appendChild(coin);
@@ -59,7 +66,7 @@
   let coinPos = { x: Math.round(W*0.35), y: FLOOR_Y-6-COIN_S };
   let coinActive = true;
   let enemyPos   = { x: Math.round(W*0.65), y: FLOOR_Y-6-ENEMY_H };
-  const enemy = { el: enemyEl, baseX: enemyPos.x, baseY: enemyPos.y, amp: 36, speed: 0.003, t: 0, state:'patrol', respawnAt:0 };
+  const enemy = { el: enemyEl, baseX: enemyPos.x, baseY: enemyPos.y, amp: 36, speed: 0.0008, t: 0, state:'patrol', respawnAt:0 };
 
   position(coin, coinPos.x, coinPos.y); position(enemyEl, enemyPos.x, enemyPos.y);
 
@@ -70,6 +77,38 @@
   let preguntas = [];
   try{ const el = document.getElementById('ms-questions'); if(el){ preguntas = JSON.parse(el.textContent||'[]'); } }catch{}
   const overlay = document.createElement('div'); overlay.className='ms-q'; overlay.innerHTML='<div class="ms-q-card"><div class="fw-bold mb-2" id="qText"></div><div id="qOpts"></div></div>'; root.appendChild(overlay);
+
+  // Pantalla de inicio: muestra un panel retro antes de jugar
+  const start = document.createElement('div');
+  start.className = 'ms-start';
+  // Toma un título limpio desde data-title del contenedor; fallback a document.title
+  const dataTitle = (root.getAttribute('data-title')||'').trim();
+  const t = (dataTitle || (document.title || 'Quiz').replace(/\s*[-–].*$/, ''))
+              .replace(/\s+/g,' ').trim();
+  start.innerHTML = `
+    <div class="ms-panel">
+      <div class="ms-sub">quiz</div>
+      <div class="ms-main">${t || 'retro bits'}</div>
+      <div class="ms-cta">
+        <img class="ms-wizard" src="/static/LevelUp/img/misiones/personaje.png" alt="personaje">
+        <div class="ms-bubble">¡Vamos!</div>
+        <button type="button" class="ms-arrow" id="msStartBtn" aria-label="Empezar">→</button>
+      </div>
+    </div>`;
+  root.appendChild(start);
+  function startGame(){
+    try{ sfx('ok'); }catch{}
+    try{ start.classList.add('hide'); }catch{}
+    setTimeout(()=>{ try{ start.remove(); }catch{} paused=false; }, 160);
+  }
+  // Click en el botón o Enter/Espacio para iniciar
+  start.addEventListener('click', (e)=>{
+    const el = e.target;
+    if (el && (el.id === 'msStartBtn' || el.classList.contains('ms-arrow'))) startGame();
+  });
+  window.addEventListener('keydown', (e)=>{
+    if (paused && (e.key === 'Enter' || e.key === ' ')) startGame();
+  });
   function ask(){
     if(!preguntas.length) return;
     const p=preguntas[0];
@@ -143,13 +182,27 @@
 
   function award(){ const key='ms_'+(document.title||'world')+'_progress'; const cur=parseInt(localStorage.getItem(key)||'0',10)||0; const nxt=Math.min(100,cur+25); localStorage.setItem(key,String(nxt)); coinsSet(coinsGet()+5); }
   function onCorrect(){ sfx('ok'); award(); enemy.state='defeated'; enemy.respawnAt=Date.now()+30000; enemy.el.classList.add('defeat'); setTimeout(()=>{ enemy.el.style.display='none'; enemy.el.classList.remove('defeat','alert','trigger'); },480); paused=false; }
-  function onWrong(){ sfx('bad'); vx = (x > enemy.baseX ? 1 : -1) * 4; x += vx*3; y = Math.min(y, FLOOR_Y-6-AV_H); setTimeout(()=>{ vx=0; }, 180); paused=false; }
+  function onWrong(){ sfx('bad'); vx = (x > enemy.baseX ? 1 : -1) * 4; x += vx*3; y = Math.min(y, FLOOR_Y-6-AV_H + AV_YOFF); setTimeout(()=>{ vx=0; }, 180); paused=false; }
 
   // Input
   window.addEventListener('keydown',e=>{ keys[e.key.toLowerCase()] = true; });
   window.addEventListener('keyup',e=>{ keys[e.key.toLowerCase()] = false; });
 
   function hit(ax,ay,aw,ah,bx,by,bw,bh){ return ax < bx+bw && ax+aw > bx && ay < by+bh && ay+ah > by; }
+  // Colisión de moneda MUY estricta (círculos + proximidad vertical)
+  // - Centro avatar al 82% de su altura (zona de pies)
+  // - Radios pequeños y verificación extra de cercanía vertical
+  function hitCoin(ax,ay,aw,ah,bx,by,bw,bh){
+    const acx = ax + aw*0.5, acy = ay + ah*0.82;   // centro avatar (abajo)
+    const bcx = bx + bw*0.5, bcy = by + bh*0.5;    // centro moneda
+    const ar = Math.min(aw,ah) * 0.22;             // radio avatar reducido
+    const br = Math.min(bw,bh) * 0.24;             // radio moneda reducido
+    const dx = acx - bcx, dy = acy - bcy;
+    const rsum = ar + br;
+    // Cercanía vertical obligatoria (evita recolectar desde muy arriba/abajo)
+    const verticalOk = Math.abs(dy) <= Math.min(ar, br) * 0.9;
+    return verticalOk && (dx*dx + dy*dy) <= (rsum*rsum);
+  }
 
   function loop(){
     if (paused){ requestAnimationFrame(loop); return; }
@@ -163,14 +216,15 @@
       av.classList.remove('walk');
     }
     // Salto
-    if ((keys['arrowup']||keys['w']||keys[' ']) && Math.abs((y+AV_H)-(FLOOR_Y-6))<1){ vy = JUMP; sfx('jump'); }
+    // Permitir salto solo si está en el piso (con offset aplicado)
+    if ((keys['arrowup']||keys['w']||keys[' ']) && Math.abs((y+AV_H)-(FLOOR_Y-6 + AV_YOFF))<1){ vy = JUMP; sfx('jump'); }
     // Física
     vy += GRAV; y += vy; x += vx;
-    if (y+AV_H >= FLOOR_Y-6){ y = FLOOR_Y-6-AV_H; vy = 0; }
+    if (y+AV_H >= FLOOR_Y-6 + AV_YOFF){ y = FLOOR_Y-6-AV_H + AV_YOFF; vy = 0; }
     if (x < 0) x = 0; if (x+AV_W > W) x = W-AV_W; place();
 
     // Moneda
-    if (coinActive && hit(x,y,AV_W,AV_H, coinPos.x, coinPos.y, COIN_S, COIN_S)) {
+    if (coinActive && hitCoin(x,y,AV_W,AV_H, coinPos.x, coinPos.y, COIN_S, COIN_S)) {
       coinActive = false;
       try{ coin.style.display='none'; }catch{}
       sfx('coin'); coinsSet(coinsGet()+1);
@@ -208,6 +262,8 @@
     // Reposicionar elementos dependientes del suelo
     coinPos.y = FLOOR_Y-6-COIN_S; enemyPos.y = FLOOR_Y-6-ENEMY_H;
     position(coin, coinPos.x, coinPos.y); position(enemy.el, enemyPos.x, enemyPos.y);
+    // Ajustar baseline del avatar con el nuevo FLOOR
+    y = Math.min(y, FLOOR_Y-6-AV_H + AV_YOFF);
     // Alinear la grilla visual al piso (compensa la altura del tile)
     const gridBottom = Math.max(0, H - (FLOOR_Y-6) - Math.round(TILE_H*0.2));
     root.style.setProperty('--grid-bottom', gridBottom + 'px');
@@ -231,6 +287,7 @@
       const x = Math.round(20 + (i/(deco.rocks.length-1))*(W-40));
       position(r, x, y);
     });
+    // (sin árboles ni plataformas)
   }
 
   // Debug: slider de piso si viene ?floor_debug=1

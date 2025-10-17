@@ -18,6 +18,9 @@
     rgba(0,0,0,0) 3px,
     rgba(0,0,0,0) 6px
   ); mix-blend-mode: multiply; z-index:5; }
+
+/* --- Tema arcade: colores más saturados y look 8-bit --- */
+/* (Seccion movida al final para que gane la cascada) */
 /* Fondo responsivo por capas */
 .ms-bg{ position:absolute; inset:0; z-index:0; }
 .ms-bg .ms-sky{ position:absolute; left:0; right:0; top:0; bottom:calc(100% - var(--floor-px));
@@ -106,19 +109,17 @@
 .ms-tile{ background:#93c5fd; border-radius:6px; box-shadow:inset 0 2px 0 rgba(255,255,255,.6); }
 .ms-avatar-wrap{ position:absolute; width:72px; height:72px; z-index:2; transform-origin:center; }
 .ms-avatar-wrap.left{ transform: scaleX(-1); }
-.ms-avatar{ width:72px; height:72px; border-radius:12px;
+.ms-avatar{ width:92px; height:92px; border-radius:0;
   background: url('/static/LevelUp/img/misiones/personaje.png') center/contain no-repeat;
-  /* Sin borde para evitar el cuadro blanco del marco */
-  border:none; box-shadow:0 6px 16px rgba(0,0,0,.2);
+  /* Quitar sombras/bordes para evitar el cuadrado visible */
+  border:none; box-shadow:none;
   position:absolute;
-  /* Mezcla para disimular fondos blancos del PNG contra el fondo */
-  mix-blend-mode: multiply;
   /* Animación por defecto (idle) suave */
   animation: msIdle 1.4s ease-in-out infinite;
 }
 .ms-avatar.walk{ animation: msWalk 0.9s ease-in-out infinite; }
-.ms-coin{ width:36px; height:36px; background:url('/static/LevelUp/img/misiones/coin.png') center/contain no-repeat; filter: drop-shadow(0 1px 1px rgba(0,0,0,.15)); animation: spin 1.2s linear infinite; }
-.ms-enemy{ width:50px; height:50px; background:url('/static/LevelUp/img/misiones/enemigo1_math.png') center/contain no-repeat; filter: drop-shadow(0 1px 1px rgba(0,0,0,.15)); }
+.ms-coin{ width:48px; height:48px; background:url('/static/LevelUp/img/misiones/coin.png') center/contain no-repeat; filter: drop-shadow(0 1px 1px rgba(0,0,0,.15)); animation: spin 3.2s linear infinite; }
+.ms-enemy{ width:74px; height:74px; background:url('/static/LevelUp/img/misiones/enemigo1_math.png') center/contain no-repeat; filter: drop-shadow(0 1px 1px rgba(0,0,0,.15)); }
 .ms-q{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.35); z-index:3; }
 .ms-q > div{ background:#fff; border-radius:12px; padding:16px; max-width:520px; box-shadow:0 20px 60px rgba(0,0,0,.2); }
 
@@ -185,4 +186,76 @@
   50%{ transform: translateY(0) rotate(0deg) }
   75%{ transform: translateY(-2px) rotate(1.2deg) }
   100%{ transform: translateY(0) rotate(0deg) }
+}
+
+/* --- Plataformas estilo pixel (inspiradas en tiles retro) --- */
+/* (tiles desactivados) */
+
+/* --- Overrides de tema (al final para ganar en cascada) --- */
+.ms-stage.theme-arcade .ms-sky{ background:
+  radial-gradient(180px 140px at 18% 18%, rgba(255,255,255,.85) 0%, rgba(255,255,255,.6) 24%, rgba(255,255,255,0) 60%),
+  linear-gradient(180deg,#66d0ff 0%, #7ee0ff 42%, #c6f5ff 100%);
+}
+.ms-stage.theme-arcade .ms-sky::before{ filter: blur(.6px); opacity:.7; }
+.ms-stage.theme-arcade .ms-hills-back{ background:
+  radial-gradient(85% 110% at 15% 110%, #4bb96d 0%, #2a9a59 60%, transparent 61%) left bottom/36% 100% no-repeat,
+  radial-gradient(80% 110% at 55% 110%, #49b469 0%, #278e52 60%, transparent 61%) center bottom/40% 100% no-repeat,
+  radial-gradient(85% 110% at 90% 110%, #4bb96d 0%, #2a9a59 60%, transparent 61%) right bottom/36% 100% no-repeat; }
+.ms-stage.theme-arcade .ms-hills-front{ background:
+  radial-gradient(90% 120% at 20% 120%, #36a75d 0%, #1e7d44 60%, transparent 61%) left bottom/36% 100% no-repeat,
+  radial-gradient(90% 120% at 58% 120%, #36a75d 0%, #1e7d44 60%, transparent 61%) center bottom/40% 100% no-repeat,
+  radial-gradient(90% 120% at 92% 120%, #36a75d 0%, #1e7d44 60%, transparent 61%) right bottom/36% 100% no-repeat; }
+.ms-stage.theme-arcade .ms-hills{ background:
+  radial-gradient(80% 100% at 10% 100%, #47b865 0%, #279a54 60%, transparent 61%) left bottom/40% 100% no-repeat,
+  radial-gradient(70% 100% at 50% 100%, #43b060 0%, #248e4e 60%, transparent 61%) center bottom/42% 100% no-repeat,
+  radial-gradient(70% 100% at 90% 100%, #43b060 0%, #248e4e 60%, transparent 61%) right bottom/40% 100% no-repeat; }
+.ms-stage.theme-arcade .ms-grass{ background:
+  linear-gradient(180deg, #b8ff9f 0%, #82f07c 45%, #2fa44f 65%, #147136 100%),
+  repeating-conic-gradient(from 0deg, #d9ffc9 0 10deg, rgba(255,255,255,0) 10deg 20deg);
+}
+.ms-stage.theme-arcade.retro::after{ opacity:.9; background: repeating-linear-gradient(to bottom, rgba(0,0,0,.08) 0 2px, rgba(0,0,0,0) 3px 6px); }
+
+/* ---------- Pantalla de inicio / menú ---------- */
+.ms-start{ position:absolute; inset:0; z-index:7; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,.25); }
+.ms-start.hide{ animation: msStartOut .18s ease forwards; }
+@keyframes msStartOut{ from{ opacity:1; transform: scale(1) } to{ opacity:0; transform: scale(.98) } }
+
+.ms-start .ms-panel{
+  font-family: 'Press Start 2P','VT323',monospace;
+  background:#6a3a59; color:#fff; text-align:center;
+  padding: 20px 22px; border-radius: 0;
+  border: 6px solid #111827; outline: 6px solid #3b1f34; outline-offset: -6px;
+  box-shadow: 0 0 0 6px #111827 inset, 0 14px 36px rgba(0,0,0,.45);
+  width: min(88vw, 640px);
+  position:relative;
+  overflow: hidden; /* que nada se desborde */
+  display: grid; grid-auto-rows: min-content; row-gap: 8px; justify-items: center;
+}
+.ms-start .ms-panel::after{ content:""; position:absolute; inset:0; pointer-events:none; opacity:.12;
+  background: repeating-linear-gradient(to bottom, rgba(255,255,255,.9) 0 1px, rgba(255,255,255,0) 2px 4px);
+}
+.ms-start .ms-sub{ font-size: 14px; letter-spacing: 1px; opacity:.9; }
+.ms-start .ms-main{ font-size: clamp(18px, 3.2vw, 36px); color:#ffde3b; text-shadow: 0 0 6px rgba(255,222,59,.35); line-height:1.15; max-width: 92%; text-align:center; white-space: normal; }
+
+.ms-start .ms-cta{ position: static; display:flex; align-items:center; justify-content:center; gap:12px; }
+.ms-start .ms-wizard{ width: 88px; height:auto; image-rendering: pixelated; filter: drop-shadow(0 3px 4px rgba(0,0,0,.35)); }
+.ms-start .ms-bubble{ position: relative; background:#fff; color:#111; border: 4px solid #111; padding:6px 10px; font: 700 12px system-ui, sans-serif; border-radius:8px; }
+.ms-start .ms-bubble::after{ content:""; position:absolute; left:14px; bottom:-10px; width:0; height:0; border-left:10px solid transparent; border-right:10px solid transparent; border-top:10px solid #111; }
+.ms-start .ms-bubble::before{ content:""; position:absolute; left:14px; bottom:-6px; width:0; height:0; border-left:8px solid transparent; border-right:8px solid transparent; border-top:8px solid #fff; z-index:1; }
+
+.ms-start .ms-arrow{ cursor:pointer; border: 6px solid #111827; background: linear-gradient(180deg,#ffd54a,#f9b233); color:#111; font-weight:900; font-size:28px; line-height:1; padding: 12px 20px; box-shadow: 0 0 0 6px #7f4a00 inset, 0 6px 0 #0f172a, 0 14px 26px rgba(0,0,0,.45); }
+.ms-start .ms-arrow:active{ transform: translateY(4px); box-shadow: 0 0 0 6px #7f4a00 inset, 0 2px 0 #0f172a; }
+
+/* Responsive tweaks */
+@media (max-width: 768px){
+  .ms-start .ms-panel{ width:min(92vw,520px); padding:16px 14px; }
+  .ms-start .ms-main{ font-size: clamp(16px, 6.5vw, 28px); }
+  .ms-start .ms-cta{ gap:10px; }
+  .ms-start .ms-wizard{ width: 72px; }
+  .ms-start .ms-bubble{ font-size: 11px; }
+  .ms-start .ms-arrow{ font-size:22px; padding:10px 16px; }
+}
+@media (max-width: 420px){
+  .ms-start .ms-wizard{ width: 58px; }
+  .ms-start .ms-main{ font-size: clamp(14px, 8.5vw, 24px); }
 }

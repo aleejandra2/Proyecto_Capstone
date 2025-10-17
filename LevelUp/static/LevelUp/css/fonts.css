@@ -1,16 +1,6 @@
-/* Local pixel fonts. Place the TTF files in static/LevelUp/fonts/ */
-/* Use WOFF2/WOFF if available; TTF kept as fallback. */
-@font-face {
-  font-family: 'Press Start 2P';
-  src:
-    local('Press Start 2P'),
-    url('/static/LevelUp/fonts/PressStart2P-Regular.woff2') format('woff2'),
-    url('/static/LevelUp/fonts/PressStart2P-Regular.woff') format('woff'),
-    url('/static/LevelUp/fonts/PressStart2P-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
+/* Load Press Start 2P from Google (browser fetch). Local TTF was empty. */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+/* If you later add a valid local font file, you can restore an @font-face block. */
 
 /* Optional secondary pixel font if added in the future
 @font-face {
@@ -24,5 +14,3 @@
 
 /* Utility class to force pixel font */
 .font-pixel { font-family: 'Press Start 2P', 'VT323', monospace; }
-/* Prefer hosted WOFF2 to avoid decode issues, fall back to local files */
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');

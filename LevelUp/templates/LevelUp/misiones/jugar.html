@@ -7,7 +7,7 @@
     <h1 class="h6 m-0">{{ mundo|title }} Â· Nivel {{ nivel }}</h1>
     <a class="btn btn-outline-secondary btn-sm" href="{% url 'misiones_mundo' mundo %}">Volver a niveles</a>
   </div>
-  <div id="msGame" class="ms-stage"></div>
+  <div id="msGame" class="ms-stage" data-title="{{ mundo|title }} Nivel {{ nivel }}"></div>
   {{ preguntas|json_script:'ms-questions' }}
 </div>
 {% endblock %}
