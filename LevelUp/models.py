@@ -212,7 +212,17 @@ class Actividad(models.Model):
     def puntaje_total(self) -> int:
         # Suma el puntaje de los ítems asociados (si existen)
         return sum(self.items.values_list("puntaje", flat=True)) or 0
-
+    
+    asignatura = models.ForeignKey(
+        'Asignatura',
+        on_delete=models.PROTECT,        # evita borrar una asignatura con actividades
+        related_name='actividades',
+        null=True, blank=True            # opcional para migrar datos
+    )
+    
+    asignatura = models.ForeignKey(
+        "LevelUp.Asignatura", on_delete=models.SET_NULL, null=True, blank=True, related_name="actividades"
+    )
 
 class AsignacionActividad(models.Model):
     class Estado(models.TextChoices):

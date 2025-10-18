@@ -504,4 +504,65 @@ body {
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
 
+/* ====== Estudiante · Lista (usa estética del home) ====== */
 
+/* Botones de acción */
+.btn-edu{
+  background: var(--primary-color);
+  color:#fff; border:none; border-radius: var(--border-radius);
+  padding:.5rem 1rem; box-shadow: var(--card-shadow);
+  transition: transform .15s ease, box-shadow .2s ease;
+}
+.btn-edu:hover{ background:#2563eb; transform: translateY(-1px); box-shadow: var(--card-shadow-hover); }
+
+.btn-edu-alt{
+  background: var(--secondary-color);
+  color:#fff; border:none; border-radius: var(--border-radius);
+  padding:.5rem 1rem; box-shadow: 0 6px 18px rgba(139,92,246,.25);
+  transition: transform .15s ease, box-shadow .2s ease;
+}
+.btn-edu-alt:hover{ background:#7c3aed; transform: translateY(-1px); }
+
+.btn.disabled, .btn:disabled{ pointer-events:none; opacity:.55; }
+
+/* Tarjetas y metadatos */
+.feature-card{
+  background:#fff; border:1px solid #e5e7eb;
+  border-radius: var(--border-radius-lg); padding:1rem 1.25rem;
+}
+.activity-card{ box-shadow: var(--card-shadow); transition: transform .08s ease, box-shadow .2s ease; }
+.activity-card:hover{ transform: translateY(-1px); box-shadow: var(--card-shadow-hover); }
+
+.activity-meta{ color:#374151; font-size:.92rem; }
+
+.pill{
+  font-size:.72rem; padding:.2rem .5rem; border-radius:9999px;
+  border:1px solid #e5e7eb; background:#fff; display:inline-flex; gap:.35rem; align-items:center;
+}
+.dot{ width:.5rem; height:.5rem; border-radius:9999px; display:inline-block; }
+.dot-easy{ background: var(--success-color); }
+.dot-mid{  background: var(--warning-color); }
+.dot-hard{ background: var(--danger-color); }
+
+.status-badges > *{ margin-right:.35rem; }
+.progress-wrap{ display:flex; align-items:center; gap:.5rem; }
+
+/* <progress> nativo */
+progress{ -webkit-appearance:none; appearance:none; width:120px; height:10px; border:none; background:#e5e7eb; border-radius:9999px; }
+progress::-webkit-progress-bar{ background:#e5e7eb; border-radius:9999px; }
+progress::-webkit-progress-value{ background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); border-radius:9999px; }
+progress::-moz-progress-bar{ background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); border-radius:9999px; }
+
+/* Acordeón por asignatura */
+.ac-asig .accordion-item{ border:1px solid #e5e7eb; border-radius: var(--border-radius-lg); overflow:hidden; }
+.ac-asig .accordion-button{ padding:.9rem 1rem; }
+.ac-asig .accordion-button:focus{ box-shadow: 0 0 0 .2rem rgba(59,130,246,.2); }
+.ac-asig .asig-title{ display:flex; align-items:center; gap:.5rem; font-weight:800; }
+.ac-asig .asig-dot{ width:.9rem; height:.9rem; border-radius:9999px; background:var(--primary-color); box-shadow:0 0 0 .25rem rgba(59,130,246,.15); }
+
+/* Chips contador */
+.subject-chip{
+  display:inline-block; margin-left:.5rem;
+  font-size:.72rem; padding:.15rem .55rem; border-radius:9999px;
+  background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe;
+}

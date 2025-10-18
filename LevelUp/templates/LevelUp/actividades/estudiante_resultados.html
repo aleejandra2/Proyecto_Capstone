@@ -21,7 +21,7 @@
         </div>
         <div class="text-end">
             {% if puede_reintentar %}
-            <a class="btn btn-primary" href="{% url 'resolver' actividad.pk %}">Intentar de nuevo</a>
+            <a class="btn btn-primary" href="{% url 'resolver_play' actividad.pk %}">Intentar de nuevo</a>
             {% else %}
             <button class="btn btn-secondary" disabled>Sin intentos disponibles</button>
             {% endif %}
