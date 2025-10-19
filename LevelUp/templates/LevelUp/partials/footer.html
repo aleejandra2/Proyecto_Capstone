@@ -1,11 +1,36 @@
 {% load static %}
+
+<style>
+/* Sticky footer inyectado desde el propio footer */
+
+/* Navegadores modernos: usa :has() */
+@supports selector(body:has(#main-footer)) {
+  body:has(#main-footer) {
+    min-height: 100dvh;           /* 100vh si prefieres */
+    display: flex;
+    flex-direction: column;
+  }
+  #main-footer { margin-top: auto; }
+}
+
+/* Fallback para navegadores sin :has() */
+@supports not selector(body:has(#main-footer)) {
+  html, body { height: 100%; }
+  body { display: flex; flex-direction: column; }
+  #main-footer { margin-top: auto; }
+}
+
+/* Asegura que no esté fijo ni se sobreponga */
+#main-footer { position: static; width: 100%; }
+</style>
+
 <footer class="footer" id="main-footer">
   <div class="footer-container">
     <div class="footer-content">
       <!-- About -->
       <div class="footer-section">
         <div class="footer-logo">
-      <img src="{% static 'LevelUp/img/logo v1.png' %}" height="60">
+          <img src="{% static 'LevelUp/img/logo v1.png' %}" height="60">
           <span class="footer-logo-text font-merienda">LevelUp</span>
         </div>
         <p>A veces me equivoco… ¡Mucho! Pero nunca me rindo. Aprender también es reírse de los errores</p>

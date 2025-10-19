@@ -15,6 +15,9 @@ ROL_DOCENTE = "DOCENTE"
 NIVELES = (
     (4, "4° Básico"),
     (5, "5° Básico"),
+    (6, "6° Básico"),
+    (7, "7° Básico"),
+    (8, "8° Básico"),
 )
 
 
@@ -94,7 +97,7 @@ class Estudiante(models.Model):
     accesorios_equipados = models.JSONField(default=dict, blank=True)      # {"cabeza":"gorra_roja","cara":"gafas_azules","espalda":"mochila_lvl1"}
     habilidades = models.JSONField(default=dict, blank=True)               # {"memoria_boost":2}
 
-    def nivel(self):
+    def nivel_calculado(self):
         # curva simple: nivel n cuando xp >= n^2 * 100
         n = 1
         while self.xp >= (n * n * 100):
@@ -103,7 +106,7 @@ class Estudiante(models.Model):
 
     def add_xp(self, amount: int):
         self.xp = max(0, self.xp + int(amount))
-        return self.nivel()
+        return self.nivel_calculado()
 
     def add_coins(self, amount: int):
         self.coins = max(0, self.coins + int(amount))
@@ -119,7 +122,7 @@ class Estudiante(models.Model):
     def __str__(self):
         u = self.usuario
         nombre = (getattr(u, "get_full_name", lambda: "")() or getattr(u, "username", "") or getattr(u, "email", "")).strip()
-        return f"{nombre} · {self.curso} · Nivel {self.nivel()} ({self.xp} XP)"
+        return f"{nombre} · {self.curso} · Nivel {self.nivel} ({self.xp} XP)"
 
 
 
@@ -212,7 +215,17 @@ class Actividad(models.Model):
     def puntaje_total(self) -> int:
         # Suma el puntaje de los ítems asociados (si existen)
         return sum(self.items.values_list("puntaje", flat=True)) or 0
-
+    
+    asignatura = models.ForeignKey(
+        'Asignatura',
+        on_delete=models.PROTECT,        # evita borrar una asignatura con actividades
+        related_name='actividades',
+        null=True, blank=True            # opcional para migrar datos
+    )
+    
+    asignatura = models.ForeignKey(
+        "LevelUp.Asignatura", on_delete=models.SET_NULL, null=True, blank=True, related_name="actividades"
+    )
 
 class AsignacionActividad(models.Model):
     class Estado(models.TextChoices):
@@ -345,17 +358,22 @@ class Answer(models.Model):
 # ---------------------------------------------------------
 # Cursos y Asignaturas
 # ---------------------------------------------------------
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.db import models
+
 
 class Asignatura(models.Model):
-    nombre = models.CharField(max_length=60, unique=True)   # "Matemáticas", "Inglés"
-    codigo = models.SlugField(max_length=30, unique=True)   # "matematicas", "ingles"
+    nombre = models.CharField(max_length=60, unique=True)   # "Matemáticas", "Inglés", "Lenguaje", "Historia", "Ciencias Naturales"
+    codigo = models.SlugField(max_length=30, unique=True)   # "matematicas", "ingles", "lenguaje", "historia", "ciencias"
 
     class Meta:
         ordering = ["nombre"]
 
     def __str__(self):
         return self.nombre
-    
+
+
 class Curso(models.Model):
     nivel = models.IntegerField(choices=NIVELES)
     letra = models.CharField(max_length=2, default="A")
@@ -373,11 +391,14 @@ class PerfilAlumno(models.Model):
     promedio = models.DecimalField(max_digits=3, decimal_places=1, default=5.0)  # ej: 4.7
     dificultad_matematicas = models.BooleanField(default=False)
     dificultad_ingles = models.BooleanField(default=False)
+    # Si luego quieres flags para nuevas asignaturas, agrégalas aquí.
 
     def __str__(self):
         return f"PerfilAlumno({self.usuario})"
 
+
 class Matricula(models.Model):
+    # Por tu definición nueva, estudiante apunta al USER directamente
     estudiante = models.ForeignKey(USER, on_delete=models.CASCADE, related_name="matriculas")
     curso = models.ForeignKey(Curso, on_delete=models.CASCADE, related_name="matriculas")
     fecha = models.DateField(auto_now_add=True)
@@ -386,11 +407,14 @@ class Matricula(models.Model):
         unique_together = [("estudiante", "curso")]
 
     def clean(self):
-        if hasattr(self.estudiante, "rol") and self.estudiante.rol != ROL_ESTUDIANTE:
+        # Acepta código 'ESTUDIANTE' y, por compatibilidad, etiqueta 'Estudiante'
+        rol = getattr(self.estudiante, "rol", None)
+        if rol not in ("ESTUDIANTE", "Estudiante"):
             raise ValidationError("Solo usuarios con rol ESTUDIANTE pueden ser matriculados.")
 
     def __str__(self):
         return f"{self.estudiante} → {self.curso}"
+
 
 class AsignacionDocente(models.Model):
     profesor = models.ForeignKey(USER, on_delete=models.CASCADE, related_name="asignaciones_docente")
@@ -400,20 +424,35 @@ class AsignacionDocente(models.Model):
         unique_together = [("profesor", "asignatura")]
 
     def clean(self):
-        if hasattr(self.profesor, "rol") and self.profesor.rol != ROL_DOCENTE:
+        rol = getattr(self.profesor, "rol", None)
+        if rol not in ("DOCENTE", "Docente"):
             raise ValidationError("Solo usuarios con rol DOCENTE pueden ser asignados.")
 
     def __str__(self):
         return f"{self.profesor} · {self.asignatura}"
 
+
 class GrupoRefuerzoNivel(models.Model):
+    """Un grupo por nivel (4° a 8°). Profes: Matemáticas, Inglés, Lenguaje, Historia, Ciencias."""
     nivel = models.IntegerField(choices=NIVELES, unique=True)
+
     profesor_matematicas = models.ForeignKey(
         USER, on_delete=models.CASCADE, related_name="grupos_refuerzo_mate"
     )
     profesor_ingles = models.ForeignKey(
         USER, on_delete=models.CASCADE, related_name="grupos_refuerzo_ing"
     )
+    # Nuevos profesores (opcionales)
+    profesor_lenguaje = models.ForeignKey(
+        USER, on_delete=models.SET_NULL, null=True, blank=True, related_name="grupos_refuerzo_leng"
+    )
+    profesor_historia = models.ForeignKey(
+        USER, on_delete=models.SET_NULL, null=True, blank=True, related_name="grupos_refuerzo_hist"
+    )
+    profesor_ciencias = models.ForeignKey(
+        USER, on_delete=models.SET_NULL, null=True, blank=True, related_name="grupos_refuerzo_cien"
+    )
+
     alumnos = models.ManyToManyField(
         USER, through="GrupoRefuerzoNivelAlumno", related_name="grupos_refuerzo_nivel"
     )
@@ -423,59 +462,39 @@ class GrupoRefuerzoNivel(models.Model):
         ordering = ["nivel"]
 
     def clean(self):
-        for prof in (self.profesor_matematicas, self.profesor_ingles):
-            if hasattr(prof, "rol") and prof.rol != ROL_DOCENTE:
-                raise ValidationError("Los profesores del grupo deben tener rol DOCENTE.")
-
-    def __str__(self):
-        return f"Refuerzo {self.get_nivel_display()}"
-
-class GrupoRefuerzoNivel(models.Model):
-    """Un grupo por nivel (4°/5°) con 10 alumnos total; dos profes (Mate/Inglés)."""
-    NIVEL_CHOICES = (
-        (4, "4° Básico"),
-        (5, "5° Básico"),
-    )
-    nivel = models.IntegerField(choices=NIVEL_CHOICES, unique=True)
-    profesor_matematicas = models.ForeignKey(
-        USER, on_delete=models.CASCADE, related_name="grupos_refuerzo_mate"
-    )
-    profesor_ingles = models.ForeignKey(
-        USER, on_delete=models.CASCADE, related_name="grupos_refuerzo_ing"
-    )
-    alumnos = models.ManyToManyField(
-        USER, through="GrupoRefuerzoNivelAlumno", related_name="grupos_refuerzo_nivel"
-    )
-    capacidad_sugerida = models.PositiveIntegerField(default=10)
-
-    class Meta:
-        ordering = ["nivel"]
-
-    def clean(self):
-        # Si tu User tiene atributo 'rol', valida que sean DOCENTE
-        for prof in (self.profesor_matematicas, self.profesor_ingles):
-            if hasattr(prof, "rol") and prof.rol != "DOCENTE":
-                raise ValidationError("Los profesores del grupo deben tener rol DOCENTE.")
+        # Valida DOCENTE cuando el profesor está presente (los opcionales pueden ser nulos)
+        for prof in (
+            self.profesor_matematicas,
+            self.profesor_ingles,
+            self.profesor_lenguaje,
+            self.profesor_historia,
+            self.profesor_ciencias,
+        ):
+            if prof:
+                rol = getattr(prof, "rol", None)
+                if rol not in (None, "DOCENTE", "Docente"):
+                    raise ValidationError("Los profesores del grupo deben tener rol DOCENTE.")
 
     def __str__(self):
         return f"Refuerzo {self.get_nivel_display()}"
 
 
 class GrupoRefuerzoNivelAlumno(models.Model):
-    """Relación alumno-grupo con la asignatura prioritaria (Matemáticas o Inglés)."""
+    """Relación alumno-grupo con la asignatura prioritaria (mate/inglés/lenguaje/historia/ciencias)."""
     grupo = models.ForeignKey(GrupoRefuerzoNivel, on_delete=models.CASCADE)
     alumno = models.ForeignKey(USER, on_delete=models.CASCADE)
-    # Referencia segura a Asignatura dentro de la misma app:
-    asignatura = models.ForeignKey("LevelUp.Asignatura", on_delete=models.CASCADE)
+    asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE)
 
     class Meta:
         unique_together = [("grupo", "alumno")]
 
     def clean(self):
-        # Solo permite mate/inglés por código
-        if getattr(self.asignatura, "codigo", None) not in ("matematicas", "ingles"):
-            raise ValidationError("La asignatura debe ser Matemáticas o Inglés.")
+        # valida por 'codigo' de Asignatura
+        permitidas = {"matematicas", "ingles", "lenguaje", "historia", "ciencias"}
+        if getattr(self.asignatura, "codigo", None) not in permitidas:
+            raise ValidationError(
+                "La asignatura debe ser Matemáticas, Inglés, Lenguaje, Historia o Ciencias Naturales."
+            )
 
     def __str__(self):
         return f"{self.alumno} → {self.grupo} ({self.asignatura})"
-

@@ -31,17 +31,23 @@ urlpatterns = [
     #path("actividades/docente/<int:pk>/editar/", views.actividad_editar, name="editar"),
     path("actividades/docente/<int:pk>/editar/", views.actividad_editar, name="actividad_editar"),
     path("actividades/docente/<int:pk>/asignar/", views.actividad_asignar, name="actividad_asignar"),
+    path("actividades/<int:pk>/eliminar/", views.actividad_eliminar, name="actividad_eliminar"),
 
     # Estudiante (resolver con autocorrección)
     path("actividades/estudiante/", views.estudiante_mis_actividades, name="estudiante_lista"),
-    path("actividades/estudiante/<int:pk>/resolver/", views.actividad_resolver, name="resolver"),
     path("actividades/estudiante/<int:pk>/resultado/", views.actividad_resultados, name="resolver_resultado"),
     path("actividades/estudiante/<int:pk>/play/", views.actividad_play, name="resolver_play"),
     path("api/actividades/<int:pk>/answer/<int:item_id>/", views.api_item_answer, name="api_item_answer"),
     path("api/actividades/<int:pk>/hint/<int:item_id>/", views.api_item_hint, name="api_item_hint"),  # opcional
 
-    #Juegos
+    #Juegos (duplicado conservado por compatibilidad)
     path("api/actividades/<int:pk>/answer/<int:item_id>/", views.api_item_answer, name="api_item_answer"),
+
+    # Misiones (mapa -> mundo -> nivel -> jugar -> logros)
+    path("misiones/", views.misiones_mapa, name="misiones_mapa"),
+    path("misiones/mundo/<slug:slug>/", views.misiones_mundo, name="misiones_mundo"),
+    path("misiones/jugar/<slug:slug>/<int:nivel>/", views.misiones_jugar, name="misiones_jugar"),
+    path("misiones/logros/", views.misiones_logros, name="misiones_logros"),
 
     # Recuperar / Restablecer contraseña
     path(

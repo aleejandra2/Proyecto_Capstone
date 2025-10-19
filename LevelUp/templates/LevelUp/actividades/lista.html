@@ -45,14 +45,14 @@
             {# Si eres docente, muestra Editar #}
             {% if request.user.rol == "Docente" %}
             <div class="mb-2">
-              <a class="btn btn-sm btn-outline-primary" href="{% url 'editar' act.pk %}">Editar</a>
+              <a class="btn btn-sm btn-outline-primary" href="{% url 'actividad_editar' act.pk %}">Editar</a>
             </div>
             {% endif %}
 
-            {# Si eres estudiante, muestra Resolver cuando esté publicada #}
+            {# Si eres estudiante, muestra Jugar cuando esté publicada #}
             {% if request.user.rol == "Estudiante" %}
             {% if act.es_publicada %}
-            <a class="btn btn-sm btn-success" href="{% url 'resolver' act.pk %}">Resolver</a>
+            <a class="btn btn-sm btn-success" href="{% url 'resolver_play' act.pk %}">Jugar</a>
             {% else %}
             <button class="btn btn-sm btn-secondary" disabled>Borrador</button>
             {% endif %}
@@ -68,3 +68,4 @@
   </div>
 </main>
 {% endblock %}
+

@@ -14,6 +14,7 @@ class LevelUpApp {
         this.bindEvents();
         this.checkSession();
         this.initAnimations();
+        this.initAccordions(); // <-- NUEVO: inicializa acordeones (estudiante_lista)
     }
 
     // Gestión de sesiones
@@ -457,7 +458,7 @@ class LevelUpApp {
             <div class="leaderboard-item ${user.name.includes(this.currentUser?.first_name) ? 'current-user' : ''}" 
                  data-rank="${user.rank}">
                 <div class="leaderboard-rank">
-                    ${user.rank <= 3 ? this.getRankMedal(user.rank) : user.rank}
+                    ${this.getRankMedal(user.rank) || user.rank}
                 </div>
                 <div class="leaderboard-avatar">${user.avatar}</div>
                 <div class="leaderboard-info">
@@ -471,7 +472,7 @@ class LevelUpApp {
 
     getRankMedal(rank) {
         const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
-        return medals[rank] || rank;
+        return medals[rank] || '';
     }
 
     // Utilidades
@@ -527,12 +528,12 @@ class LevelUpApp {
             }
         });
 
-        // Navigation
+        // Navigation (si usas vistas SPA)
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('nav-link')) {
-                e.preventDefault();
                 const view = e.target.dataset.view;
                 if (view) {
+                    e.preventDefault();
                     this.switchView(view);
                 }
             }
@@ -542,7 +543,7 @@ class LevelUpApp {
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('navbar-mobile-toggle')) {
                 const menu = document.querySelector('.navbar-mobile-menu');
-                menu.classList.toggle('active');
+                if (menu) menu.classList.toggle('active');
             }
         });
 
@@ -577,6 +578,51 @@ class LevelUpApp {
         document.querySelectorAll('.card, .stats-card').forEach(el => {
             observer.observe(el);
         });
+    }
+
+    /* ========== NUEVO: Acordeón de asignaturas (estudiante_lista) ========== */
+    initAccordions() {
+        const run = () => {
+            const parent = document.querySelector('#acAsignaturas');
+            if (!parent) return; // esta vista no lo necesita
+
+            if (!window.bootstrap || !bootstrap.Collapse) {
+                console.warn('[LevelUp] Bootstrap.Collapse no disponible');
+                return;
+            }
+
+            parent.querySelectorAll('.accordion-button').forEach((btn) => {
+                const targetSel = btn.getAttribute('data-bs-target');
+                if (!targetSel) return;
+                const target = document.querySelector(targetSel);
+                if (!target) return;
+
+                // Instancia sin auto-toggle
+                const inst = bootstrap.Collapse.getOrCreateInstance(target, { toggle: false });
+
+                // Alternar al click (ignora cualquier CSS que haya interferido)
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    inst.toggle();
+                });
+
+                // Mantener aria y clase del botón sincronizados
+                target.addEventListener('shown.bs.collapse', () => {
+                    btn.classList.remove('collapsed');
+                    btn.setAttribute('aria-expanded', 'true');
+                });
+                target.addEventListener('hidden.bs.collapse', () => {
+                    btn.classList.add('collapsed');
+                    btn.setAttribute('aria-expanded', 'false');
+                });
+            });
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', run);
+        } else {
+            run();
+        }
     }
 }
 

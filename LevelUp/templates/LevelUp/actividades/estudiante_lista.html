@@ -1,79 +1,182 @@
 {% extends "LevelUp/base.html" %}
+{% load static %}
 {% block title %}Mis actividades{% endblock %}
 
 {% block content %}
-<div class="container py-3">
+<main class="landing">
 
-  {% if messages %}
-    {% for message in messages %}
-      <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
-    {% endfor %}
-  {% endif %}
-
-  <h1 class="h4 mb-3">Actividades asignadas</h1>
-
-  <div class="list-group">
-    {# Usamos rows, que trae: a, usados, max, tiene_abierto, puede_intentar, tiene_resultados, cerrada #}
-    {% for r in rows %}
-      {% with a=r.a %}
-      <div class="list-group-item">
-        <div class="d-flex w-100 justify-content-between align-items-start">
-          <div>
-            <h5 class="mb-1">{{ a.titulo }}</h5>
-            <div class="small text-muted">
-              {{ a.get_dificultad_display }} · XP: {{ a.xp_total }}
-              {% if a.fecha_cierre %} · Cierra: {{ a.fecha_cierre|date:"d/m/Y H:i" }}{% endif %}
-              · Intentos: {{ r.usados }}/{{ r.max }}
-            </div>
-            <div class="mt-1">
-              {% if r.cerrada %}
-                <span class="badge text-bg-secondary">Cerrada</span>
-              {% else %}
-                <span class="badge text-bg-success">Abierta</span>
-              {% endif %}
-
-              {% if r.tiene_abierto %}
-                <span class="badge text-bg-info">Intento en curso</span>
-              {% endif %}
-
-              {% if r.tiene_resultados %}
-                <span class="badge text-bg-primary">Con resultados</span>
-              {% endif %}
-
-              {% if not r.puede_intentar and not r.tiene_abierto %}
-                <span class="badge text-bg-warning text-dark">Sin intentos disponibles</span>
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="d-flex flex-wrap gap-2">
-            {# Resolver (form clásico). Habilitado si puede_intentar o hay intento abierto #}
-            <a
-              class="btn btn-sm {% if r.puede_intentar or r.tiene_abierto %}btn-primary{% else %}btn-outline-secondary disabled{% endif %}"
-              href="{% if r.puede_intentar or r.tiene_abierto %}{% url 'resolver' a.pk %}{% else %}#{% endif %}">
-              Resolver
-            </a>
-
-            {# Modo Juego (play) — misma vista con ?modo=play #}
-            <a
-              class="btn btn-sm {% if r.puede_intentar or r.tiene_abierto %}btn-success{% else %}btn-outline-secondary disabled{% endif %}"
-              href="{% if r.puede_intentar or r.tiene_abierto %}{% url 'resolver' a.pk %}?modo=play{% else %}#{% endif %}">
-              Jugar
-            </a>
-
-            {# Resultados — visible si ya tiene envíos finalizados #}
-            <a
-              class="btn btn-sm {% if r.tiene_resultados %}btn-outline-primary{% else %}btn-outline-secondary disabled{% endif %}"
-              href="{% if r.tiene_resultados %}{% url 'resolver_resultado' a.pk %}{% else %}#{% endif %}">
-              Resultados
-            </a>
+  <!-- Hero compacto -->
+  <section class="landing-hero position-relative overflow-hidden landing-hero--compact">
+    <div class="container">
+      <div class="d-flex align-items-center justify-content-between gap-3">
+        <div>
+          <h1 class="h3 fw-800 font-merienda m-0">Mis <span class="grad-ink">actividades</span></h1>
+          <p class="text-edu-ink-700 mb-0">Sigue tus misiones por asignatura y progresa de nivel.</p>
+        </div>
+        <div class="d-none d-md-block">
+          <div class="stat-card" data-count="{{ total_xp|default:'0' }}">
+            <span class="stat-value">0</span>
+            <small class="stat-label">XP acumulado</small>
           </div>
         </div>
       </div>
-      {% endwith %}
-    {% empty %}
-      <div class="alert alert-info">No tienes actividades por ahora.</div>
-    {% endfor %}
-  </div>
-</div>
+    </div>
+    <div class="bg-wave" aria-hidden="true"></div>
+  </section>
+
+  <section class="section-pad pt-4">
+    <div class="container">
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+
+      {% if grupos %}
+      <div class="accordion ac-asig" id="acAsignaturas">
+        {% for g in grupos %}
+        {% with acc_id=forloop.counter %}
+        <div class="accordion-item mb-3">
+          <h2 class="accordion-header" id="head-{{ acc_id }}">
+            <button
+              class="accordion-button {% if not forloop.first %}collapsed{% endif %}"
+              type="button"
+              data-bs-target="#col-{{ acc_id }}"
+              aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
+              aria-controls="col-{{ acc_id }}">
+              <span class="asig-title">
+                <span class="asig-dot" aria-hidden="true"></span>
+                {{ g.asignatura }}
+                <span class="subject-chip">{{ g.rows|length }} actividad{{ g.rows|length|pluralize:"es" }}</span>
+              </span>
+            </button>
+          </h2>
+
+          <div
+            id="col-{{ acc_id }}"
+            class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+            aria-labelledby="head-{{ acc_id }}"
+            data-bs-parent="#acAsignaturas">
+            <div class="accordion-body">
+
+              {% if g.rows %}
+              <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                {% for r in g.rows %}
+                  {% with a=r.a %}
+                  <div class="col">
+                    <div class="feature-card activity-card h-100">
+                      <div class="d-flex flex-column justify-content-between h-100">
+
+                        <div>
+                          <div class="d-flex align-items-center gap-2 mb-1">
+                            <h3 class="h6 m-0">{{ a.titulo }}</h3>
+                            {% with dif=a.get_dificultad_display %}
+                              {% if "Fácil" in dif or "Básico" in dif %}
+                                <span class="pill"><span class="dot dot-easy"></span>{{ dif }}</span>
+                              {% elif "Medio" in dif %}
+                                <span class="pill"><span class="dot dot-mid"></span>{{ dif }}</span>
+                              {% else %}
+                                <span class="pill"><span class="dot dot-hard"></span>{{ dif }}</span>
+                              {% endif %}
+                            {% endwith %}
+                          </div>
+
+                          <div class="activity-meta">
+                            <span title="Experiencia total">🎯 XP: {{ a.xp_total }}</span>
+                            {% if a.fecha_cierre %} ·
+                              <span title="Fecha de cierre">⏳ Cierra: {{ a.fecha_cierre|date:"d/m/Y H:i" }}</span>
+                            {% endif %}
+                            · <span class="progress-wrap" title="Intentos usados">
+                                <progress value="{{ r.usados }}" max="{{ r.max }}"></progress>
+                                <small>{{ r.usados }}/{{ r.max }}</small>
+                              </span>
+                          </div>
+
+                          {# ---- ETIQUETAS/CHIPS DE ESTADO MEJORADAS ---- #}
+                          <div class="status-badges mt-2 d-flex flex-wrap gap-2">
+                            {% if r.cerrada %}
+                              <span class="badge rounded-pill text-bg-secondary d-inline-flex align-items-center gap-1"
+                                    title="La actividad ya no acepta intentos">
+                                <i class="bi bi-lock-fill"></i> Cerrada
+                              </span>
+                            {% else %}
+                              <span class="badge rounded-pill text-bg-success d-inline-flex align-items-center gap-1"
+                                    title="Disponible para intentar">
+                                <i class="bi bi-unlock-fill"></i> Abierta
+                              </span>
+                            {% endif %}
+
+                            {% if r.tiene_abierto %}
+                              <span class="badge rounded-pill text-bg-info d-inline-flex align-items-center gap-1"
+                                    title="Tienes un intento sin finalizar">
+                                <i class="bi bi-play-circle-fill"></i> En curso
+                              </span>
+                            {% endif %}
+
+                            {% if r.tiene_resultados %}
+                              <span class="badge rounded-pill text-bg-primary d-inline-flex align-items-center gap-1"
+                                    title="Ya tienes resultados guardados">
+                                <i class="bi bi-bar-chart-fill"></i> Con resultados
+                              </span>
+                            {% endif %}
+
+                            {% if not r.puede_intentar and not r.tiene_abierto %}
+                              <span class="badge rounded-pill text-bg-warning text-dark d-inline-flex align-items-center gap-1"
+                                    title="Ya usaste todos tus intentos">
+                                <i class="bi bi-slash-circle-fill"></i> Sin intentos
+                              </span>
+                            {% endif %}
+                          </div>
+                        </div>
+
+                        {# ---- BOTONES ACCIÓN (copias claras) ---- #}
+                        <div class="d-flex gap-2 mt-3">
+                          <a class="btn btn-edu btn-sm flex-fill {% if not r.puede_intentar and not r.tiene_abierto %}disabled{% endif %}"
+                             href="{% if r.puede_intentar or r.tiene_abierto %}{% url 'resolver_play' a.pk %}{% else %}#{% endif %}">
+                            {% if r.tiene_abierto %}
+                              Continuar
+                            {% elif r.puede_intentar %}
+                              {% if r.usados|default:0 > 0 %}Reintentar{% else %}Empezar{% endif %}
+                            {% else %}
+                              Jugar
+                            {% endif %}
+                          </a>
+
+                          <a class="btn btn-edu-alt btn-sm flex-fill {% if not r.tiene_resultados %}disabled{% endif %}"
+                             href="{% if r.tiene_resultados %}{% url 'resolver_resultado' a.pk %}{% else %}#{% endif %}">
+                            Ver resultados
+                          </a>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+                  {% endwith %}
+                {% endfor %}
+              </div>
+              {% else %}
+                <div class="alert alert-light border d-flex align-items-center mt-2" role="alert">
+                  <div class="me-2">🫙</div>
+                  <div>No tienes actividades disponibles.</div>
+                </div>
+              {% endif %}
+
+            </div>
+          </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+      </div>
+      {% else %}
+        <div class="alert alert-info">No tienes actividades por ahora.</div>
+      {% endif %}
+
+    </div>
+  </section>
+</main>
+
+<link rel="stylesheet" href="{% static 'LevelUp/css/home-kids.css' %}">
+<script defer src="{% static 'LevelUp/js/home-kids.js' %}"></script>
+<script defer src="{% static 'LevelUp/js/script.js' %}"></script>
 {% endblock %}
