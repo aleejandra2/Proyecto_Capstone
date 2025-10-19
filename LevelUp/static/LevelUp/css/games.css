@@ -76,3 +76,11 @@
 .tr-card{ background:#fff; border-radius:12px; padding:12px; box-shadow:0 6px 16px rgba(0,0,0,.08); margin-bottom:10px; }
 .tr-q{ font-weight:800; margin-bottom:8px; }
 .tr-opts .btn{ margin-right:8px; margin-bottom:8px; }
+
+/* chips classify */
+.cf-chip{ user-select:none; cursor:grab; }
+.cf-chip:active{ cursor:grabbing; }
+
+/* ordenar */
+.ord-list{ list-style:none; padding-left:0; }
+.ord-item{ cursor:grab; user-select:none; }

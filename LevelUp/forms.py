@@ -3,6 +3,7 @@ from django.contrib.auth.forms import UserCreationForm, PasswordChangeForm, Pass
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
+import json
 
 from .models import Actividad, ItemActividad
 from .validators import formatear_rut_usuario
@@ -172,8 +173,11 @@ class ActividadForm(forms.ModelForm):
 # ==============================
 # Ítems de actividad (incluye Juego/Interactivo)
 # ==============================
+# ... imports de arriba ...
+import json  # <-- asegúrate de tener este import
+
 class ItemActividadForm(forms.ModelForm):
-    # --- MCQ (campos opcionales por si los usas en el futuro) ---
+    # --- MCQ (opcional) ---
     alt_1 = forms.CharField(label="Alternativa A", required=False, widget=forms.TextInput(attrs={"class":"form-control"}))
     alt_2 = forms.CharField(label="Alternativa B", required=False, widget=forms.TextInput(attrs={"class":"form-control"}))
     alt_3 = forms.CharField(label="Alternativa C", required=False, widget=forms.TextInput(attrs={"class":"form-control"}))
@@ -222,12 +226,25 @@ class ItemActividadForm(forms.ModelForm):
     ext_url = forms.URLField(label="URL del recurso (embed)", required=False, widget=forms.URLInput(attrs={"class":"form-control"}))
     ext_provider = forms.CharField(label="Proveedor (ej: itch.io, youtube, genially)", required=False, widget=forms.TextInput(attrs={"class":"form-control"}))
 
-    # --- GAME BUILDER (visual) ---
-    GAME_CHOICES = (("memory","Memoria (Parejas)"),("dragmatch","Arrastrar y Soltar"),("trivia","Trivia"))
-    game_kind = forms.ChoiceField(label="Tipo de juego", required=False, choices=GAME_CHOICES, widget=forms.Select(attrs={"class":"form-select"}))
+    # --- GAME BUILDER (unificado) ---
+    GAME_CHOICES = [
+        ("memory",    "Memoria (Parejas)"),
+        ("dragmatch", "Arrastrar y Soltar"),
+        ("trivia",    "Trivia"),
+        # nuevos (todos juntos, sin categorías)
+        ("ordering",  "Ordena la secuencia"),
+        ("classify",  "Clasifica en canastas"),
+        ("cloze",     "Cloze (rellena huecos)"),
+        ("vf",        "Verdadero/Falso (+ justificación)"),
+        ("labyrinth", "Laberinto de puertas"),
+        ("shop",      "Tiendita (Matemáticas)"),
+    ]
+    game_kind = forms.ChoiceField(label="Tipo de juego", required=False,
+                                  choices=GAME_CHOICES,
+                                  widget=forms.Select(attrs={"class":"form-select"}))
     game_time_limit = forms.IntegerField(label="Tiempo límite (s)", required=False, min_value=0, initial=60,
                                          widget=forms.NumberInput(attrs={"class":"form-control"}))
-    # El JS del builder escribe aquí
+    # El builder/JSON editor escribe aquí
     game_pairs = forms.CharField(label="(Avanzado) Texto del contenido", required=False,
                                  widget=forms.Textarea(attrs={"class":"form-control","rows":6}))
 
@@ -242,38 +259,66 @@ class ItemActividadForm(forms.ModelForm):
             "imagen": forms.ClearableFileInput(attrs={"class":"form-control"}),
         }
 
-    # --------- precarga desde datos (edición) ---------
+    # ---------- utilidades ----------
+    def _looks_like_json(self, txt: str) -> bool:
+        return bool(txt and txt.strip() and txt.strip()[0] in "{[")
+
+    def _parse_pairs_text(self, raw: str):
+        out = []
+        for ln in (raw or "").splitlines():
+            ln = (ln or "").strip()
+            if not ln: continue
+            parts = [x.strip() for x in ln.split("|")]
+            if len(parts) >= 2 and parts[0] and parts[1]:
+                out.append([parts[0], parts[1]])
+        return out
+
+    def _parse_trivia_text(self, raw: str):
+        out = []
+        for ln in (raw or "").splitlines():
+            ln = (ln or "").strip()
+            if not ln: continue
+            parts = [x.strip() for x in ln.split("|") if x.strip()]
+            if len(parts) < 3: continue
+            q = parts[0]; rest = parts[1:]
+            ans = 0; opts = []
+            for i, t in enumerate(rest):
+                if t.endswith("*"): ans = i; t = t[:-1].strip()
+                opts.append(t)
+            out.append({"q": q, "opts": opts, "ans": ans})
+        return out
+
+    # ---------- precarga (edición) ----------
     def _load_ext_initial(self, datos):
-        if "url" in datos:
-            self.fields["ext_url"].initial = datos["url"]
-        if "proveedor" in datos:
-            self.fields["ext_provider"].initial = datos["proveedor"]
+        if "url" in datos: self.fields["ext_url"].initial = datos["url"]
+        if "proveedor" in datos: self.fields["ext_provider"].initial = datos["proveedor"]
 
     def _load_game_initial(self, datos):
         if "kind" in datos:
             self.fields["game_kind"].initial = datos["kind"]
-        # acepta time_limit o timeLimit
         if "time_limit" in datos:
             self.fields["game_time_limit"].initial = datos.get("time_limit") or 60
         elif "timeLimit" in datos:
             self.fields["game_time_limit"].initial = datos.get("timeLimit") or 60
-        # reinyecta al textarea para seguir editando
+
+        # Si viene texto guardado, respétalo
         if datos.get("text"):
-            self.fields["game_pairs"].initial = datos["text"]
-            return
+            self.fields["game_pairs"].initial = datos["text"]; return
+
+        # Pares o Trivia → serializar a texto plano
         if datos.get("pairs"):
-            self.fields["game_pairs"].initial = "\n".join(
-                f"{a}|{b}" for a, b in datos["pairs"]
-            )
-            return
+            self.fields["game_pairs"].initial = "\n".join(f"{a}|{b}" for a,b in datos["pairs"]); return
         if datos.get("trivia") or datos.get("questions"):
             qs = datos.get("trivia") or datos.get("questions") or []
             lines = []
             for q in qs:
                 ans = q.get("ans") or 0
-                opts = [f"{t}{'*' if i==ans else ''}" for i, t in enumerate(q.get("opts", []))]
-                lines.append(" | ".join([q.get("q", "")] + opts))
-            self.fields["game_pairs"].initial = "\n".join(lines)
+                opts = [f"{t}{'*' if i==ans else ''}" for i,t in enumerate(q.get("opts", []))]
+                lines.append(" | ".join([q.get("q","")] + opts))
+            self.fields["game_pairs"].initial = "\n".join(lines); return
+
+        # Cualquier otro contenido → mostrar JSON completo
+        self.fields["game_pairs"].initial = json.dumps(datos, ensure_ascii=False, indent=2)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -285,45 +330,7 @@ class ItemActividadForm(forms.ModelForm):
             elif t == "game":
                 self._load_game_initial(datos)
 
-    # --------- parsers ---------
-    def _parse_pairs_text(self, raw: str):
-        """A|B por línea → [['A','B'], ...]. Ignora líneas vacías o incompletas."""
-        out = []
-        for ln in (raw or "").splitlines():
-            ln = (ln or "").strip()
-            if not ln:
-                continue
-            parts = [x.strip() for x in ln.split("|")]
-            if len(parts) >= 2 and parts[0] and parts[1]:
-                out.append([parts[0], parts[1]])
-        return out
-
-    def _parse_trivia_text(self, raw: str):
-        """
-        'Pregunta | op1 | op2* | op3' → [{'q','opts','ans'}...]
-        La opción con * es la correcta; si no hay *, se asume la primera (0).
-        """
-        out = []
-        for ln in (raw or "").splitlines():
-            ln = (ln or "").strip()
-            if not ln:
-                continue
-            parts = [x.strip() for x in ln.split("|") if x.strip()]
-            if len(parts) < 3:
-                continue
-            q = parts[0]
-            rest = parts[1:]
-            ans = 0
-            opts = []
-            for i, t in enumerate(rest):
-                if t.endswith("*"):
-                    ans = i
-                    t = t[:-1].strip()
-                opts.append(t)
-            out.append({"q": q, "opts": opts, "ans": ans})
-        return out
-
-    # --------- clean/save ---------
+    # ---------- validación unificada ----------
     def clean(self):
         cleaned = super().clean()
         t = (cleaned.get("tipo") or "").lower()
@@ -337,33 +344,47 @@ class ItemActividadForm(forms.ModelForm):
             cleaned["_datos_payload"] = {"url": url, "proveedor": prov}
             return cleaned
 
-        # GAME
+        # GAME (unificado)
         if t == "game":
             kind = (cleaned.get("game_kind") or "").lower()
-            if kind not in {"memory", "dragmatch", "trivia"}:
+            if not kind:
                 raise forms.ValidationError("Selecciona el tipo de juego.")
             time_limit = int(cleaned.get("game_time_limit") or 0) or 0
             raw = (cleaned.get("game_pairs") or "").strip()
 
-            payload = {"kind": kind, "timeLimit": time_limit}
+            payload = {}
 
-            if kind in {"memory", "dragmatch"}:
-                pairs = self._parse_pairs_text(raw)
-                if not pairs:
-                    raise forms.ValidationError("Para este juego, agrega al menos 1 par usando el formato A|B (uno por línea).")
-                payload["pairs"] = pairs
-                payload["text"] = raw
+            # 1) Si parece JSON, úsalo tal cual para cualquier tipo
+            if self._looks_like_json(raw):
+                try:
+                    payload = json.loads(raw)
+                except json.JSONDecodeError:
+                    raise forms.ValidationError("JSON inválido en “(Avanzado) Texto del contenido”.")
             else:
-                trivia = self._parse_trivia_text(raw)
-                if not trivia:
-                    raise forms.ValidationError("Para Trivia, agrega al menos 1 pregunta: Pregunta | Opción1 | Opción2* | Opción3 …")
-                payload["trivia"] = trivia
-                payload["text"] = raw
+                # 2) Texto plano de respaldo para tipos que lo soportan
+                if kind in {"memory","dragmatch"}:
+                    pairs = self._parse_pairs_text(raw)
+                    if not pairs:
+                        raise forms.ValidationError("Agrega al menos 1 par usando el formato A|B (uno por línea).")
+                    payload["pairs"] = pairs
+                    payload["text"] = raw
+                elif kind == "trivia":
+                    trivia = self._parse_trivia_text(raw)
+                    if not trivia:
+                        raise forms.ValidationError("Agrega al menos 1 pregunta: Pregunta | Opción1 | Opción2* | Opción3 …")
+                    payload["trivia"] = trivia
+                    payload["text"] = raw
+                else:
+                    # Los demás tipos requieren JSON si no hay texto válido
+                    raise forms.ValidationError("Para este tipo, pega o edita el contenido en formato JSON en “(Avanzado) Texto del contenido”.")
+
+            # 3) Normalizar metadatos comunes
+            payload["kind"] = kind
+            payload["timeLimit"] = time_limit
 
             cleaned["_datos_payload"] = payload
             return cleaned
 
-        # Otros tipos (sin validación específica aquí)
         cleaned["_datos_payload"] = cleaned.get("_datos_payload") or {}
         return cleaned
 
