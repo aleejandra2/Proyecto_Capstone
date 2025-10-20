@@ -2,7 +2,7 @@
 
 .navbar {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
+  color: #ffffff;
   padding: 1rem 0;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   position: sticky;
@@ -74,7 +74,13 @@
   gap: 0.5rem;
   font-weight: 500;
 }
-.navbar-link:hover { background: rgba(255,255,255,.1); color:#fff; }
+
+.nav-link.px-2{
+  color: #000000;
+}
+
+
+.navbar-link:hover { background: rgba(255,255,255,.1); color:#e01b1b; }
 .navbar-link.active { background: rgba(255,255,255,.2); font-weight:600; }
 
 /* Usuario */

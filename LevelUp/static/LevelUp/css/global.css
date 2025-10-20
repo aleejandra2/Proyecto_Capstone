@@ -321,14 +321,14 @@ nav.navbar{ background:#fff; border-bottom:1px solid var(--border); }
 /* ======== Navbar Home ======== */
 .navbar-home{
   background:#867cc4;
-  --bs-navbar-color:#fff;
+  --bs-navbar-color:#8c0c0c;
   --bs-navbar-brand-color:#fff;
   --bs-navbar-hover-color:#f2f2f7;
   --bs-navbar-active-color:#fff;
 }
 .navbar-home .navbar-brand,
-.navbar-home .nav-link{ color:#fff !important; }
-.navbar-home .nav-link:hover{ color:#f2f2f7 !important; }
+.navbar-home .nav-link{ color:#000000 !important; }
+.navbar-home .nav-link:hover{ color:#000000 !important; }
 
 /* Buscador pequeño en navbar */
 .home-nav-search{

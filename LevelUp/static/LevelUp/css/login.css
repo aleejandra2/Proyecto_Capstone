@@ -63,13 +63,14 @@ body {
 /* ======== Inputs ======== */
 .form-input {
   width: 100%;
-  background: #fff;
-  color: #1a1a1a;
-  border: none;
+  background: #ffffff;
+  color: #000000;
+  border: 2px solid rgb(50, 50, 50);
   border-radius: 0.75rem;
   padding: 1rem;
   margin-bottom: 1rem;
   font-size: 1rem;
+  box-sizing: border-box;
 }
 
 .form-input::placeholder {
