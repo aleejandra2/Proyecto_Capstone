@@ -432,7 +432,7 @@ body {
 .inline-block { display: inline-block; }
 .w-full { width: 100%; }
 .h-full { height: 100%; }
-.min-h-screen { min-height: 100vh; }
+.min-h-screen
 .p-4 { padding: 1rem; }
 .p-6 { padding: 1.5rem; }
 .m-4 { margin: 1rem; }

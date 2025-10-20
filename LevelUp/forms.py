@@ -80,11 +80,11 @@ class RegistrationForm(UserCreationForm):
 class LoginForm(forms.Form):
     email = forms.EmailField(
         label="Email",
-        widget=forms.EmailInput(attrs={"class": "form-input"})
+        widget=forms.EmailInput(attrs={"class": "form-input", "placeholder": "Correo electrónico"})
     )
     password = forms.CharField(
         label="Contraseña",
-        widget=forms.PasswordInput(attrs={"class": "form-input"})
+        widget=forms.PasswordInput(attrs={"class": "form-input", "placeholder": "Contraseña"})
     )
     remember = forms.BooleanField(label="Recordarme", required=False)
 

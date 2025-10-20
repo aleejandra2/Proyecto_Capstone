@@ -2,7 +2,7 @@
 
 .navbar {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
+  color: #ce4545;
   padding: 1rem 0;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   position: sticky;
@@ -18,6 +18,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background-color:#764ba2;
 }
 
 /* Marca */
@@ -25,10 +26,10 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  text-decoration: none;
+  text-decoration:solid;
   color: #fff;
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 700;;
 }
 
 .navbar-logo {
@@ -74,8 +75,14 @@
   gap: 0.5rem;
   font-weight: 500;
 }
-.navbar-link:hover { background: rgba(255,255,255,.1); color:#fff; }
-.navbar-link.active { background: rgba(255,255,255,.2); font-weight:600; }
+
+.nav-link.px-2{
+  color: #000000;
+}
+
+
+.navbar-link:hover { background-color: rgba(255,255,255,.1); color:#fff; }
+.navbar-link.active { background-color: rgba(255,255,255,.2); font-weight:600; }
 
 /* Usuario */
 .navbar-user { display:flex; align-items:center; gap:1rem; }
