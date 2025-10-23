@@ -1,36 +1,170 @@
 {% extends "LevelUp/base.html" %}
+{% load static %}
 {% block title %}Mis actividades{% endblock %}
+
 {% block content %}
-<div class="container py-3">
-
-    {% if messages %}
-    {% for message in messages %}
-    <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
-    {% endfor %}
-    {% endif %}
-
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h4 m-0">Mis actividades</h1>
-        <a class="btn btn-primary" href="{% url 'crear' %}">Nueva actividad</a>
+<main class="landing">
+  <!-- Hero compacto -->
+  <section class="landing-hero position-relative overflow-hidden landing-hero--compact">
+    <div class="container">
+      <div class="d-flex align-items-center justify-content-between gap-3">
+        <div>
+          <h1 class="h3 fw-800 font-merienda m-0">Mis <span class="grad-ink">actividades</span></h1>
+          <p class="text-edu-ink-700 mb-0">Gestiona, edita y publica tus actividades por asignatura.</p>
+        </div>
+        <div class="d-flex gap-2">
+          <a class="btn btn-edu btn-lg" href="{% url 'crear' %}">Nueva actividad</a>
+        </div>
+      </div>
     </div>
+    <div class="bg-wave" aria-hidden="true"></div>
+  </section>
 
-    <div class="list-group">
-        {% for a in actividades %}
-        <a class="list-group-item list-group-item-action" href="{% url 'actividad_editar' a.pk %}">
-            <div class="d-flex w-100 justify-content-between">
-                <h5 class="mb-1">{{ a.titulo }}</h5>
-                <small class="text-nowrap">{{ a.get_dificultad_display }}</small>
-            </div>
-            <div class="small text-muted">
-                {{ a.get_tipo_display }} · XP {{ a.xp_total }}
-                · {% if a.es_publicada %}<span class="text-success">Publicada</span>{% else %}<span
-                    class="text-secondary">Borrador</span>{% endif %}
-                {% if a.fecha_cierre %}· Cierra: {{ a.fecha_cierre|date:"d/m/Y H:i" }}{% endif %}
-            </div>
-        </a>
-        {% empty %}
-        <div class="alert alert-info">Aún no tienes actividades.</div>
+  <section class="section-pad pt-4">
+    <div class="container">
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
         {% endfor %}
+      {% endif %}
+
+      {# Si la vista no trae 'grupos', agrupamos aquí #}
+      {% if not grupos %}{% regroup actividades by asignatura as grupos %}{% endif %}
+
+      {% if grupos %}
+      <div class="accordion ac-asig" id="acAsignaturas">
+        {% for g in grupos %}
+        {% with acc_id=forloop.counter %}
+        <div class="accordion-item mb-3">
+          <h2 class="accordion-header" id="head-{{ acc_id }}">
+            <button
+              class="accordion-button {% if not forloop.first %}collapsed{% endif %}"
+              type="button"
+              data-bs-target="#col-{{ acc_id }}"
+              aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
+              aria-controls="col-{{ acc_id }}">
+              <span class="asig-title">
+                <span class="asig-dot" aria-hidden="true"></span>
+                {{ g.asignatura|default:g.grouper }}
+                <span class="subject-chip">
+                  {% with filas=g.rows|default:g.list %}
+                    {{ filas|length }} actividad{{ filas|length|pluralize:"es" }}
+                  {% endwith %}
+                </span>
+              </span>
+            </button>
+          </h2>
+
+          <div
+            id="col-{{ acc_id }}"
+            class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+            aria-labelledby="head-{{ acc_id }}"
+            data-bs-parent="#acAsignaturas">
+            <div class="accordion-body">
+
+              {% with filas=g.rows|default:g.list %}
+              {% if filas %}
+              <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                {% for a in filas %}
+                <div class="col">
+                  <div class="feature-card activity-card h-100">
+                    <div class="d-flex flex-column justify-content-between h-100">
+
+                      <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                          <h3 class="h6 m-0">{{ a.titulo }}</h3>
+                          {% with dif=a.get_dificultad_display %}
+                            {% if "Fácil" in dif or "Básico" in dif %}
+                              <span class="pill"><span class="dot dot-easy"></span>{{ dif }}</span>
+                            {% elif "Medio" in dif %}
+                              <span class="pill"><span class="dot dot-mid"></span>{{ dif }}</span>
+                            {% else %}
+                              <span class="pill"><span class="dot dot-hard"></span>{{ dif }}</span>
+                            {% endif %}
+                          {% endwith %}
+                        </div>
+
+                        {# -------- META EN LÍNEA -------- #}
+                        <div class="activity-meta">
+                          <span>🎮 {{ a.get_tipo_display }}</span>
+                          · <span>🎯 XP: {{ a.xp_total }}</span>
+                          · {% if a.es_publicada %}
+                              <span class="badge rounded-pill text-bg-success">Publicada</span>
+                            {% else %}
+                              <span class="badge rounded-pill text-bg-secondary">Borrador</span>
+                            {% endif %}
+                        </div>
+
+                        {# -------- CIERRE EN LA LÍNEA DE ABAJO -------- #}
+                        {% if a.fecha_cierre %}
+                          <div class="mt-1">
+                            <span style="white-space:nowrap" title="Fecha de cierre">
+                              ⏳ <strong>Cierra:</strong>
+                              <time datetime="{{ a.fecha_cierre|date:'c' }}">{{ a.fecha_cierre|date:"d/m/Y H:i" }}</time>
+                            </span>
+                          </div>
+                        {% endif %}
+                      </div>
+
+                      <div class="card-actions d-flex gap-2 mt-3">
+                        {# Editar #}
+                        <a class="btn btn-edu btn-sm w-100"
+                           href="{% url 'actividad_editar' a.pk %}">
+                          Editar
+                        </a>
+
+                        {# Eliminar (POST) #}
+                        {% url 'actividad_eliminar' a.pk as u_del %}
+                        {% if not u_del %}{% url 'eliminar_actividad' a.pk as u_del %}{% endif %}
+                        {% if not u_del %}{% url 'actividad-delete' a.pk as u_del %}{% endif %}
+                        {% if not u_del %}{% url 'actividad_borrar' a.pk as u_del %}{% endif %}
+
+                        {% if u_del %}
+                          <form method="post" action="{{ u_del }}" class="w-100">
+                            {% csrf_token %}
+                            <button type="submit"
+                                    class="btn btn-outline-danger btn-sm w-100"
+                                    onclick="return confirm('¿Eliminar «{{ a.titulo }}»? Esta acción no se puede deshacer.');">
+                              Eliminar
+                            </button>
+                          </form>
+                        {% else %}
+                          <button type="button" class="btn btn-outline-danger btn-sm w-100 disabled"
+                                  title="Falta configurar la URL de eliminar">
+                            Eliminar
+                          </button>
+                        {% endif %}
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+              {% else %}
+                <div class="alert alert-light border d-flex align-items-center mt-2" role="alert">
+                  <div class="me-2">🫙</div>
+                  <div>No tienes actividades en esta asignatura.</div>
+                </div>
+              {% endif %}
+              {% endwith %}
+
+            </div>
+          </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+      </div>
+      {% else %}
+        <div class="alert alert-info">Aún no tienes actividades.</div>
+      {% endif %}
+
     </div>
-</div>
+  </section>
+</main>
+
+<link rel="stylesheet" href="{% static 'LevelUp/css/home-kids.css' %}">
+<script defer src="{% static 'LevelUp/js/home-kids.js' %}"></script>
+<script defer src="{% static 'LevelUp/js/script.js' %}"></script>
 {% endblock %}

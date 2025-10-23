@@ -30,3 +30,57 @@
 .lv-meta .pill{ display:inline-flex; gap:6px; padding:6px 10px; border-radius:999px; background:#f1f5f9; font-weight:700; color:#0f172a; }
 .lv-progress{ width:220px; height:12px; background:#eef2ff; border-radius:999px; overflow:hidden; border:1px solid #c7d2fe; }
 .lv-progress > div{ height:100%; width:0%; background:linear-gradient(90deg,#22c55e,#84cc16); transition:width .18s ease; }
+
+/* HUD (encabezado modo juego) */
+.hud{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.hud-left{ display:flex; align-items:center; gap:12px; }
+.hud-avatar{ width:60px; height:60px; border-width:3px; }
+.hud-meta{ display:flex; flex-direction:column; gap:6px; }
+.hud-title{ font-weight:800; font-size:1rem; }
+.hud-pills{ display:flex; gap:8px; flex-wrap:wrap; }
+.hud-right{ display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; }
+.hud-counters{ display:flex; gap:8px; flex-wrap:wrap; }
+.hud-pill{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#f1f5f9; font-weight:700; color:#0f172a; border:1px solid #e2e8f0; }
+.hud-progress{ min-width:240px; }
+
+/* Confeti (simple con emoji) */
+.confetti-container{ position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:1055; }
+.confetti{ position:absolute; top:-10vh; font-size:20px; will-change:transform, opacity; animation: fall 2.5s linear forwards; }
+@keyframes fall{
+  0%{ transform: translateY(-10vh) translateX(0) rotate(0); opacity:1; }
+  100%{ transform: translateY(110vh) translateX(var(--dx, 0)) rotate(540deg); opacity:0; }
+}
+
+/* ------------------------------ */
+/* Estilos minijuegos (UI base)   */
+/* ------------------------------ */
+
+/* Memoria */
+.game-board{ display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:12px; }
+.game-card{ position:relative; width:110px; height:140px; border:none; background:transparent; cursor:pointer; padding:0; perspective:800px; }
+.game-card .front, .game-card .back{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; border-radius:12px; backface-visibility:hidden; transition: transform .35s ease, box-shadow .2s ease; box-shadow:0 6px 16px rgba(0,0,0,.08); }
+.game-card .front{ background:#e2e8f0; color:#334155; font-weight:800; font-size:22px; transform: rotateY(0deg); }
+.game-card .back{ background:#ffffff; color:#0f172a; padding:10px; text-align:center; transform: rotateY(180deg); }
+.game-card.flipped .front{ transform: rotateY(180deg); }
+.game-card.flipped .back{ transform: rotateY(0deg); }
+
+/* Drag & Match */
+.gm-wrap{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.gm-col{ display:flex; flex-direction:column; gap:10px; }
+.gm-tile, .gm-slot{ background:#fff; border:1px solid #cbd5e1; border-radius:10px; padding:10px 12px; box-shadow:0 4px 12px rgba(0,0,0,.05); }
+.gm-slot{ min-height:44px; background:#f8fafc; }
+.gm-slot.gm-slot-filled{ border-color:#22c55e; background:#ecfdf5; }
+.gm-tile[draggable="true"]{ cursor:grab; }
+
+/* Trivia */
+.tr-card{ background:#fff; border-radius:12px; padding:12px; box-shadow:0 6px 16px rgba(0,0,0,.08); margin-bottom:10px; }
+.tr-q{ font-weight:800; margin-bottom:8px; }
+.tr-opts .btn{ margin-right:8px; margin-bottom:8px; }
+
+/* chips classify */
+.cf-chip{ user-select:none; cursor:grab; }
+.cf-chip:active{ cursor:grabbing; }
+
+/* ordenar */
+.ord-list{ list-style:none; padding-left:0; }
+.ord-item{ cursor:grab; user-select:none; }

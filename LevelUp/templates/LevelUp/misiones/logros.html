@@ -1,0 +1,24 @@
+{% extends "LevelUp/base.html" %}
+{% load static %}
+{% block title %}Logros{% endblock %}
+{% block content %}
+<div class="container py-3">
+  <h1 class="h5 mb-3">Logros</h1>
+  <div id="msLogros" class="row g-3"></div>
+  <a class="btn btn-outline-secondary mt-3" href="{% url 'misiones_mapa' %}">Volver al mapa</a>
+  <template id="tplLogro">
+    <div class="col-md-4">
+      <div class="p-3 rounded border h-100">
+        <div class="fw-bold mb-1 js-title">Título</div>
+        <div class="small text-muted js-desc">Descripción</div>
+      </div>
+    </div>
+  </template>
+  <div class="small text-muted mt-3">Los logros se guardan localmente en este prototipo.</div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<link rel="stylesheet" href="{% static 'LevelUp/css/misiones.css' %}">
+<script src="{% static 'LevelUp/js/misiones/logros.js' %}"></script>
+{% endblock %}
+
