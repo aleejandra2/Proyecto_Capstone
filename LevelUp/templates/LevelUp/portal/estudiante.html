@@ -6,8 +6,8 @@
 <main class="min-h-screen">
   <div class="container">
 
-    <!-- Encabezado -->
-    <div class="card mb-3">
+<!-- Encabezado (hero) -->
+    <div class="card mb-3 card-hero">
       <div class="card-body d-flex flex-wrap justify-content-between align-items-start gap-2">
         <div>
           <h1 class="h3 m-0">¡Bienvenido/a, {{ request.user.get_full_name|default:request.user.username }}! 👋</h1>
@@ -17,31 +17,32 @@
       </div>
     </div>
 
+
     <!-- Stats -->
     <div class="card mb-3">
       <div class="card-body">
         <div class="row g-3">
           <div class="col-6 col-md-3">
             <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Nivel</div>
+              <div class="text-muted small">Nivel🔝</div>
               <div class="fs-3 fw-bold">{{ nivel|default:1 }}</div>
             </div>
           </div>
           <div class="col-6 col-md-3">
             <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Puntos</div>
+              <div class="text-muted small">Puntos📍</div>
               <div class="fs-3 fw-bold">{{ puntos|default:0 }}</div>
             </div>
           </div>
           <div class="col-6 col-md-3">
             <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Medallas</div>
+              <div class="text-muted small">Medallas🏅</div>
               <div class="fs-3 fw-bold">{{ medallas|default:0 }}</div>
             </div>
           </div>
           <div class="col-6 col-md-3">
             <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Actividades</div>
+              <div class="text-muted small">Actividades🕹️</div>
               <div class="fs-3 fw-bold">{{ actividades_count|default:0 }}</div>
             </div>
           </div>
@@ -57,7 +58,7 @@
 
           <div class="col-12 col-md-6">
             <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Docentes asignados</div>
+              <div class="text-muted small">Docentes asignados👩‍🏫</div>
               <div class="fw-semibold">
                 Matemáticas: {{ docente_matematicas|default:"—" }}<br>
                 Inglés: {{ docente_ingles|default:"—" }}
@@ -80,35 +81,44 @@
             </div>
 
             <!-- Placeholders con CTA real -->
-            <div class="border rounded p-3 mb-2">
-              <div class="d-flex justify-content-between align-items-center">
-                <div>
-                  <div class="fw-semibold">Fracciones básicas</div>
-                  <div class="text-muted small">Dificultad: Fácil · 100 XP</div>
-                </div>
-                <a href="{% url 'estudiante_lista' %}" class="btn btn-outline-success btn-sm">Empezar</a>
+        <div class="activity p-3 mb-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-semibold">Fracciones básicas</div>
+              <div class="text-muted small">⏱️ 6–8 min · Dificultad: Fácil · 100 XP</div>
+              <div class="chips">
+                <span class="chip chip--new">Nuevo</span>
               </div>
             </div>
+            <a href="{% url 'estudiante_lista' %}" class="btn btn-outline-success btn-sm">Empezar</a>
+          </div>
+        </div>
 
-            <div class="border rounded p-3 mb-2">
-              <div class="d-flex justify-content-between align-items-center">
-                <div>
-                  <div class="fw-semibold">Comprensión lectora</div>
-                  <div class="text-muted small">Dificultad: Media · 150 XP</div>
-                </div>
-                <a href="{% url 'estudiante_lista' %}" class="btn btn-outline-success btn-sm">Continuar</a>
+        <div class="activity p-3 mb-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-semibold">Comprensión lectora</div>
+              <div class="text-muted small">⏱️ 7–10 min · Dificultad: Media · 150 XP</div>
+              <div class="chips">
+                <span class="chip chip--cont">Continuar</span>
               </div>
             </div>
+            <a href="{% url 'estudiante_lista' %}" class="btn btn-outline-success btn-sm">Continuar</a>
+          </div>
+        </div>
 
-            <div class="border rounded p-3">
-              <div class="d-flex justify-content-between align-items-center">
-                <div>
-                  <div class="fw-semibold">Problemas lógicos</div>
-                  <div class="text-muted small">Dificultad: Difícil · 200 XP</div>
-                </div>
-                <a href="{% url 'estudiante_lista' %}" class="btn btn-outline-success btn-sm">Empezar</a>
+        <div class="activity p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-semibold">Problemas lógicos</div>
+              <div class="text-muted small">⏱️ 10–12 min · Dificultad: Difícil · 200 XP</div>
+              <div class="chips">
+                <span class="chip chip--due">Vence hoy</span>
               </div>
             </div>
+            <a href="{% url 'estudiante_lista' %}" class="btn btn-outline-success btn-sm">Empezar</a>
+          </div>
+        </div>
 
           </div>
         </div>
@@ -169,5 +179,7 @@
     </div>
 
   </div>
+
+
 </main>
 {% endblock %}

@@ -65,7 +65,7 @@
 .navbar-nav li { margin: 0; }
 
 .navbar-link {
-  color: #fff;
+  color: #3b1616;
   text-decoration: none;
   padding: 0.5rem 1rem;
   border-radius: 0.5rem;
@@ -78,7 +78,9 @@
 
 .nav-link.px-2{
   color: #000000;
+  font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
 }
+
 
 
 .navbar-link:hover { background-color: rgba(255,255,255,.1); color:#fff; }
@@ -189,7 +191,23 @@
 /* Dark */
 @media (prefers-color-scheme: dark){
   .navbar-dropdown-menu{ background:#1f2937; color:#f3f4f6; }
-  .navbar-dropdown-item{ color:#f3f4f6; }
+  .navbar-dropdown-item{ color:#000000; }
   .navbar-dropdown-item:hover{ background:#374151; color:#f3f4f6; }
   .navbar-dropdown-divider{ background:#4b5563; }
+}
+
+.navbar.navbar-kids{
+  --c1:#ea84d6; --c2:#7edfe6;
+  background: linear-gradient(120deg,var(--c1),var(--c2));
+  background-size: 200% 200%;
+  animation: nbMove 12s ease infinite;
+  color:#140d0d;
+
+}
+.navbar.navbar-kids .navbar-brand,
+.navbar.navbar-kids .nav-link,
+.navbar.navbar-kids .navbar-toggler{ color:#fff !important; }
+
+@keyframes nbMove{
+  0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%}
 }
