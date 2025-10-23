@@ -1,11 +1,11 @@
 {% load static %}
-<nav class="navbar navbar-expand-lg bg-body-tertiary">
+<nav class="navbar navbar-expand-lg navbar-kids">
   <div class="container">
     <div class="d-none d-lg-flex align-items-center gap-3 mx-auto order-0">
       <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
         <img src="{% static 'LevelUp/img/logo v1.png' %}" width="32" height="32"
              class="d-inline-block align-text-top me-2" style="object-fit:contain;">
-        <span>LevelUp</span>
+        <span id="levelupp">LevelUp</span>
       </a>
       <a class="nav-link px-2 {% if request.resolver_match.url_name == 'actividades' %}active{% endif %}"
          href="{% url 'actividades' %}">Actividades</a>

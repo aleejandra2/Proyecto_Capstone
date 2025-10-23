@@ -151,7 +151,7 @@ body {
 }
 
 .btn-success:hover {
-  background: #059669;
+  background: #3c6457;
 }
 
 .btn-outline {
@@ -432,7 +432,7 @@ body {
 .inline-block { display: inline-block; }
 .w-full { width: 100%; }
 .h-full { height: 100%; }
-.min-h-screen { min-height: 100vh; }
+.min-h-screen
 .p-4 { padding: 1rem; }
 .p-6 { padding: 1.5rem; }
 .m-4 { margin: 1rem; }
@@ -566,3 +566,34 @@ progress::-moz-progress-bar{ background: linear-gradient(90deg, var(--primary-co
   font-size:.72rem; padding:.15rem .55rem; border-radius:9999px;
   background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe;
 }
+
+/* Forzamos especificidad y que no lo pise Bootstrap */
+.card.card-hero{
+  background: linear-gradient(120deg,#ea84d6,#7edfe6) !important;
+  color:#f9f9f9;
+  border:0;
+  box-shadow: 0 12px 28px -10px rgba(255, 92, 244, 0.35);
+}
+.card.card-hero .text-muted{ color: rgba(255,255,255,.9) !important; }
+.card.card-hero .btn.btn-success{
+  background:#34D399; border-color:#34D399; color:#0F172A;
+}
+
+/* Actividades + chips (lo que ya usaste en HTML) */
+.activity{
+  background:#f7f7f7; border:1px solid #112346; border-radius:.75rem;
+  transition: transform .15s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.activity:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 12px 20px -10px rgba(0,0,0,.15);
+  border-color:#cbd5e1;
+}
+.chips{ display:flex; gap:.25rem; flex-wrap:wrap; margin-top:.25rem; }
+.chip{ padding:.15rem .5rem; font-size:.75rem; border-radius:999px; border:1px solid transparent; }
+.chip--new{  background:#E8F2FF; color:#1E3A8A; border-color:#D9E8FF; }
+.chip--cont{ background:#E8FFF6; color:#065F46; border-color:#C9F7E6; }
+.chip--due{  background:#FFE9EE; color:#9F1239; border-color:#FFD1DA; }
+
+.navbar{ position: sticky; top:0; z-index:1050; overflow:visible; }
+.dropdown-menu{ z-index:2000; }
