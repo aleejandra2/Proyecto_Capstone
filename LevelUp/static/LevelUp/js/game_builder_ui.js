@@ -1,17 +1,32 @@
+/* Oculta el RAW y garantiza que el constructor esté visible */
 (function () {
-  function toggle(scope) {
-    const tipoSel = scope.querySelector('[name$="-tipo"]') || scope.querySelector('[name$="tipo"]');
-    if (!tipoSel) return;
-    const tipo = (tipoSel.value || "").toLowerCase();
-    scope.querySelectorAll('[data-group="game"]').forEach(n => n.style.display = (tipo === "game" ? "" : "none"));
-    scope.querySelectorAll('[data-group="interactive"]').forEach(n => n.style.display = (tipo === "interactive" ? "" : "none"));
+  function apply() {
+    document.querySelectorAll('[data-group="game"]').forEach(n => { n.style.display = ""; });
+    // Ocultar cualquier bloque legacy que mencione JSON
+    document.querySelectorAll(".alert, .gb-legacy, .gb-json-hint").forEach(n => {
+      if ((n.textContent || "").toLowerCase().includes("json") ||
+        (n.textContent || "").toLowerCase().includes("cuadro de abajo")) {
+        n.remove();
+      }
+    });
+    // Ocultar el RAW con contundencia
+    document.querySelectorAll(".gb-raw").forEach(raw => {
+      raw.classList.add("d-none");
+      raw.style.display = "none";
+      const ta = raw.querySelector("textarea, input");
+      if (ta) {
+        ta.setAttribute("aria-hidden", "true");
+        ta.setAttribute("tabindex", "-1");
+        ta.style.display = "none";
+      }
+    });
   }
-  function init() { document.querySelectorAll(".item-form").forEach(toggle); }
-  document.addEventListener("change", (e)=>{
-    if (e.target.matches('select[name$="-tipo"], select[name$="tipo"]')) {
-      toggle(e.target.closest(".item-form") || document);
-    }
-  });
-  if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", init); } else { init(); }
-  document.addEventListener("formset:item-added", e=>{ if (e.detail?.node) toggle(e.detail.node); });
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", apply);
+  else apply();
+
+  const container = document.getElementById("items-container");
+  if (container && "MutationObserver" in window) {
+    const mo = new MutationObserver(apply);
+    mo.observe(container, { childList: true, subtree: true });
+  }
 })();

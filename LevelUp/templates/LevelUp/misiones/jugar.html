@@ -1,21 +1,598 @@
-﻿{% extends "LevelUp/base.html" %}
-{% load static %}
-{% block title %}Jugar Â· {{ mundo|title }} N{{ nivel }}{% endblock %}
-{% block content %}
-<div class="container py-3">
-  <div class="d-flex justify-content-between align-items-center mb-2">
-    <h1 class="h6 m-0">{{ mundo|title }} Â· Nivel {{ nivel }}</h1>
-    <a class="btn btn-outline-secondary btn-sm" href="{% url 'misiones_mundo' mundo %}">Volver a niveles</a>
+﻿{% load static %}
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Nivel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      background: #1e1e1e;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+      color-scheme: light dark;
+    }
+
+    /* Stage centrado + escala uniforme (X==Y) */
+    .stage {
+      position: fixed;
+      left: 0;
+      top: 0;
+      transform-origin: 0 0;
+    }
+
+    canvas {
+      position: absolute;
+      left: 0;
+      top: 0;
+      image-rendering: pixelated;
+    }
+
+    #bg {
+      z-index: 0;
+    }
+
+    #game {
+      z-index: 1;
+    }
+
+    /* Overlay preguntas */
+    .ask {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, .5);
+      z-index: 9000;
+    }
+
+    .ask.show {
+      display: flex;
+    }
+
+    .ask-card {
+      min-width: 280px;
+      max-width: 520px;
+      background: #fff;
+      color: #111;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, .4);
+      font: 14px/1.35 system-ui;
+    }
+
+    .ask-card h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+
+    .ask-card .ops {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .ask-card button {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      background: #f7f7f7;
+      cursor: pointer;
+    }
+
+    .ask-card button.ok {
+      background: #16a34a;
+      color: #fff;
+      border-color: #16a34a;
+    }
+
+    .ask-card button.bad {
+      background: #ef4444;
+      color: #fff;
+      border-color: #ef4444;
+    }
+
+    /* Menús */
+    .menu {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      z-index: 9500;
+      color: #fff;
+      background: radial-gradient(80% 80% at 50% 50%, rgba(0, 0, 0, .2), rgba(0, 0, 0, .85)),
+      url("{% static 'LevelUp/img/misiones/menu_bg.jpg' %}") center/cover no-repeat;
+    }
+
+    .menu.show {
+      display: grid;
+    }
+
+    .menu-card {
+      text-align: center;
+      padding: 20px 24px;
+      background: rgba(0, 0, 0, .6);
+      border: 1px solid rgba(255, 255, 255, .15);
+      border-radius: 16px;
+      min-width: 280px;
+      max-width: 520px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, .5);
+      backdrop-filter: blur(4px);
+    }
+
+    .menu-card h1 {
+      margin: 0 0 10px;
+      font-size: 42px;
+      letter-spacing: .5px;
+    }
+
+    .menu-card p {
+      margin: 0 0 14px;
+      opacity: .9;
+    }
+
+    .menu-card .btns {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .menu-card button {
+      cursor: pointer;
+      border-radius: 10px;
+      border: 1px solid #ffd54a;
+      background: #ffd54a;
+      color: #111;
+      padding: 10px 14px;
+      font-weight: 600;
+    }
+
+    .menu-card button.ghost {
+      background: transparent;
+      color: #ffd54a;
+    }
+
+    /* Confeti: canvas fijo encima de todo */
+    #fx {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 12000;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Escena -->
+  <div class="stage" id="stage">
+    <canvas id="bg"></canvas>
+    <canvas id="game"></canvas>
   </div>
-  <div id="msGame" class="ms-stage" data-title="{{ mundo|title }} Nivel {{ nivel }}"></div>
-  {{ preguntas|json_script:'ms-questions' }}
-</div>
-{% endblock %}
-{% block extra_js %}
-<link rel="stylesheet" href="{% static 'LevelUp/css/fonts.css' %}">
-<link rel="stylesheet" href="{% static 'LevelUp/css/misiones.css' %}">
-<script src="{% static 'LevelUp/js/misiones/jugar.js' %}"></script>
-{% endblock %}
 
+  <!-- Confeti -->
+  <canvas id="fx"></canvas>
 
+  <!-- Menú de inicio -->
+  <div id="menuStart" class="menu show">
+    <div class="menu-card">
+      <h1>¡LevelUp!</h1>
+      <p>Responde correcto para derrotar a los enemigos.</p>
+      <div class="btns">
+        <button id="btnStart">¡Jugar!</button>
+      </div>
+    </div>
+  </div>
 
+  <!-- Menú final -->
+  <div id="menuEnd" class="menu">
+    <div class="menu-card">
+      <h1>¡Completado!</h1>
+      <p id="endStats">¡Bien hecho!</p>
+      <div class="btns">
+        <button id="btnRetry">Reintentar</button>
+        <button id="btnExit" href="{% url 'estudiante_lista' %}" class="ghost">Salir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Motor del juego -->
+  <script src="{% static 'LevelUp/js/misiones/play.js' %}"></script>
+
+  <script>
+    // ================== CONFIG ==================
+    const MAP_URL = "{% static 'LevelUp/maps/escenario1.json' %}";
+    const MAP_ABS = new URL(MAP_URL, location.href).href;
+    const DEBUG_ENTITIES = false;
+
+    // ================== UTILS ===================
+    const FLIP_H = 0x80000000, FLIP_V = 0x40000000, FLIP_D = 0x20000000, GID_MASK = 0x1fffffff;
+    const absUrl = (rel, base) => new URL(rel, base).href;
+    const decodeGid = raw => ({ gid: raw & GID_MASK, flipH: !!(raw & FLIP_H), flipV: !!(raw & FLIP_V), flipD: !!(raw & FLIP_D) });
+    const imgCache = new Map();
+    function loadImage(src) {
+      if (imgCache.has(src)) return imgCache.get(src);
+      const p = new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('No se pudo cargar: ' + src)); i.src = src; });
+      imgCache.set(src, p); return p;
+    }
+    const fetchText = async u => { const r = await fetch(u); if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + u); return r.text(); };
+    const fetchJSON = async u => { const r = await fetch(u); if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + u); return r.json(); };
+
+    // ================== CANVAS / ESCALADO ===================
+    const stageEl = document.getElementById('stage');
+    const bg = document.getElementById('bg'); const bgCtx = bg.getContext('2d'); bgCtx.imageSmoothingEnabled = false;
+    const game = document.getElementById('game');
+
+    function fitStage(pxW, pxH) {
+      stageEl.style.width = pxW + 'px';
+      stageEl.style.height = pxH + 'px';
+      const s = Math.min(window.innerWidth / pxW, window.innerHeight / pxH);
+      stageEl.style.transform = `scale(${s})`;
+      const left = Math.max(0, Math.floor((window.innerWidth - pxW * s) / 2));
+      const top = Math.max(0, Math.floor((window.innerHeight - pxH * s) / 2));
+      stageEl.style.left = left + 'px';
+      stageEl.style.top = top + 'px';
+    }
+    addEventListener('resize', () => { if (window.LEVEL) fitStage(window.LEVEL.size.pxW, window.LEVEL.size.pxH); });
+
+    // ================== UI AUDIO (start / win) ===================
+    const UIAudio = (() => {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      let ctx = null;
+      function get() { if (!Ctx) return null; if (!ctx) ctx = new Ctx(); if (ctx.state === 'suspended') ctx.resume(); return ctx; }
+      function play(type = 'start') {
+        const ac = get(); if (!ac) return;
+        if (type === 'start') {
+          const o = ac.createOscillator(), g = ac.createGain();
+          o.type = 'square'; o.frequency.value = 520;
+          o.connect(g); g.connect(ac.destination);
+          g.gain.setValueAtTime(0.0001, ac.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.18, ac.currentTime + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.22);
+          o.start(); o.stop(ac.currentTime + 0.24);
+        } else if (type === 'win') {
+          // pequeño arpegio 3 notas
+          [660, 880, 1320].forEach((f, i) => {
+            const t = ac.currentTime + i * 0.08;
+            const o = ac.createOscillator(), g = ac.createGain();
+            o.type = 'triangle'; o.frequency.value = f;
+            o.connect(g); g.connect(ac.destination);
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+            o.start(t); o.stop(t + 0.24);
+          });
+        }
+      }
+      return { play };
+    })();
+
+    // ================== CONFETI ===================
+    const FX = (() => {
+      const c = document.getElementById('fx');
+      const ctx = c.getContext('2d');
+      let parts = [], raf = null;
+
+      function resize() { c.width = innerWidth; c.height = innerHeight; }
+      addEventListener('resize', resize); resize();
+
+      function spawn(n = 160) {
+        for (let i = 0; i < n; i++) {
+          parts.push({
+            x: Math.random() * innerWidth, y: -20 * Math.random(),
+            vx: (Math.random() * 2 - 1) * 4, vy: 2 + Math.random() * 2,
+            ay: 0.12, s: 3 + Math.random() * 7,
+            r: Math.random() * Math.PI, rv: (Math.random() * 2 - 1) * 0.25,
+            col: `hsl(${Math.random() * 360},90%,60%)`,
+            life: 0, ttl: 220 + Math.random() * 120
+          });
+        }
+      }
+
+      function tick() {
+        ctx.clearRect(0, 0, c.width, c.height);
+        for (const p of parts) {
+          p.vx *= 0.995; p.vy += p.ay;
+          p.x += p.vx; p.y += p.vy;
+          p.r += p.rv; p.life++;
+          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+          ctx.fillStyle = p.col; ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s);
+          ctx.restore();
+        }
+        parts = parts.filter(p => p.y < c.height + 40 && p.life < p.ttl);
+        if (parts.length > 0) { raf = requestAnimationFrame(tick); } else { raf = null; ctx.clearRect(0, 0, c.width, c.height); }
+      }
+
+      function burst(durationMs = 2000) {
+        spawn(200);
+        if (!raf) tick();
+        const start = performance.now();
+        (function drip() {
+          if (performance.now() - start < durationMs) {
+            spawn(25);
+            setTimeout(drip, 100);
+          }
+        })();
+      }
+      return { burst };
+    })();
+
+    // ================== TILESETS =================
+    async function loadTileset(tsRef, baseForJSON) {
+      if (!tsRef.source) return null;
+      const tsxUrl = absUrl(tsRef.source, baseForJSON);
+      const xml = new DOMParser().parseFromString(await fetchText(tsxUrl), 'text/xml');
+      const root = xml.querySelector('tileset');
+
+      const tilewidth = +(root.getAttribute('tilewidth') || tsRef.tilewidth || 0);
+      const tileheight = +(root.getAttribute('tileheight') || tsRef.tileheight || 0);
+      const spacing = +(root.getAttribute('spacing') || 0);
+      const margin = +(root.getAttribute('margin') || 0);
+      const to = root.querySelector('tileoffset');
+      const tileOffsetX = +(to?.getAttribute('x') || 0);
+      const tileOffsetY = +(to?.getAttribute('y') || 0);
+      const tileRenderSize = (root.getAttribute('tilerendersize') || 'tile').toLowerCase();
+
+      const srcName = (tsRef.source || '').toLowerCase();
+      const isPlatform = /plataform|plataforma/.test(srcName);
+
+      const solidIds = new Set(); const solidTop = new Map(); const solidBottom = new Map();
+      if (isPlatform) {
+        root.querySelectorAll(':scope > tile').forEach(t => {
+          const id = +(t.getAttribute('id') || 0);
+          const og = t.querySelector('objectgroup'); if (!og) return;
+          let minY = Infinity, maxY = -Infinity;
+          og.querySelectorAll('object').forEach(o => {
+            const oy = +o.getAttribute('y') || 0, w = +o.getAttribute('width') || 0, h = +o.getAttribute('height') || 0;
+            const poly = o.querySelector('polygon');
+            if (poly) {
+              (poly.getAttribute('points') || '').trim().split(/\s+/).forEach(p => {
+                const [px, py] = p.split(',').map(Number); const yy = oy + py; minY = Math.min(minY, yy); maxY = Math.max(maxY, yy);
+              });
+            } else if (w && h) { minY = Math.min(minY, oy); maxY = Math.max(maxY, oy + h); }
+            else { minY = Math.min(minY, oy); maxY = Math.max(maxY, oy); }
+          });
+          if (isFinite(minY) && isFinite(maxY)) { solidIds.add(id); solidTop.set(id, Math.round(minY)); solidBottom.set(id, Math.round(maxY)); }
+        });
+      }
+
+      const imageEl = root.querySelector(':scope > image');
+      if (imageEl) {
+        const imageUrl = absUrl(imageEl.getAttribute('source'), tsxUrl);
+        const columns = +(root.getAttribute('columns') || 0);
+        const imagewidth = +(imageEl.getAttribute('width') || 0);
+        const cols = columns || Math.floor((imagewidth - 2 * margin + spacing) / (tilewidth + spacing)) || 1;
+        return {
+          kind: 'spritesheet', firstgid: tsRef.firstgid, tilewidth, tileheight, spacing, margin,
+          imageUrl, columns: cols, tileOffsetX, tileOffsetY, tileRenderSize,
+          isPlatform, solidIds, solidTop, solidBottom
+        };
+      } else {
+        const tiles = new Map();
+        root.querySelectorAll(':scope > tile').forEach(t => {
+          const id = +(t.getAttribute('id') || 0), img = t.querySelector('image'); if (!img) return;
+          tiles.set(id, {
+            url: absUrl(img.getAttribute('source'), tsxUrl),
+            w: +(img.getAttribute('width') || tilewidth || 0),
+            h: +(img.getAttribute('height') || tileheight || 0)
+          });
+        });
+        return {
+          kind: 'collection', firstgid: tsRef.firstgid, tilewidth, tileheight, tiles,
+          tileOffsetX, tileOffsetY, tileRenderSize, isPlatform, solidIds, solidTop, solidBottom
+        };
+      }
+    }
+    function getTilesetForGid(tilesets, gid) { let f = null; for (const ts of tilesets) { if (gid >= ts.firstgid) f = ts; else break; } return f; }
+
+    async function drawTileFromTileset(ctx, ts, localId, dx, dy, flipH, flipV, flipD, cellW, cellH) {
+      if (!ts) return;
+      if (ts.kind === 'spritesheet') {
+        const img = await loadImage(ts.imageUrl);
+        const cols = ts.columns || 1, sxI = localId % cols, syI = Math.floor(localId / cols);
+        const sx = (ts.margin || 0) + sxI * (ts.tilewidth + (ts.spacing || 0));
+        const sy = (ts.margin || 0) + syI * (ts.tileheight + (ts.spacing || 0));
+        const ox = dx + (ts.tileOffsetX || 0), oy = dy + (ts.tileOffsetY || 0);
+        ctx.save();
+        ctx.translate(ox + (flipH ? ts.tilewidth : 0), oy + (flipV ? ts.tileheight : 0));
+        if (flipD) { ctx.translate(ts.tilewidth, 0); ctx.rotate(Math.PI / 2);[flipH, flipV] = [flipV, flipH]; }
+        ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+        ctx.drawImage(img, sx, sy, ts.tilewidth, ts.tileheight, 0, 0, ts.tilewidth, ts.tileheight);
+        ctx.restore();
+      } else {
+        const t = ts.tiles.get(localId); if (!t) return;
+        const img = await loadImage(t.url);
+        const useGrid = (ts.tileRenderSize === 'grid');
+        const destW = useGrid ? ts.tilewidth : img.width;
+        const destH = useGrid ? ts.tileheight : img.height;
+        const ox = dx + (ts.tileOffsetX || 0);
+        const oy = dy + (cellH - destH) + (ts.tileOffsetY || 0);
+        ctx.save();
+        let w = destW, h = destH;
+        ctx.translate(ox, oy);
+        if (flipD) { ctx.translate(h, 0); ctx.rotate(Math.PI / 2);[w, h] = [h, w];[flipH, flipV] = [flipV, flipH]; }
+        ctx.translate(flipH ? w : 0, flipV ? h : 0);
+        ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+        ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, destW, destH);
+        ctx.restore();
+      }
+    }
+
+    // ===== Objetos de Tiled =====
+    function objRect(obj, map) {
+      if (obj.gid) {
+        const w = obj.width || map.tilewidth, h = obj.height || map.tileheight;
+        return { x: Math.round(obj.x - w / 2), y: Math.round(obj.y - h), w: Math.round(w), h: Math.round(h), kind: 'tile' };
+      }
+      if (obj.point || (!obj.width && !obj.height)) return { x: Math.round(obj.x), y: Math.round(obj.y), w: 0, h: 0, kind: 'point' };
+      return { x: Math.round(obj.x), y: Math.round(obj.y), w: Math.round(obj.width || 0), h: Math.round(obj.height || 0), kind: 'rect' };
+    }
+    const readProps = obj => { const d = {}; (obj.properties || []).forEach(p => d[p.name] = p.value); return d; };
+    const typeOf = (obj, layer) => (obj.type || obj.name || layer?.name || '').trim().toLowerCase();
+
+    (async () => {
+      const map = await fetchJSON(MAP_ABS);
+      const cellW = map.tilewidth, cellH = map.tileheight;
+
+      // Tamaño real de los canvas
+      const pxW = map.width * cellW, pxH = map.height * cellH;
+      bg.width = game.width = pxW; bg.height = game.height = pxH;
+      fitStage(pxW, pxH);
+
+      // Cargar tilesets
+      const tilesets = [];
+      for (const tsRef of map.tilesets) tilesets.push(await loadTileset(tsRef, MAP_ABS));
+      tilesets.sort((a, b) => a.firstgid - b.firstgid);
+
+      // Grillas
+      const solids = Array.from({ length: map.height }, () => Array(map.width).fill(false));
+      const fullBlocks = Array.from({ length: map.height }, () => Array(map.width).fill(false));
+      const solidTopGrid = Array.from({ length: map.height }, () => Array(map.width).fill(0));
+      const solidBottomGrid = Array.from({ length: map.height }, () => Array(map.width).fill(cellH));
+
+      for (const layer of map.layers) {
+        if (layer.type !== 'tilelayer' || !layer.visible) continue;
+        const w = layer.width, data = layer.data;
+        const layerIsSolid = (layer.properties || []).some(p => p.name === 'collision' && p.value === true);
+
+        for (let i = 0; i < data.length; i++) {
+          const raw = data[i]; if (!raw) continue;
+          const x = i % w, y = Math.floor(i / w);
+
+          if (layerIsSolid) { solids[y][x] = true; fullBlocks[y][x] = true; solidTopGrid[y][x] = 0; solidBottomGrid[y][x] = cellH; continue; }
+
+          const { gid } = decodeGid(raw);
+          const ts = getTilesetForGid(tilesets, gid); if (!ts || !ts.isPlatform) continue;
+          const localId = gid - ts.firstgid;
+          if (ts.solidIds && ts.solidIds.has(localId)) {
+            const sy = (ts.tileheight ? cellH / ts.tileheight : 1);
+            const off = ts.tileOffsetY || 0;
+            const top = Math.max(0, Math.min(cellH, Math.round((ts.solidTop.get(localId) + off) * sy)));
+            const bottom = Math.max(0, Math.min(cellH, Math.round((ts.solidBottom.get(localId) + off) * sy)));
+            solids[y][x] = true; fullBlocks[y][x] = false;
+            solidTopGrid[y][x] = top; solidBottomGrid[y][x] = bottom;
+          }
+        }
+      }
+
+      // Entidades
+      let spawn = null; const coins = [], enemies = [], questions = [];
+      for (const layer of map.layers) {
+        if (layer.type !== 'objectgroup') continue;
+        for (const obj of (layer.objects || [])) {
+          const t = typeOf(obj, layer); const R = objRect(obj, map); const P = readProps(obj);
+          const cx = (R.kind === 'point') ? R.x : (R.x + R.w / 2);
+          const cy = (R.kind === 'point') ? R.y : (R.y + R.h / 2);
+          if (t === 'spawn' || t === 'player') spawn = { x: cx, y: cy };
+          else if (t === 'coin' || t === 'coins') coins.push({ id: obj.id, x: cx, y: cy });
+          else if (t === 'enemy') {
+            if (R.kind === 'rect' && R.w > cellW * 0.8 && R.h < cellH * 0.6) {
+              enemies.push({ id: obj.id, x: R.x + R.w / 2, y: R.y + R.h, patrolMinX: R.x, patrolMaxX: R.x + R.w, speed: +(P.speed ?? 60), dir: (P.dir || 'right'), qid: (P.qid != null ? +P.qid : null) });
+            } else {
+              const range = +(P.range ?? 2 * cellW);
+              enemies.push({ id: obj.id, x: cx, y: cy, patrolMinX: cx - range * 0.5, patrolMaxX: cx + range * 0.5, speed: +(P.speed ?? 60), dir: (P.dir || 'right'), qid: (P.qid != null ? +P.qid : null) });
+            }
+          } else if (t === 'question' || t === 'quiz' || t === 'pregunta') {
+            questions.push({ id: obj.id, x: cx, y: cy, q: P.q || '¿Pregunta?', a1: P.a1 || 'Opción 1', a2: P.a2 || 'Opción 2', a3: P.a3 || 'Opción 3', correct: +(P.correct ?? 1) });
+          }
+        }
+      }
+
+      // Pintar mapa en #bg
+      bgCtx.clearRect(0, 0, bg.width, bg.height);
+      for (const layer of map.layers) {
+        if (!layer.visible) continue;
+        if (layer.type === 'imagelayer' && layer.image) {
+          try { const img = await loadImage(absUrl(layer.image, MAP_ABS)); bgCtx.drawImage(img, layer.offsetx || 0, layer.offsety || 0); }
+          catch (e) { console.warn('No se pudo cargar imagen de capa:', e.message); }
+        }
+        if (layer.type === 'tilelayer') {
+          const w = layer.width, data = layer.data, lx = layer.offsetx || 0, ly = layer.offsety || 0;
+          for (let i = 0; i < data.length; i++) {
+            const raw = data[i]; if (!raw) continue;
+            const { gid, flipH, flipV, flipD } = decodeGid(raw);
+            const ts = getTilesetForGid(tilesets, gid); if (!ts) continue;
+            const localId = gid - ts.firstgid;
+            const x = lx + (i % w) * cellW;
+            const y = ly + Math.floor(i / w) * cellH;
+            await drawTileFromTileset(bgCtx, ts, localId, x, y, flipH, flipV, flipD, cellW, cellH);
+          }
+        }
+      }
+
+      // Sprites
+      const ASSETS = {
+        player: "{% static 'LevelUp/img/misiones/personaje.png' %}",
+        coin: "{% static 'LevelUp/img/misiones/coin.png' %}",
+        enemy1: "{% static 'LevelUp/img/misiones/enemigo1_math.png' %}"
+      };
+
+      // Exportar nivel
+      window.LEVEL = {
+        mapUrl: MAP_ABS,
+        size: { tilesW: map.width, tilesH: map.height, pxW: pxW, pxH: pxH },
+        tileSize: { w: cellW, h: cellH },
+        spawn, coins, enemies, questions,
+        solids, fullBlocks, solidTopGrid, solidBottomGrid,
+        assets: ASSETS,
+        settings: { gravity: 0.8, jump: -26, enemyGroundOffsetPx: 0 }
+      };
+
+      // Menús y arranque
+      const menuStart = document.getElementById('menuStart');
+      const menuEnd = document.getElementById('menuEnd');
+      const endStats = document.getElementById('endStats');
+
+      document.getElementById('btnStart').onclick = () => {
+        UIAudio.play('start');          // << sonido al empezar
+        menuStart.classList.remove('show');
+        if (window.Play && typeof window.Play.init === 'function') {
+          window.Play.init(game, window.LEVEL, askQuestion, (stats) => {
+            // al finalizar:
+            UIAudio.play('win');        // << sonido de victoria
+            FX.burst(2200);             // << confeti
+            endStats.textContent = `Monedas: ${stats.coins} · Tiempo: ${Math.round(stats.time / 1000)} s`;
+            menuEnd.classList.add('show');
+          });
+        }
+      };
+
+      document.getElementById('btnRetry').onclick = () => location.reload();
+      document.getElementById('btnExit').onclick = () => location.assign("{% url 'estudiante_lista' %}");
+    })().catch(e => console.error('Fallo general:', e));
+
+    // ===== Overlay de preguntas =====
+    const ASK = (() => {
+      const wrap = document.createElement('div'); wrap.className = 'ask';
+      wrap.innerHTML = '<div class="ask-card"><h3 id="askQ"></h3><div class="ops" id="askOps"></div></div>';
+      document.body.appendChild(wrap);
+      function open(q, ops, correctIdx, onOk, onBad) {
+        document.getElementById('askQ').textContent = q;
+        const box = document.getElementById('askOps'); box.innerHTML = '';
+        ops.forEach((t, i) => {
+          const b = document.createElement('button'); b.textContent = t;
+          b.onclick = () => { if (i === correctIdx) { b.classList.add('ok'); onOk && onOk(); close(); } else { b.classList.add('bad'); onBad && onBad(); } };
+          box.appendChild(b);
+        });
+        wrap.classList.add('show');
+      }
+      function close() { document.querySelector('.ask').classList.remove('show'); }
+      return { open, close };
+    })();
+
+    function askQuestion(qid, onOk, onBad) {
+      const QL = (window.LEVEL?.questions || []);
+      const q = QL.find(x => String(x.id) === String(qid));
+      if (q) { ASK.open(q.q, [q.a1, q.a2, q.a3].filter(Boolean), (q.correct || 1) - 1, onOk, onBad); }
+      else { ASK.open('¿2 + 2 = ?', ['3', '4', '5'], 1, onOk, onBad); }
+    }
+  </script>
+</body>
+
+</html>

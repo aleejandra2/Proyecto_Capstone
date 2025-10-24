@@ -27,6 +27,7 @@
           <label class="form-label" for="{{ form.titulo.id_for_label }}">Título</label>
           {{ form.titulo }} {{ form.titulo.errors }}
         </div>
+
         <div class="mb-3">
           <label class="form-label" for="{{ form.descripcion.id_for_label }}">Descripción</label>
           {{ form.descripcion }} {{ form.descripcion.errors }}
@@ -34,8 +35,12 @@
 
         <div class="row g-3">
           <div class="col-md-4">
-            <label class="form-label" for="{{ form.tipo.id_for_label }}">Tipo</label>
+            <label class="form-label" for="{{ form.tipo.id_for_label }}">Tipo de actividad</label>
             {{ form.tipo }} {{ form.tipo.errors }}
+            <div class="form-text">
+              Elige <strong>Quiz</strong> para crear preguntas (Drag &amp; Match, Trivia, V/F, etc.) o
+              <strong>Juego</strong> para minijuegos.
+            </div>
           </div>
           <div class="col-md-4">
             <label class="form-label" for="{{ form.dificultad.id_for_label }}">Dificultad</label>
@@ -52,17 +57,6 @@
             <label class="form-label" for="{{ form.intentos_max.id_for_label }}">Intentos máx.</label>
             {{ form.intentos_max }} {{ form.intentos_max.errors }}
           </div>
-          <div class="col-md-6">
-            <label class="form-label" for="{{ form.recurso.id_for_label }}">Recurso</label>
-            {{ form.recurso }} {{ form.recurso.errors }}
-          </div>
-          <div class="col-md-6">
-            <label class="form-label" for="{{ form.recompensa.id_for_label }}">Recompensa</label>
-            {{ form.recompensa }} {{ form.recompensa.errors }}
-          </div>
-        </div>
-
-        <div class="row g-3 mt-1">
           <div class="col-md-4">
             <div class="form-check mt-4">
               {{ form.es_publicada }}
@@ -70,7 +64,7 @@
               {{ form.es_publicada.errors }}
             </div>
           </div>
-          <div class="col-md-8">
+          <div class="col-md-4">
             <label class="form-label" for="{{ form.fecha_cierre.id_for_label }}">Fecha de cierre</label>
             {{ form.fecha_cierre }} {{ form.fecha_cierre.errors }}
           </div>
@@ -81,12 +75,11 @@
         <div class="border rounded p-3 bg-light" id="ayuda-tipo-actividad">
           <div class="d-flex align-items-center gap-2 mb-2">
             <span class="badge text-bg-primary">Consejos</span>
-            <span class="text-muted small">se actualizan al elegir “Tipo”</span>
+            <span class="text-muted small">se actualizan según el tipo</span>
           </div>
           <ul class="small m-0 ps-3" id="lista-ayuda-tipo">
-            <li><strong>Juego</strong>: usa el constructor visual (no necesitas escribir formatos especiales).</li>
-            <li><strong>Interactivo</strong>: pega una URL embebible (Genially, YouTube, itch.io…).</li>
-            <li>Agrega una <strong>imagen</strong> para contextualizar la consigna.</li>
+            <li>Selecciona <strong>Quiz</strong> para crear preguntas (Drag &amp; Match, V/F, Trivia, etc.).</li>
+            <li>Selecciona <strong>Juego</strong> para minijuegos o misiones.</li>
           </ul>
         </div>
       </div>
@@ -97,70 +90,36 @@
     {# =================== Ítems =================== #}
     <div class="d-flex align-items-center justify-content-between mb-2">
       <h2 class="h6 m-0">Ítems de la actividad</h2>
-      <div class="d-flex gap-2">
-        <div class="dropdown">
-          <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-            Agregar ítem rápido
-          </button>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item add-item-kind" href="#" data-kind="interactive">Interactivo (URL)</a></li>
-            <li><a class="dropdown-item add-item-kind" href="#" data-kind="game">Juego (builder)</a></li>
-          </ul>
-        </div>
-        <button type="button" id="btn-add-item" class="btn btn-sm btn-outline-primary">+ Agregar ítem</button>
-      </div>
+      <div><button type="button" id="btn-add-item" class="btn btn-sm btn-outline-primary">+ Agregar ítem</button></div>
     </div>
 
-    {{ formset.management_form }}
-
-    <div id="items-container">
-      {% for f in formset %}
-      {% if f.non_field_errors %}
-      <div class="alert alert-danger">{{ f.non_field_errors }}</div>
+    {# <<< MUESTRA ERRORES DEL FORMSET>>> #}
+      {% if formset.non_form_errors %}
+      <div class="alert alert-danger">
+        {{ formset.non_form_errors }}
+      </div>
       {% endif %}
 
-      <div class="card mb-3 item-form" data-form-index="{{ forloop.counter0 }}">
-        <div class="card-body">
-          {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+      {{ formset.management_form }}
 
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label class="form-label" for="{{ f.tipo.id_for_label }}">Tipo de ítem</label>
-              {{ f.tipo }} {{ f.tipo.errors }}
-            </div>
-            <div class="col-md-2">
-              <label class="form-label" for="{{ f.puntaje.id_for_label }}">Puntaje</label>
-              {{ f.puntaje }} {{ f.puntaje.errors }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label" for="{{ f.imagen.id_for_label }}">Imagen (opcional)</label>
-              {{ f.imagen }} {{ f.imagen.errors }}
-            </div>
-          </div>
+      <div id="items-container">
+        {% for f in formset %}
+        {% if f.non_field_errors %}
+        <div class="alert alert-danger">{{ f.non_field_errors }}</div>
+        {% endif %}
 
-          <div class="mt-3">
-            <label class="form-label" for="{{ f.enunciado.id_for_label }}">Enunciado / Consigna</label>
-            {{ f.enunciado }} {{ f.enunciado.errors }}
-            <div class="form-text">
-              Escribe en lenguaje simple qué debe hacer el alumno (p. ej., “Encuentra las parejas correctas”,
-              “Arrastra cada término a su definición”, “Responde las preguntas de cultura general”).
-            </div>
-          </div>
-
-          {# --------- GAME BUILDER (visual) --------- #}
-          <div class="mt-3" data-group="game">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <div class="d-flex align-items-center gap-2">
-                <span class="badge text-bg-info">Juego interno</span>
-                <div class="small text-muted">No necesitas escribir formatos especiales.</div>
-              </div>
-              <div class="d-flex align-items-center gap-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary gb-import">Pegar en bloque</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary gb-toggle-raw">Ver texto</button>
-              </div>
-            </div>
+        <div class="feature-card activity-card mb-3 item-form" data-form-index="{{ forloop.counter0 }}">
+          <div class="card-body p-0 border-0">
+            {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
 
             <div class="row g-3">
+              <div class="col-md-3">
+                <label class="form-label" for="{{ f.puntaje.id_for_label }}">Puntaje</label>
+                {{ f.puntaje }} {{ f.puntaje.errors }}
+              </div>
+            </div>
+
+            <div class="row g-3 mt-1 align-items-end">
               <div class="col-md-4">
                 <label class="form-label" for="{{ f.game_kind.id_for_label }}">Tipo de juego</label>
                 {{ f.game_kind }} {{ f.game_kind.errors }}
@@ -182,73 +141,49 @@
               </div>
             </div>
 
-            <div class="mt-2 gb-raw">
+            <div class="mt-3">
+              <label class="form-label" for="{{ f.enunciado.id_for_label }}">Enunciado / Consigna</label>
+              {{ f.enunciado }} {{ f.enunciado.errors }}
+            </div>
+
+            <div class="mt-3">
+              <div class="d-flex justify-content-end">
+                <button type="button" class="btn btn-link btn-sm p-0 gb-toggle-raw">Editar como texto</button>
+              </div>
+              <div class="gbuilder" data-prefix="{{ f.prefix }}"></div>
+              <div class="small text-muted mt-2"><span class="gb-counter">0 ítems</span></div>
+            </div>
+
+            <div class="mt-3 gb-raw d-none">
               <label class="form-label" for="{{ f.game_pairs.id_for_label }}">(Avanzado) Texto del contenido</label>
               {{ f.game_pairs }} {{ f.game_pairs.errors }}
-              <div class="form-text">
-                Memoria/Drag: <code>A|B</code> por línea. · Trivia:
-                <code>Pregunta? | Opción1 | Opción2* | Opción3</code>.
-              </div>
             </div>
 
-            <div class="mt-2 gbuilder" data-prefix="{{ f.prefix }}"></div>
-
-            <div class="small text-muted mt-2">
-              <span class="gb-counter">0 ítems</span> · Sugerencia: 6–10 pares para Memoria/Drag, 3–10 preguntas para
-              Trivia.
+            <div class="d-flex align-items-center gap-2 mt-3">
+              <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item">Quitar</button>
+              {% if f.DELETE %}<label class="form-check small text-muted m-0">{{ f.DELETE }} Marcar para
+                eliminar</label>{% endif %}
+              {% if f.instance.pk %}<small class="text-muted ms-auto">ID ítem: {{ f.instance.pk }}</small>{% endif %}
             </div>
-          </div>
-
-          {# --------- INTERACTIVE (URL) --------- #}
-          <div class="mt-3" data-group="interactive">
-            <div class="mb-2"><span class="badge text-bg-info">Interactivo (embed)</span></div>
-            <label class="form-label" for="{{ f.ext_url.id_for_label }}">URL del recurso</label>
-            {{ f.ext_url }} {{ f.ext_url.errors }}
-            <div class="form-text">Pega un enlace de Genially, YouTube, itch.io u otro recurso con iframe.</div>
-          </div>
-
-          <div class="d-flex align-items-center gap-2 mt-3">
-            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item">Quitar</button>
-            {% if f.DELETE %}
-            <label class="form-check small text-muted m-0">{{ f.DELETE }} Marcar para eliminar</label>
-            {% endif %}
-            {% if f.instance.pk %}
-            <small class="text-muted ms-auto">ID ítem: {{ f.instance.pk }}</small>
-            {% endif %}
           </div>
         </div>
+        {% endfor %}
       </div>
-      {% endfor %}
-    </div>
 
-    {# =================== Template del empty_form =================== #}
-    <template id="empty-form-template">
-      {% with ef=formset.empty_form %}
-      <div class="card mb-3 item-form" data-form-index="__prefix__">
-        <div class="card-body">
-          {% for hidden in ef.hidden_fields %}{{ hidden }}{% endfor %}
+      {# =================== Template del empty_form =================== #}
+      <template id="empty-form-template">
+        {% with ef=formset.empty_form %}
+        <div class="feature-card activity-card mb-3 item-form" data-form-index="__prefix__">
+          <div class="card-body p-0 border-0">
+            {% for hidden in ef.hidden_fields %}{{ hidden }}{% endfor %}
 
-          <div class="row g-3">
-            <div class="col-md-4"><label class="form-label">Tipo de ítem</label>{{ ef.tipo }}</div>
-            <div class="col-md-2"><label class="form-label">Puntaje</label>{{ ef.puntaje }}</div>
-            <div class="col-md-6"><label class="form-label">Imagen (opcional)</label>{{ ef.imagen }}</div>
-          </div>
-
-          <div class="mt-3"><label class="form-label">Enunciado / Consigna</label>{{ ef.enunciado }}</div>
-
-          <div class="mt-3" data-group="game">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <div class="d-flex align-items-center gap-2">
-                <span class="badge text-bg-info">Juego interno</span>
-                <div class="small text-muted">No necesitas escribir formatos especiales.</div>
-              </div>
-              <div class="d-flex align-items-center gap-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary gb-import">Pegar en bloque</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary gb-toggle-raw">Ver texto</button>
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label class="form-label">Puntaje</label>{{ ef.puntaje }}
               </div>
             </div>
 
-            <div class="row g-3">
+            <div class="row g-3 mt-1 align-items-end">
               <div class="col-md-4"><label class="form-label">Tipo de juego</label>{{ ef.game_kind }}</div>
               <div class="col-md-4"><label class="form-label">Tiempo límite (s)</label>{{ ef.game_time_limit }}</div>
               <div class="col-md-4">
@@ -264,54 +199,50 @@
               </div>
             </div>
 
-            <div class="mt-2 gb-raw">
-              <label class="form-label">(Avanzado) Texto del contenido</label>
-              {{ ef.game_pairs }}
-              <div class="form-text">Memoria/Drag: <code>A|B</code>. · Trivia:
-                <code>Pregunta? | Opción1 | Opción2* | Opción3</code>.</div>
+            <div class="mt-3"><label class="form-label">Enunciado / Consigna</label>{{ ef.enunciado }}</div>
+
+            <div class="mt-3">
+              <div class="d-flex justify-content-end">
+                <button type="button" class="btn btn-link btn-sm p-0 gb-toggle-raw">Editar como texto</button>
+              </div>
+              <div class="gbuilder" data-prefix="{{ ef.prefix }}"></div>
+              <div class="small text-muted mt-2"><span class="gb-counter">0 ítems</span></div>
             </div>
 
-            <div class="mt-2 gbuilder" data-prefix="{{ ef.prefix }}"></div>
-            <div class="small text-muted mt-2"><span class="gb-counter">0 ítems</span></div>
-          </div>
+            <div class="mt-3 gb-raw d-none">
+              <label class="form-label">(Avanzado) Texto del contenido</label>{{ ef.game_pairs }}
+            </div>
 
-          <div class="mt-3" data-group="interactive">
-            <div class="mb-2"><span class="badge text-bg-info">Interactivo (embed)</span></div>
-            <label class="form-label">URL del recurso</label>{{ ef.ext_url }}
-          </div>
-
-          <div class="d-flex align-items-center gap-2 mt-3">
-            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item">Quitar</button>
-            {% if ef.DELETE %}<label class="form-check small text-muted m-0">{{ ef.DELETE }} Marcar para
-              eliminar</label>{% endif %}
+            <div class="d-flex align-items-center gap-2 mt-3">
+              <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item">Quitar</button>
+              {% if ef.DELETE %}<label class="form-check small text-muted m-0">{{ ef.DELETE }} Marcar para
+                eliminar</label>{% endif %}
+            </div>
           </div>
         </div>
+        {% endwith %}
+      </template>
+
+      <div class="d-flex gap-2 mt-2">
+        <button class="btn btn-success" type="submit" name="accion" value="guardar">Guardar</button>
+
+        {% if editar %}
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#asignarModal">Guardar y
+          asignar…</button>
+        {% else %}
+        <button class="btn btn-primary" type="submit" name="accion" value="guardar_y_asignar">Guardar y
+          asignar…</button>
+        {% endif %}
+
+        <button class="btn btn-outline-secondary" type="button" id="btn-preview" data-bs-toggle="modal"
+          data-bs-target="#previewModal">Vista previa</button>
+        <a class="btn btn-outline-secondary" href="{% url 'docente_lista' %}">Volver</a>
       </div>
-      {% endwith %}
-    </template>
-
-    <div class="d-flex gap-2 mt-2">
-      <button class="btn btn-success" type="submit" name="accion" value="guardar">Guardar</button>
-
-      {% if editar %}
-      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#asignarModal">
-        Guardar y asignar…
-      </button>
-      {% else %}
-      <button class="btn btn-primary" type="submit" name="accion" value="guardar_y_asignar">
-        Guardar y asignar…
-      </button>
-      {% endif %}
-
-      <button class="btn btn-outline-secondary" type="button" id="btn-preview" data-bs-toggle="modal"
-        data-bs-target="#previewModal">Vista previa</button>
-      <a class="btn btn-outline-secondary" href="{% url 'docente_lista' %}">Volver</a>
-    </div>
   </form>
 </div>
 
-{# =================== MODAL DE ASIGNACIÓN =================== #}
 {% if editar and act %}
+{# =================== MODAL DE ASIGNACIÓN =================== #}
 <div class="modal fade" id="asignarModal" tabindex="-1" aria-labelledby="asignarLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <form id="form-asignar" class="modal-content" method="post" action="{% url 'actividad_asignar' act.pk %}">
@@ -374,12 +305,9 @@
   </div>
 </div>
 
-{# =================== JS =================== #}
-<script src="{% static 'LevelUp/js/actividad_formset.js' %}"></script>
-<script src="{% static 'LevelUp/js/actividad_dynamic.js' %}"></script>
-<script src="{% static 'LevelUp/js/actividad_preview.js' %}"></script>
-
+{# =================== ASSETS =================== #}
 <link rel="stylesheet" href="{% static 'LevelUp/css/game_builder.css' %}">
+<script src="{% static 'LevelUp/js/actividad_formset.js' %}"></script>
 <script src="{% static 'LevelUp/js/game_builder_helper.js' %}"></script>
-<script src="{% static 'LevelUp/js/game_builder_ui.js' %}"></script>
+<script src="{% static 'LevelUp/js/actividad_preview.js' %}"></script>
 {% endblock %}

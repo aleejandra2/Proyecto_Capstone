@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tileset version="1.10" tiledversion="1.11.2" name="bloques" tilewidth="129" tileheight="129" tilecount="18" columns="0">
+ <grid orientation="orthogonal" width="1" height="1"/>
+ <tile id="0">
+  <image source="../img/images_tiled/1.png" width="128" height="128"/>
+ </tile>
+ <tile id="1">
+  <image source="../img/images_tiled/2.png" width="128" height="128"/>
+ </tile>
+ <tile id="2">
+  <image source="../img/images_tiled/3.png" width="128" height="128"/>
+ </tile>
+ <tile id="3">
+  <image source="../img/images_tiled/4.png" width="129" height="129"/>
+ </tile>
+ <tile id="4">
+  <image source="../img/images_tiled/5.png" width="128" height="128"/>
+ </tile>
+ <tile id="5">
+  <image source="../img/images_tiled/6.png" width="128" height="128"/>
+ </tile>
+ <tile id="6">
+  <image source="../img/images_tiled/7.png" width="128" height="128"/>
+ </tile>
+ <tile id="7">
+  <image source="../img/images_tiled/8.png" width="128" height="128"/>
+ </tile>
+ <tile id="8">
+  <image source="../img/images_tiled/9.png" width="128" height="128"/>
+ </tile>
+ <tile id="9">
+  <image source="../img/images_tiled/10.png" width="128" height="128"/>
+ </tile>
+ <tile id="10">
+  <image source="../img/images_tiled/11.png" width="128" height="128"/>
+ </tile>
+ <tile id="11">
+  <image source="../img/images_tiled/12.png" width="128" height="128"/>
+ </tile>
+ <tile id="12">
+  <image source="../img/images_tiled/13.png" width="128" height="93"/>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="2" y="1">
+    <polygon points="0,0 124,0 127,90 97,91 53,72 44,55 15,51 4,41 -2,32"/>
+   </object>
+  </objectgroup>
+ </tile>
+ <tile id="13">
+  <image source="../img/images_tiled/14.png" width="128" height="93"/>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="2" y="1" width="125" height="92"/>
+  </objectgroup>
+ </tile>
+ <tile id="14">
+  <image source="../img/images_tiled/15.png" width="128" height="93"/>
+  <objectgroup draworder="index" id="2">
+   <object id="1" x="3" y="0">
+    <polygon points="0,0 124,-1 123,30 109,51 77,55 69,69 33,92 -3,93"/>
+   </object>
+  </objectgroup>
+ </tile>
+ <tile id="15">
+  <image source="../img/images_tiled/16.png" width="128" height="128"/>
+ </tile>
+ <tile id="16">
+  <image source="../img/images_tiled/17.png" width="128" height="99"/>
+ </tile>
+ <tile id="17">
+  <image source="../img/images_tiled/18.png" width="128" height="128"/>
+ </tile>
+</tileset>

@@ -56,7 +56,7 @@ class Usuario(AbstractUser):
     # Email único ("email único para login/recuperación")
     email = models.EmailField(max_length=128, unique=True)
 
-    rol = models.CharField(max_length=20, choices=Rol.choices)
+    #rol = models.CharField(max_length=20, choices=Rol.choices)
 
     def __str__(self):
         nombre = f"{self.first_name} {self.last_name}".strip() or self.username
@@ -167,65 +167,129 @@ class Actividad(models.Model):
     class Tipo(models.TextChoices):
         QUIZ = "quiz", "Quiz"
         JUEGO = "juego", "Juego"
-        VIDEO = "video", "Video"
-        TAREA = "tarea", "Tarea"
-
     class Dificultad(models.IntegerChoices):
         FACIL = 1, "Fácil"
         MEDIO = 2, "Medio"
         DIFICIL = 3, "Difícil"
 
+    # -----------------------------------------
+    # Datos principales
+    # -----------------------------------------
     titulo = models.CharField(max_length=150)
     descripcion = models.TextField()
     tipo = models.CharField(max_length=20, choices=Tipo.choices)
+
     dificultad = models.IntegerField(
         choices=Dificultad.choices,
         default=Dificultad.MEDIO,
-        validators=[MinValueValidator(1), MaxValueValidator(3)]
+        validators=[MinValueValidator(1), MaxValueValidator(3)],
     )
+
     recurso = models.ForeignKey(Recurso, on_delete=models.SET_NULL, null=True, blank=True)
     recompensa = models.ForeignKey(Recompensa, on_delete=models.SET_NULL, null=True, blank=True)
 
-    # Autor de la actividad (opcional para no romper datos existentes)
+    # Autor de la actividad 
     docente = models.ForeignKey(
-        Docente, on_delete=models.SET_NULL, null=True, blank=True, related_name="actividades_creadas"
+        "LevelUp.Docente",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="actividades_creadas",
     )
-    
+
+    # Asignatura
+    asignatura = models.ForeignKey(
+        "LevelUp.Asignatura",
+        on_delete=models.PROTECT,   #  PROTECT para impedir borrar asignaturas con actividades
+        null=True,
+        blank=True,
+        related_name="actividades",
+    )
+
     # Publicación/cierre + XP total que reparte la actividad
     es_publicada = models.BooleanField(default=False)
     fecha_publicacion = models.DateTimeField(null=True, blank=True)
     fecha_cierre = models.DateTimeField(null=True, blank=True)
-    xp_total = models.PositiveIntegerField(default=100, help_text="XP base proporcional al puntaje obtenido")
+    xp_total = models.PositiveIntegerField(
+        default=100,
+        help_text="XP base proporcional al puntaje obtenido"
+    )
 
     # N° de Intentos
     intentos_max = models.PositiveSmallIntegerField(
         default=1,
-        validators=[MinValueValidator(1), MaxValueValidator(20)],
-        help_text="Número máximo de intentos por estudiante (1–20)."
+        validators=[MinValueValidator(1), MaxValueValidator(1000)],
+        help_text="Número máximo de intentos por estudiante (1–1000).",
     )
 
+    # Asignaciones a estudiantes (vía tabla intermedia)
     estudiantes = models.ManyToManyField(
-        'Estudiante', through='AsignacionActividad', related_name='actividades', blank=True
+        "LevelUp.Estudiante",
+        through="LevelUp.AsignacionActividad",
+        related_name="actividades",
+        blank=True,
     )
+
+    class Meta:
+        ordering = ["-id"]  # más nuevas primero
 
     def __str__(self):
         return f"{self.titulo} ({self.get_dificultad_display()})"
 
     @property
     def puntaje_total(self) -> int:
-        # Suma el puntaje de los ítems asociados (si existen)
+        """
+        Suma el puntaje de los ítems asociados (si existen).
+        """
         return sum(self.items.values_list("puntaje", flat=True)) or 0
-    
-    asignatura = models.ForeignKey(
-        'Asignatura',
-        on_delete=models.PROTECT,        # evita borrar una asignatura con actividades
-        related_name='actividades',
-        null=True, blank=True            # opcional para migrar datos
-    )
-    
-    asignatura = models.ForeignKey(
-        "LevelUp.Asignatura", on_delete=models.SET_NULL, null=True, blank=True, related_name="actividades"
-    )
+
+    def save(self, *args, **kwargs):
+        """
+        - Autocompleta `asignatura` si viene vacía y tenemos `docente`:
+          · Si el docente tiene exactamente 1 AsignacionDocente → usar esa asignatura.
+          · Si no, intenta resolver por el string `docente.asignatura` (nombre o código slug).
+        - Sella `fecha_publicacion` la primera vez que se publica.
+        """
+        # Sella fecha de publicación si aplica
+        if self.es_publicada and not self.fecha_publicacion:
+            from django.utils import timezone
+            self.fecha_publicacion = timezone.now()
+
+        # Resolver asignatura si falta y hay docente
+        if self.docente and not self.asignatura:
+            # Import local para evitar problemas de orden de definición
+            try:
+                from django.utils.text import slugify
+                # Acceso directo a modelos del mismo módulo (ya definidos en runtime)
+                AsignacionDocente = globals().get("AsignacionDocente")
+                Asignatura = globals().get("Asignatura")
+            except Exception:
+                AsignacionDocente = None
+                Asignatura = None
+
+            resolved = None
+
+            # 1) Exactamente una asignación formal del docente
+            if AsignacionDocente is not None:
+                rels = AsignacionDocente.objects.filter(
+                    profesor=self.docente.usuario
+                ).select_related("asignatura")
+                if rels.count() == 1:
+                    resolved = rels.first().asignatura
+
+            # 2) Si no se pudo, intenta por el texto del perfil Docente (p.ej. "Matemáticas")
+            if resolved is None and Asignatura is not None:
+                nombre = (self.docente.asignatura or "").strip()
+                if nombre:
+                    resolved = (
+                        Asignatura.objects.filter(nombre__iexact=nombre).first()
+                        or Asignatura.objects.filter(codigo__iexact=slugify(nombre)).first()
+                    )
+
+            if resolved is not None:
+                self.asignatura = resolved
+
+        return super().save(*args, **kwargs)
 
 class AsignacionActividad(models.Model):
     class Estado(models.TextChoices):

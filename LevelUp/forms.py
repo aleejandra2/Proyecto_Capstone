@@ -3,6 +3,7 @@ from django.contrib.auth.forms import UserCreationForm, PasswordChangeForm, Pass
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
+from typing import Any, Dict
 import json
 
 from .models import Actividad, ItemActividad
@@ -53,7 +54,6 @@ class RegistrationForm(UserCreationForm):
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        # username desde el email
         email = self.cleaned_data["email"].lower()
         base_username = email.split("@")[0]
         username = base_username
@@ -66,7 +66,7 @@ class RegistrationForm(UserCreationForm):
         user.email = email
         user.first_name = self.cleaned_data["first_name"]
         user.last_name = self.cleaned_data["last_name"]
-        user.rut = self.cleaned_data["rut"]          # ya normalizado por clean_rut
+        user.rut = self.cleaned_data["rut"]
         user.rol = self.cleaned_data["rol"]
 
         if commit:
@@ -139,7 +139,6 @@ class ProfileForm(forms.ModelForm):
         return email
 
     def clean_rut(self):
-        # proteger backend: conservar el RUT original
         return getattr(self.instance, "rut", self.initial.get("rut", ""))
 
 
@@ -150,258 +149,256 @@ class ProfilePasswordForm(PasswordChangeForm):
 
 
 # ==============================
-# Actividades (contenedor)
+# Actividad (cabecera)
 # ==============================
 class ActividadForm(forms.ModelForm):
     class Meta:
         model = Actividad
-        fields = ["titulo","descripcion","tipo","dificultad","recurso","recompensa","es_publicada","fecha_cierre","xp_total","intentos_max"]
+        fields = ["titulo", "descripcion", "tipo", "dificultad",
+                  "xp_total", "intentos_max", "es_publicada", "fecha_cierre"]
         widgets = {
-            "titulo": forms.TextInput(attrs={"class":"form-control"}),
-            "descripcion": forms.Textarea(attrs={"class":"form-control","rows":3}),
-            "tipo": forms.Select(attrs={"class":"form-select"}),
-            "dificultad": forms.Select(attrs={"class":"form-select"}),
-            "recurso": forms.Select(attrs={"class":"form-select"}),
-            "recompensa": forms.Select(attrs={"class":"form-select"}),
-            "es_publicada": forms.CheckboxInput(attrs={"class":"form-check-input"}),
-            "fecha_cierre": forms.DateTimeInput(attrs={"class":"form-control","type":"datetime-local"}),
-            "xp_total": forms.NumberInput(attrs={"class":"form-control","min":"0"}),
-            "intentos_max": forms.NumberInput(attrs={"class":"form-control","min":"1","max":"20"}),
+            "titulo": forms.TextInput(attrs={"class": "form-control"}),
+            "descripcion": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "tipo": forms.Select(attrs={"class": "form-select"}),
+            "dificultad": forms.Select(attrs={"class": "form-select"}),
+            "xp_total": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
+            "intentos_max": forms.NumberInput(attrs={"class": "form-control", "min": "1", "max": "20"}),
+            "es_publicada": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "fecha_cierre": forms.DateTimeInput(attrs={"class": "form-control", "type": "datetime-local"}),
         }
-
-
-# ==============================
-# Ítems de actividad (incluye Juego/Interactivo)
-# ==============================
-# ... imports de arriba ...
-import json  # <-- asegúrate de tener este import
-
-class ItemActividadForm(forms.ModelForm):
-    # --- MCQ (opcional) ---
-    alt_1 = forms.CharField(label="Alternativa A", required=False, widget=forms.TextInput(attrs={"class":"form-control"}))
-    alt_2 = forms.CharField(label="Alternativa B", required=False, widget=forms.TextInput(attrs={"class":"form-control"}))
-    alt_3 = forms.CharField(label="Alternativa C", required=False, widget=forms.TextInput(attrs={"class":"form-control"}))
-    alt_4 = forms.CharField(label="Alternativa D", required=False, widget=forms.TextInput(attrs={"class":"form-control"}))
-    alt_5 = forms.CharField(label="Alternativa E", required=False, widget=forms.TextInput(attrs={"class":"form-control"}))
-    alt_6 = forms.CharField(label="Alternativa F", required=False, widget=forms.TextInput(attrs={"class":"form-control"}))
-
-    allow_multiple = forms.BooleanField(label="Permitir múltiples correctas", required=False, widget=forms.CheckboxInput(attrs={"class":"form-check-input"}))
-    correcta = forms.ChoiceField(label="¿Cuál es la correcta? (si no usas múltiples)", required=False,
-                                 choices=[("1","A"),("2","B"),("3","C"),("4","D"),("5","E"),("6","F")],
-                                 widget=forms.RadioSelect(attrs={"class":"form-check-input"}))
-    correctas_multi = forms.MultipleChoiceField(label="Marca las correctas (si usas múltiples)", required=False,
-                                 choices=[("1","A"),("2","B"),("3","C"),("4","D"),("5","E"),("6","F")],
-                                 widget=forms.CheckboxSelectMultiple(attrs={"class":"form-check-input"}))
-
-    # --- TF ---
-    tf_respuesta = forms.ChoiceField(label="Respuesta (Verdadero/Falso)", required=False,
-                                     choices=[("true","Verdadero"),("false","Falso")],
-                                     widget=forms.RadioSelect(attrs={"class":"form-check-input"}))
-
-    # --- FIB ---
-    fib_respuestas = forms.CharField(label="Respuestas aceptadas (una por línea)", required=False,
-                                     widget=forms.Textarea(attrs={"class":"form-control","rows":3}),
-                                     help_text="Se aceptará cualquiera; puedes poner '4' y 'cuatro'.")
-    fib_case_insensitive = forms.BooleanField(label="Ignorar mayúsculas/minúsculas", required=False, initial=True,
-                                              widget=forms.CheckboxInput(attrs={"class":"form-check-input"}))
-
-    # --- SORT ---
-    sort_items = forms.CharField(label="Elementos a ordenar (uno por línea, en el orden correcto)", required=False,
-                                 widget=forms.Textarea(attrs={"class":"form-control","rows":4}),
-                                 help_text="El orden que ingreses aquí se considera el correcto.")
-
-    # --- MATCH ---
-    match_left  = forms.CharField(label="Columna izquierda (uno por línea)", required=False,
-                                  widget=forms.Textarea(attrs={"class":"form-control","rows":4}))
-    match_right = forms.CharField(label="Columna derecha (uno por línea, mismo número de líneas que izquierda)", required=False,
-                                  widget=forms.Textarea(attrs={"class":"form-control","rows":4}))
-
-    # --- TEXT ---
-    text_keywords = forms.CharField(label="Palabras clave (opcional, separadas por coma)", required=False,
-                                    widget=forms.TextInput(attrs={"class":"form-control"}))
-    text_minlen   = forms.IntegerField(label="Largo mínimo (opcional)", required=False, min_value=0,
-                                       widget=forms.NumberInput(attrs={"class":"form-control"}))
-
-    # --- INTERACTIVE (embed) ---
-    ext_url = forms.URLField(label="URL del recurso (embed)", required=False, widget=forms.URLInput(attrs={"class":"form-control"}))
-    ext_provider = forms.CharField(label="Proveedor (ej: itch.io, youtube, genially)", required=False, widget=forms.TextInput(attrs={"class":"form-control"}))
-
-    # --- GAME BUILDER (unificado) ---
-    GAME_CHOICES = [
-        ("memory",    "Memoria (Parejas)"),
-        ("dragmatch", "Arrastrar y Soltar"),
-        ("trivia",    "Trivia"),
-        # nuevos (todos juntos, sin categorías)
-        ("ordering",  "Ordena la secuencia"),
-        ("classify",  "Clasifica en canastas"),
-        ("cloze",     "Cloze (rellena huecos)"),
-        ("vf",        "Verdadero/Falso (+ justificación)"),
-        ("labyrinth", "Laberinto de puertas"),
-        ("shop",      "Tiendita (Matemáticas)"),
-    ]
-    game_kind = forms.ChoiceField(label="Tipo de juego", required=False,
-                                  choices=GAME_CHOICES,
-                                  widget=forms.Select(attrs={"class":"form-select"}))
-    game_time_limit = forms.IntegerField(label="Tiempo límite (s)", required=False, min_value=0, initial=60,
-                                         widget=forms.NumberInput(attrs={"class":"form-control"}))
-    # El builder/JSON editor escribe aquí
-    game_pairs = forms.CharField(label="(Avanzado) Texto del contenido", required=False,
-                                 widget=forms.Textarea(attrs={"class":"form-control","rows":6}))
-
-    class Meta:
-        model = ItemActividad
-        fields = ["tipo","enunciado","puntaje","imagen"]
-        labels = {"enunciado":"Enunciado / Consigna"}
-        widgets = {
-            "tipo": forms.Select(attrs={"class":"form-select"}),
-            "enunciado": forms.Textarea(attrs={"class":"form-control","rows":2,"placeholder":"Describe qué debe hacer el alumno…"}),
-            "puntaje": forms.NumberInput(attrs={"class":"form-control","min":"0"}),
-            "imagen": forms.ClearableFileInput(attrs={"class":"form-control"}),
-        }
-
-    # ---------- utilidades ----------
-    def _looks_like_json(self, txt: str) -> bool:
-        return bool(txt and txt.strip() and txt.strip()[0] in "{[")
-
-    def _parse_pairs_text(self, raw: str):
-        out = []
-        for ln in (raw or "").splitlines():
-            ln = (ln or "").strip()
-            if not ln: continue
-            parts = [x.strip() for x in ln.split("|")]
-            if len(parts) >= 2 and parts[0] and parts[1]:
-                out.append([parts[0], parts[1]])
-        return out
-
-    def _parse_trivia_text(self, raw: str):
-        out = []
-        for ln in (raw or "").splitlines():
-            ln = (ln or "").strip()
-            if not ln: continue
-            parts = [x.strip() for x in ln.split("|") if x.strip()]
-            if len(parts) < 3: continue
-            q = parts[0]; rest = parts[1:]
-            ans = 0; opts = []
-            for i, t in enumerate(rest):
-                if t.endswith("*"): ans = i; t = t[:-1].strip()
-                opts.append(t)
-            out.append({"q": q, "opts": opts, "ans": ans})
-        return out
-
-    # ---------- precarga (edición) ----------
-    def _load_ext_initial(self, datos):
-        if "url" in datos: self.fields["ext_url"].initial = datos["url"]
-        if "proveedor" in datos: self.fields["ext_provider"].initial = datos["proveedor"]
-
-    def _load_game_initial(self, datos):
-        if "kind" in datos:
-            self.fields["game_kind"].initial = datos["kind"]
-        if "time_limit" in datos:
-            self.fields["game_time_limit"].initial = datos.get("time_limit") or 60
-        elif "timeLimit" in datos:
-            self.fields["game_time_limit"].initial = datos.get("timeLimit") or 60
-
-        # Si viene texto guardado, respétalo
-        if datos.get("text"):
-            self.fields["game_pairs"].initial = datos["text"]; return
-
-        # Pares o Trivia → serializar a texto plano
-        if datos.get("pairs"):
-            self.fields["game_pairs"].initial = "\n".join(f"{a}|{b}" for a,b in datos["pairs"]); return
-        if datos.get("trivia") or datos.get("questions"):
-            qs = datos.get("trivia") or datos.get("questions") or []
-            lines = []
-            for q in qs:
-                ans = q.get("ans") or 0
-                opts = [f"{t}{'*' if i==ans else ''}" for i,t in enumerate(q.get("opts", []))]
-                lines.append(" | ".join([q.get("q","")] + opts))
-            self.fields["game_pairs"].initial = "\n".join(lines); return
-
-        # Cualquier otro contenido → mostrar JSON completo
-        self.fields["game_pairs"].initial = json.dumps(datos, ensure_ascii=False, indent=2)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        datos = getattr(self.instance, "datos", {}) or {}
-        t = ((getattr(self.instance, "tipo", "") or "").lower()) or (self.data.get("tipo", "").lower())
-        if self.instance and self.instance.pk and datos:
-            if t == "interactive":
-                self._load_ext_initial(datos)
-            elif t == "game":
-                self._load_game_initial(datos)
+        # Mostrar solo Quiz/Juego en UI (aunque luego tratamos todos como 'game' en ítems)
+        self.fields["tipo"].choices = [("quiz", "Quiz"), ("game", "Juego")]
 
-    # ---------- validación unificada ----------
+
+# ==============================
+# Ítems (game builder)
+# ==============================
+def _norm_kind(v: str) -> str:
+    s = (v or "").strip().lower()
+    if "drag" in s and "match" in s: return "dragmatch"
+    if s in ("dragandmatch",): return "dragmatch"
+    if "memoria" in s: return "dragmatch"
+    if "clasific" in s: return "classify"
+    if "cloze" in s or "completar" in s or "espacio" in s: return "cloze"
+    if "orden" in s or s == "ordening": return "ordering"
+    if s == "vf" or "verdadero" in s or "falso" in s: return "vf"
+    if "laberinto" in s: return "labyrinth"
+    if "tiend" in s or "precio" in s or s == "shop": return "shop"
+    if "trivia" in s: return "trivia"
+    return s
+
+GAME_KIND_CHOICES = [
+    ("dragmatch",  "Drag & Match / Memoria"),
+    ("trivia",     "Trivia (opción múltiple)"),
+    ("vf",         "Verdadero / Falso"),
+    ("classify",   "Clasificar en categorías"),
+    ("cloze",      "Completar (cloze)"),
+    ("ordering",   "Ordenar pasos"),
+    ("labyrinth",  "Laberinto de puertas"),
+    ("shop",       "Tiendita (precios)"),
+]
+
+class ItemForm(forms.ModelForm):
+    # Campos “virtuales” del builder
+    game_kind = forms.ChoiceField(
+        label="Tipo de juego",
+        choices=GAME_KIND_CHOICES,
+        required=True,
+        widget=forms.Select(attrs={"class": "form-select"})  # <— Bootstrap
+    )
+    game_time_limit = forms.IntegerField(
+        label="Tiempo límite (s)",
+        required=False,
+        min_value=5,
+        max_value=3600,
+        initial=60,
+        widget=forms.NumberInput(attrs={"class": "form-control"})  # <— Bootstrap
+    )
+    game_pairs = forms.CharField(
+        label="(Avanzado) Texto del contenido", required=False,
+        widget=forms.Textarea(attrs={"rows": 6, "class": "form-control"})
+    )
+
+    class Meta:
+        model = ItemActividad
+        fields = ["tipo", "enunciado", "puntaje"]
+        widgets = {
+            "tipo": forms.HiddenInput(),
+            "enunciado": forms.Textarea(attrs={
+                "class": "form-control",
+                "rows": 2,
+                "placeholder": "Describe qué debe hacer el alumno…",
+            }),
+            "puntaje": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
+        }
+
+    # ---------- Inicialización (edición) ----------
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        inst = self.instance
+        if inst and inst.pk and (inst.tipo or "").lower() == "game":
+            data = inst.datos or {}
+            kind = data.get("kind") or ""
+            time_limit = data.get("timeLimit") or data.get("time_limit")
+            payload: Dict[str, Any] = {}
+
+            if kind == "dragmatch":
+                payload = {"kind": "dragmatch", "pairs": data.get("pairs") or []}
+            elif kind == "trivia":
+                payload = {"kind": "trivia", "questions": data.get("questions") or []}
+            elif kind == "classify":
+                payload = {"kind": "classify", "categories": data.get("categories") or [], "items": data.get("items") or []}
+            elif kind == "cloze":
+                payload = {"kind": "cloze", "text": data.get("text") or "", "answers": data.get("answers") or [], "bank": data.get("bank") or []}
+            elif kind == "ordering":
+                payload = {"kind": "ordering", "steps": data.get("steps") or []}
+            elif kind == "vf":
+                payload = {"kind": "vf", "items": data.get("items") or []}
+            elif kind == "labyrinth":
+                payload = {"kind": "labyrinth", "steps": data.get("steps") or []}
+            elif kind == "shop":
+                payload = {"kind": "shop", "products": data.get("products") or []}
+
+            self.fields["game_kind"].initial = kind or "dragmatch"
+            self.fields["game_time_limit"].initial = time_limit or 60
+            self.fields["game_pairs"].initial = json.dumps(payload, ensure_ascii=False, indent=2)
+
+    # ---------- Validación / mapeo a .datos ----------
     def clean(self):
         cleaned = super().clean()
-        t = (cleaned.get("tipo") or "").lower()
 
-        # INTERACTIVE
-        if t == "interactive":
-            url = (cleaned.get("ext_url") or "").strip()
-            if not url:
-                raise forms.ValidationError("Ingresa la URL del recurso a embeber.")
-            prov = (cleaned.get("ext_provider") or "").strip()
-            cleaned["_datos_payload"] = {"url": url, "proveedor": prov}
+        # si está marcado para borrar, no validar contenido
+        if self.cleaned_data.get("DELETE"):
             return cleaned
 
-        # GAME (unificado)
-        if t == "game":
-            kind = (cleaned.get("game_kind") or "").lower()
-            if not kind:
-                raise forms.ValidationError("Selecciona el tipo de juego.")
-            time_limit = int(cleaned.get("game_time_limit") or 0) or 0
-            raw = (cleaned.get("game_pairs") or "").strip()
+        raw_kind = self.cleaned_data.get("game_kind") or ""
+        kind = _norm_kind(raw_kind)
+        raw_json = (self.cleaned_data.get("game_pairs") or "").strip()
+        time_limit = self.cleaned_data.get("game_time_limit")
 
-            payload = {}
+        if not kind:
+            raise ValidationError("Selecciona el tipo de juego.")
+        if not raw_json:
+            raise ValidationError("Completa el contenido o pega el JSON del juego.")
 
-            # 1) Si parece JSON, úsalo tal cual para cualquier tipo
-            if self._looks_like_json(raw):
-                try:
-                    payload = json.loads(raw)
-                except json.JSONDecodeError:
-                    raise forms.ValidationError("JSON inválido en “(Avanzado) Texto del contenido”.")
-            else:
-                # 2) Texto plano de respaldo para tipos que lo soportan
-                if kind in {"memory","dragmatch"}:
-                    pairs = self._parse_pairs_text(raw)
-                    if not pairs:
-                        raise forms.ValidationError("Agrega al menos 1 par usando el formato A|B (uno por línea).")
-                    payload["pairs"] = pairs
-                    payload["text"] = raw
-                elif kind == "trivia":
-                    trivia = self._parse_trivia_text(raw)
-                    if not trivia:
-                        raise forms.ValidationError("Agrega al menos 1 pregunta: Pregunta | Opción1 | Opción2* | Opción3 …")
-                    payload["trivia"] = trivia
-                    payload["text"] = raw
-                else:
-                    # Los demás tipos requieren JSON si no hay texto válido
-                    raise forms.ValidationError("Para este tipo, pega o edita el contenido en formato JSON en “(Avanzado) Texto del contenido”.")
+        try:
+            payload = json.loads(raw_json)
+        except Exception:
+            raise ValidationError("El contenido del juego no es un JSON válido.")
 
-            # 3) Normalizar metadatos comunes
-            payload["kind"] = kind
-            payload["timeLimit"] = time_limit
+        datos: Dict[str, Any] = {"kind": kind}
+        if time_limit:
+            datos["timeLimit"] = int(time_limit)
 
-            cleaned["_datos_payload"] = payload
-            return cleaned
+        def _require(cond: bool, msg: str):
+            if not cond:
+                raise ValidationError(msg)
 
-        cleaned["_datos_payload"] = cleaned.get("_datos_payload") or {}
+        if kind == "dragmatch":
+            pairs = payload.get("pairs")
+            _require(isinstance(pairs, list) and len(pairs) >= 1 and all(
+                isinstance(p, list) and len(p) == 2 and str(p[0]).strip() and str(p[1]).strip() for p in pairs
+            ), "Debes definir al menos 1 par válido (A|B) para Drag & Match.")
+            datos["pairs"] = pairs
+
+        elif kind == "trivia":
+            questions = payload.get("questions")
+            _require(isinstance(questions, list) and len(questions) >= 1, "Agrega al menos 1 pregunta.")
+            for q in questions:
+                _require(
+                    isinstance(q, dict) and str(q.get("q", "")).strip()
+                    and isinstance(q.get("opts"), list) and len(q["opts"]) >= 2
+                    and all(str(o).strip() for o in q["opts"]),
+                    "Cada pregunta de Trivia debe tener texto y ≥2 opciones no vacías."
+                )
+                if "ans" in q:
+                    _require(isinstance(q["ans"], int) and 0 <= q["ans"] < len(q["opts"]), "Índice 'ans' fuera de rango.")
+            datos["questions"] = questions
+
+        elif kind == "classify":
+            cats = payload.get("categories") or []
+            items = payload.get("items") or []
+            _require(isinstance(cats, list) and len(cats) >= 2, "Define al menos 2 categorías.")
+            _require(isinstance(items, list) and len(items) > 0, "Agrega ítems para clasificar.")
+            datos["categories"] = cats
+            datos["items"] = items
+
+        elif kind == "cloze":
+            txt = str(payload.get("text") or "")
+            answers = payload.get("answers") or []
+            _require(txt != "", "Escribe el texto base para cloze.")
+            holes = txt.count("___")
+            if holes > 0:
+                _require(isinstance(answers, list) and len(answers) == holes, "La cantidad de respuestas debe coincidir con los huecos ___.")
+            datos["text"] = txt
+            datos["answers"] = answers
+            if "bank" in payload:
+                datos["bank"] = payload.get("bank") or []
+
+        elif kind == "ordering":
+            steps = payload.get("steps") or []
+            _require(isinstance(steps, list) and len(steps) >= 2 and all(str(s).strip() for s in steps),
+                     "Agrega al menos 2 pasos para ordenar.")
+            datos["steps"] = steps
+
+        elif kind == "vf":
+            items = payload.get("items") or []
+            _require(
+                isinstance(items, list)
+                and len(items) >= 1
+                and all(
+                    isinstance(i, dict)
+                    and str(i.get("text", "")).strip()
+                    and ("is_true" in i)
+                    for i in items
+                ),
+                "Agrega al menos 1 afirmación con su valor Verdadero/Falso.",
+            )
+            datos["items"] = items
+
+        elif kind == "labyrinth":
+            steps = payload.get("steps") or []
+            _require(isinstance(steps, list) and len(steps) >= 1, "Agrega al menos 1 paso del laberinto.")
+            datos["steps"] = steps
+
+        elif kind == "shop":
+            products = payload.get("products") or []
+            _require(
+                isinstance(products, list)
+                and len(products) >= 1
+                and all(
+                    isinstance(p, dict)
+                    and str(p.get("name", "")).strip()
+                    and ("price" in p)
+                    for p in products
+                ),
+                "Agrega al menos 1 producto con nombre y precio.",
+            )
+            datos["products"] = products
+
+        else:
+            raise ValidationError(f"Tipo de juego no soportado: {kind}")
+
+        # Guardar en la instancia
+        self.instance.tipo = "game"
+        self.instance.datos = datos
         return cleaned
 
-    def save(self, commit=True):
-        obj = super().save(commit=False)
-        payload = self.cleaned_data.get("_datos_payload")
-        if payload is not None:
-            obj.datos = payload
+    def save(self, commit: bool = True):
+        inst = super().save(commit=False)
+        inst.tipo = "game"
         if commit:
-            obj.save()
-        return obj
+            inst.save()
+        return inst
 
 
 ItemFormSet = inlineformset_factory(
-    Actividad,
-    ItemActividad,
-    form=ItemActividadForm,
+    parent_model=Actividad,
+    model=ItemActividad,
+    form=ItemForm,
     extra=0,
-    can_delete=True
+    can_delete=True,
 )
