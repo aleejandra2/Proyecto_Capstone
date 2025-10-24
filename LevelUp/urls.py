@@ -32,6 +32,7 @@ urlpatterns = [
     path("actividades/docente/<int:pk>/editar/", views.actividad_editar, name="actividad_editar"),
     path("actividades/docente/<int:pk>/asignar/", views.actividad_asignar, name="actividad_asignar"),
     path("actividades/<int:pk>/eliminar/", views.actividad_eliminar, name="actividad_eliminar"),
+    path("portal/docente/", views.Docente, name="portal_docente"),
 
     # Estudiante (resolver con autocorrección)
     path("actividades/estudiante/", views.estudiante_mis_actividades, name="estudiante_lista"),
