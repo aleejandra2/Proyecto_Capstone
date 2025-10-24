@@ -7,7 +7,7 @@
       <div class="card-content">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <h1 style="margin:0; font-size:1.5rem; font-weight:800;">Ranking de Estudiantes</h1>
-          <a href="{% url 'home' %}" class="btn btn-outline">← Volver</a>
+          <a href="{% url 'dashboard' %}" class="btn btn-outline">← Volver</a>
         </div>
         <ul style="list-style:none; padding:0; margin:1rem 0 0; display:grid; gap:.5rem;">
           {% for e in estudiantes_top %}
