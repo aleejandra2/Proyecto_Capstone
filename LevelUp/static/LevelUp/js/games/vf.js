@@ -1,106 +1,109 @@
-// vf.js — V/F con justificación opcional (auto-corrección V/F)
+// vf.js — V/F con justificación opcional
 export default async function initVF(host, cfg = {}) {
-  const items = normalizeItems(cfg.items);
-  if (!items.length) {
-    host.innerHTML = `<div class="alert alert-warning" data-game-rendered>No hay afirmaciones.</div>`;
+  const qlist = getQuestions(cfg);
+  if (!qlist.length) {
+    host.innerHTML = `<div class="alert alert-warning" data-game-rendered>No hay afirmaciones V/F.</div>`;
     return false;
   }
 
-  host.innerHTML = ""; host.dataset.gameComplete="false"; host.setAttribute("data-game-rendered","1");
+  const sfx = createSfx(cfg.sfx !== false);
 
-  const wrap = document.createElement("div");
-  wrap.className = "lv-card";
-  wrap.innerHTML = `
-    <div class="lv-header">
-      <div class="lv-title">Verdadero / Falso</div>
-      <div class="lv-meta"><span class="pill">Ítems: ${items.length}</span></div>
-    </div>
-  `;
-  const list = document.createElement("div"); wrap.appendChild(list);
+  host.innerHTML = "";
+  host.dataset.gameComplete = "false";
+  host.setAttribute("data-game-rendered", "1");
 
-  items.forEach((it, idx)=>{
-    const card = document.createElement("div"); card.className = "border rounded p-2 mb-2";
-    card.innerHTML = `
-      <div class="fw-bold">${idx+1}. ${it.text}</div>
-      <div class="btn-group mt-1" role="group" aria-label="Selecciona verdadero o falso">
-        <button type="button" class="btn btn-outline-success btn-sm vf-true">Verdadero</button>
-        <button type="button" class="btn btn-outline-danger btn-sm vf-false">Falso</button>
-      </div>
-      <div class="mt-2">
-        <label class="form-label small">Justificación (opcional)</label>
-        <textarea class="form-control form-control-sm vf-why" rows="2" placeholder="Escribe tu razonamiento..."></textarea>
-      </div>
-    `;
-    card.dataset.index = String(idx);
-    list.appendChild(card);
-  });
+  const card = el("div", "lv-card vf-card");
+  const head = el("div", "d-flex align-items-center justify-content-between mb-2");
+  const prog = el("div", "progress flex-grow-1 me-3", "<div class='progress-bar' style='width:0%'></div>");
+  const time = el("div", "badge text-bg-secondary", "⏱ <span id='vf-time'>∞</span>");
+  head.appendChild(prog); head.appendChild(time);
 
-  const actions = document.createElement("div");
-  actions.className = "d-flex gap-2 mt-2";
-  actions.innerHTML = `
-    <button class="btn btn-primary btn-sm" type="button" id="btnCheck">Validar</button>
-    <button class="btn btn-outline-secondary btn-sm" type="button" id="btnReset">Reiniciar</button>
-  `;
-  wrap.appendChild(actions);
-  host.appendChild(wrap);
+  const stmt = el("div", "vf-stmt h6 mb-2");
+  const btns = el("div", "d-flex gap-2 mb-2");
+  const bTrue = el("button", "btn btn-success btn-lg flex-fill", "Verdadero");
+  const bFalse = el("button", "btn btn-danger  btn-lg flex-fill", "Falso");
+  bTrue.type = "button"; bFalse.type = "button";
+  btns.appendChild(bTrue); btns.appendChild(bFalse);
 
-  // Interacciones
-  list.addEventListener("click", (e)=>{
-    const card = e.target.closest(".border.rounded"); if(!card) return;
-    const tBtn = e.target.closest(".vf-true"); const fBtn = e.target.closest(".vf-false");
-    if (tBtn || fBtn) {
-      card.dataset.sel = tBtn ? "true" : "false";
-      card.querySelector(".vf-true").classList.toggle("btn-success", !!tBtn);
-      card.querySelector(".vf-false").classList.toggle("btn-danger", !!fBtn);
-      card.querySelector(".vf-true").classList.toggle("btn-outline-success", !tBtn);
-      card.querySelector(".vf-false").classList.toggle("btn-outline-danger", !fBtn);
-    }
-  });
+  const just = el("textarea", "form-control vf-just", ""); just.rows = 2; just.placeholder = "(Opcional) Justifica en una frase…";
+  const hint = el("div", "small text-muted mt-1", "La justificación no afecta la corrección automática, pero se guarda para revisión.");
 
-  actions.querySelector("#btnReset").addEventListener("click", ()=>{
-    list.querySelectorAll(".border.rounded").forEach(c=>{
-      delete c.dataset.sel;
-      c.querySelector(".vf-true").className = "btn btn-outline-success btn-sm vf-true";
-      c.querySelector(".vf-false").className = "btn btn-outline-danger btn-sm vf-false";
-      c.querySelector(".vf-why").value = "";
-    });
-    clearAlert(); setScore(0, items.length, 0); host.dataset.gameComplete="false";
-  });
+  card.appendChild(head); card.appendChild(stmt); card.appendChild(btns); card.appendChild(just); card.appendChild(hint);
+  host.appendChild(card);
 
-  actions.querySelector("#btnCheck").addEventListener("click", ()=>{
-    let correct = 0; const total = items.length; const detail = [];
-    list.querySelectorAll(".border.rounded").forEach((c, i)=>{
-      const sel = c.dataset.sel ?? "";
-      const why = c.querySelector(".vf-why").value || "";
-      const exp = String(items[i].answer);
-      if (sel && exp && String(sel) === exp) correct++;
-      detail.push({ q: items[i].text, selected: sel, expected: exp, why });
-    });
-    const ratio = total ? correct/total : 0;
-    setScore(correct, total, ratio);
-    showAlert(ratio >= 1 ? "¡Excelente! ✅" : `Correctos: ${correct}/${total}`, ratio>=1);
+  let i = 0, okCount = 0, it = null, limit = Math.max(0, Number(cfg.timeLimit || 0) || 0);
 
-    host.dataset.gameDetail  = JSON.stringify(detail);
-    host.dataset.gameCorrect = String(correct);
-    host.dataset.gameTotal   = String(total);
-    host.dataset.gameScore   = String(Math.max(0, Math.min(1, ratio)));
-    host.dataset.gameComplete= String(ratio >= 1 ? true : false);
+  render(); updateTimer();
 
-    if (ratio >= 1) addSuccessFlag();
-  });
+  bTrue.addEventListener("click", () => choose(true));
+  bFalse.addEventListener("click", () => choose(false));
+  document.addEventListener("keydown", (e) => { if (e.key.toLowerCase() === "v") bTrue.click(); if (e.key.toLowerCase() === "f") bFalse.click(); });
 
-  function normalizeItems(a){
-    if (!Array.isArray(a)) return [];
-    return a.map(x=>{
-      const text = String(x.text ?? x.statement ?? "");
-      let ans = x.answer; // true/false o "V"/"F"
-      if (typeof ans === "string") ans = /^v(er(d(adero)?)?)?$/i.test(ans) ? true : false;
-      return { text, answer: String(ans) };
-    }).filter(x=>x.text);
+  function render() {
+    if (i >= qlist.length) return finish();
+    const q = qlist[i];
+    stmt.textContent = q.text;
+    just.value = "";
+    btns.querySelectorAll("button").forEach(b => { b.disabled = false; b.classList.remove("glow-ok", "glow-bad"); });
+    updateProg();
+  }
+  function choose(ans) {
+    btns.querySelectorAll("button").forEach(b => b.disabled = true);
+    clearInterval(it);
+    const q = qlist[i];
+    const correct = !!q.ans === !!ans;
+    (ans ? bTrue : bFalse).classList.add(correct ? "glow-ok" : "glow-bad");
+    if (correct) { okCount++; sfx.ok(); } else sfx.bad();
+    // guardar justificación (si existe) — disponible para submit externo si quieres leer dataset
+    host.dispatchEvent(new CustomEvent("vf:answer", { detail: { index: i, text: q.text, ans, correct, justification: just.value.trim() } }));
+    setTimeout(() => { i++; render(); updateTimer(); }, 650);
+  }
+  function finish() {
+    host.dataset.gameComplete = "true";
+    host.dataset.gameCorrect = String(okCount);
+    host.dataset.gameTotal = String(qlist.length);
+    host.dataset.gameScore = String((okCount / qlist.length).toFixed(4));
+    confetti(host); sfx.win();
+    card.innerHTML += `<div class="text-center mt-3"><div class="lead">Aciertos: <b>${okCount}</b> / ${qlist.length}</div></div>`;
+  }
+  function updateProg() { prog.querySelector(".progress-bar").style.width = Math.round((i / qlist.length) * 100) + "%"; }
+  function updateTimer() {
+    clearInterval(it);
+    if (!limit) { time.querySelector("#vf-time").textContent = "∞"; return; }
+    let left = limit; time.querySelector("#vf-time").textContent = `${left}s`;
+    it = setInterval(() => { left--; time.querySelector("#vf-time").textContent = `${Math.max(0, left)}s`; if (left <= 0) { clearInterval(it); choose(null); } }, 1000);
   }
 
-  function setScore(c,t,r){ host.dataset.gameCorrect=String(c||0); host.dataset.gameTotal=String(t||0); host.dataset.gameScore=String(Math.max(0,Math.min(1,r||0))); }
-  function showAlert(msg, ok){ clearAlert(); const d=document.createElement('div'); d.className=`alert ${ok?'alert-success':'alert-info'} mt-2`; d.textContent=msg; wrap.appendChild(d); }
-  function clearAlert(){ const a=wrap.querySelector('.alert'); a&&a.remove(); }
-  function addSuccessFlag(){ const ok=document.createElement('div'); ok.className='alert alert-success d-none'; ok.textContent='OK'; host.appendChild(ok); }
+  // helpers
+  function getQuestions(cfg) {
+    if (Array.isArray(cfg.items) && cfg.items.length) {
+      return cfg.items.map(it => ({ text: String(it.text ?? it.q ?? it.statement), ans: parseBool(it.ans ?? it.answer) }));
+    }
+    const out = []; (String(cfg.text || cfg.game_pairs || "")).split(/\r?\n/).forEach(ln => {
+      ln = (ln || "").trim(); if (!ln) return;
+      const p = ln.split("|").map(s => s.trim());
+      // "Texto | V" o "Texto | F"
+      if (p.length >= 2) out.push({ text: p[0], ans: parseBool(p[1]) });
+    });
+    return out;
+  }
+  function parseBool(t) { const s = String(t || "").trim().toLowerCase(); return ["v", "verdadero", "true", "t", "1", "sí", "si"].includes(s); }
+  function el(tag, cls, html) { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; }
+  function confetti(root) { const wrap = el("div", "confetti-wrap"); root.appendChild(wrap); for (let k = 0; k < 60; k++) { const p = el("i", "confetti"); p.style.setProperty("--tx", (Math.random() * 200 - 100).toFixed(0)); p.style.setProperty("--d", (0.6 + Math.random() * 0.8).toFixed(2) + "s"); p.style.left = (10 + Math.random() * 80).toFixed(0) + "%"; wrap.appendChild(p); } setTimeout(() => wrap.remove(), 1200); }
+  function createSfx(enabled = true) {
+    let ctx = null;
+    function beep(freq = 440, dur = 0.12, type = "sine", gain = 0.05) {
+      if (!enabled) return;
+      try {
+        ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = type; o.frequency.value = freq; g.gain.value = gain; o.connect(g); g.connect(ctx.destination);
+        o.start(); o.stop(ctx.currentTime + dur);
+      } catch { }
+    }
+    return {
+      get enabled() { return enabled; }, set enabled(v) { enabled = !!v; },
+      ok() { beep(760, .10, "sine", .07); }, bad() { beep(180, .18, "sawtooth", .07); }, win() { [660, 880, 990].forEach((f, i) => setTimeout(() => beep(f, .10, "sine", .09), i * 120)); }
+    };
+  }
 }

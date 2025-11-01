@@ -41,6 +41,7 @@ urlpatterns = [
     path("api/actividades/<int:pk>/answer/<int:item_id>/", views.api_item_answer, name="api_item_answer"),
     path("api/actividades/<int:pk>/hint/<int:item_id>/", views.api_item_hint, name="api_item_hint"),  # opcional
     path("misiones/<slug:slug>/<int:nivel>/", views.misiones_jugar, name="misiones_jugar"),
+    path('misiones/mapa/<int:actividad_pk>/', views.misiones_mapa, name='misiones_mapa_actividad'),
 
     #Juegos (duplicado conservado por compatibilidad)
     path("api/actividades/<int:pk>/answer/<int:item_id>/", views.api_item_answer, name="api_item_answer"),

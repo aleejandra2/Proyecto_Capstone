@@ -1,128 +1,151 @@
-// shop.js — Selecciona productos, calcula total y vuelto exacto
+// shop.js — Carrito simple con monedas/billetes, total y vuelto
 export default async function initShop(host, cfg = {}) {
-  const currency = cfg.currency || "$";
-  const products = normalizeProducts(cfg.products);
-  const cash     = Number(cfg.cash ?? cfg.efectivo ?? 0);
+  const currency = String(cfg.currency || "$");
+  const products = getProducts(cfg);
+  const denoms = (cfg.accepted_denoms || cfg.denoms || [50, 100, 200, 500, 1000]).map(Number).sort((a, b) => a - b);
+  const wallet = Number(cfg.cash || 1000);
 
-  if (!products.length || !(cash>0)) {
-    host.innerHTML = `<div class="alert alert-warning" data-game-rendered>Configura productos y efectivo entregado.</div>`;
+  if (!products.length) {
+    host.innerHTML = `<div class="alert alert-warning" data-game-rendered>No hay productos configurados.</div>`;
     return false;
   }
 
-  host.innerHTML = ""; host.dataset.gameComplete="false"; host.setAttribute("data-game-rendered","1");
+  const sfx = createSfx(cfg.sfx !== false);
 
-  const wrap = document.createElement("div");
-  wrap.className = "lv-card";
-  wrap.innerHTML = `
-    <div class="lv-header">
-      <div class="lv-title">Tiendita</div>
-      <div class="lv-meta"><span class="pill">Efectivo: ${currency} ${fmt(cash)}</span></div>
-    </div>
-    <div class="table-responsive">
-      <table class="table table-sm align-middle mb-2">
-        <thead><tr><th>Producto</th><th class="text-end">Precio</th><th class="text-center">Cantidad</th><th class="text-end">Subtotal</th></tr></thead>
-        <tbody id="rows"></tbody>
-        <tfoot><tr><th colspan="3" class="text-end">Total</th><th class="text-end" id="totalCell">${currency} 0,00</th></tr></tfoot>
-      </table>
-    </div>
-    <div class="d-flex gap-2 flex-wrap align-items-center">
-      <div><label class="form-label small">Vuelto esperado si pagas con ${currency} ${fmt(cash)}:</label>
-        <input type="number" step="0.01" class="form-control form-control-sm d-inline-block" id="changeInput" placeholder="Ingresa el vuelto" style="width:160px;">
+  host.innerHTML = "";
+  host.dataset.gameComplete = "false";
+  host.setAttribute("data-game-rendered", "1");
+
+  const wrap = el("div", "lv-card shop");
+  const header = el("div", "shop-header d-flex align-items-center justify-content-between mb-2");
+  const walletBox = el("div", "wallet", `💰 Monedero: <strong>${fmt(wallet)}</strong>`);
+  const meta = el("div", "small text-muted", `<span class="steps">Pasos: <b>0</b></span>`);
+  header.appendChild(walletBox); header.appendChild(meta);
+
+  const prods = el("div", "products");
+  products.forEach(p => {
+    const card = el("div", "product", `
+      <div class="pic">${escapeHtml(p.emoji || "🛒")}</div>
+      <div class="name">${escapeHtml(p.name)}</div>
+      <div class="price">${fmt(p.price)}</div>
+      <div class="qty">
+        <button class="dec" type="button">−</button>
+        <span class="qv">0</span>
+        <button class="inc" type="button">+</button>
       </div>
-      <button class="btn btn-primary btn-sm" type="button" id="btnCheck">Validar</button>
-      <button class="btn btn-outline-secondary btn-sm" type="button" id="btnReset">Reiniciar</button>
-    </div>
-    <div class="mt-2 small text-muted">Bonus (interno): menos acciones para llegar al resultado.</div>
-  `;
+    `);
+    card.dataset.id = p.id; card.dataset.price = String(p.price);
+    card.querySelector(".inc").addEventListener("click", () => changeQty(card, +1));
+    card.querySelector(".dec").addEventListener("click", () => changeQty(card, -1));
+    prods.appendChild(card);
+  });
+
+  const cart = el("div", "cart", `<ul class="lines"></ul><div class="totals">
+    <div>Subtotal: <span class="subtotal">${fmt(0)}</span></div>
+    <div>Impuestos: <span class="tax">${fmt(0)}</span></div>
+    <div class="total">TOTAL: <strong class="grand">${fmt(0)}</strong></div>
+  </div>`);
+
+  const pay = el("div", "pay", "");
+  const coins = el("div", "coins");
+  denoms.forEach(v => {
+    const b = el("button", "coin", fmt(v));
+    b.type = "button"; b.dataset.val = String(v);
+    b.addEventListener("click", () => { given += v; steps++; sfx.flip(); updatePay(); });
+    coins.appendChild(b);
+  });
+  const givenBox = el("div", "given", `Entregado: <strong class="given-val">${fmt(0)}</strong>`);
+  const changeBox = el("div", "change", `Vuelto esperado: <strong class="change-val">${fmt(0)}</strong>`);
+  const confirm = el("button", "btn btn-primary confirm", "Confirmar");
+  confirm.type = "button";
+  pay.appendChild(coins); pay.appendChild(givenBox); pay.appendChild(changeBox); pay.appendChild(confirm);
+
+  wrap.appendChild(header); wrap.appendChild(prods); wrap.appendChild(cart); wrap.appendChild(pay);
   host.appendChild(wrap);
 
-  const rows = wrap.querySelector("#rows");
-  const totalCell = wrap.querySelector("#totalCell");
-  const changeInput = wrap.querySelector("#changeInput");
-  const state = { qty: Object.fromEntries(products.map(p=>[p.id,0])), actions: 0 };
+  let steps = 0, given = 0;
 
-  products.forEach(p=>{
-    const tr = document.createElement("tr"); tr.dataset.id = p.id;
-    tr.innerHTML = `
-      <td>${p.name}</td>
-      <td class="text-end">${currency} ${fmt(p.price)}</td>
-      <td class="text-center">
-        <div class="input-group input-group-sm" style="max-width:140px;margin:auto;">
-          <button class="btn btn-outline-secondary btn-sm act-dec" type="button">−</button>
-          <input type="number" class="form-control text-center qty" min="0" value="0">
-          <button class="btn btn-outline-secondary btn-sm act-inc" type="button">+</button>
-        </div>
-      </td>
-      <td class="text-end subtotal">${currency} 0,00</td>
-    `;
-    rows.appendChild(tr);
+  confirm.addEventListener("click", () => {
+    const total = getTotal();
+    if (given < total) { sfx.bad(); shake(confirm); return; }
+    const change = round2(given - total);
+    // éxito si el vuelto coincide con operación exacta
+    host.dataset.gameComplete = "true";
+    host.dataset.gameCorrect = "1";
+    host.dataset.gameTotal = "1";
+    // Puntaje con penalización por pasos
+    const base = Number(cfg.scoring?.base ?? 100);
+    const pen = Number(cfg.scoring?.step_penalty ?? 3);
+    const score = Math.max(base - (steps * pen), 0);
+    host.dataset.gameScore = String((score / base).toFixed(4));
+    sfx.ok(); confetti(host);
+    confirm.insertAdjacentHTML("afterend", `<div class="small text-muted mt-2">Vuelto: <b>${fmt(change)}</b> — Pasos: <b>${steps}</b></div>`);
   });
 
-  rows.addEventListener("click", (e)=>{
-    const tr = e.target.closest("tr"); if (!tr) return;
-    const id = tr.dataset.id;
-    const input = tr.querySelector(".qty");
-    if (e.target.closest(".act-inc")) { input.value = String((parseInt(input.value||"0",10)||0)+1); state.actions++; }
-    if (e.target.closest(".act-dec")) { input.value = String(Math.max(0,(parseInt(input.value||"0",10)||0)-1)); state.actions++; }
-    update();
-  });
-  rows.addEventListener("input", (e)=>{
-    const input = e.target.closest(".qty"); if (!input) return;
-    state.actions++; update();
-  });
-
-  wrap.querySelector("#btnReset").addEventListener("click", ()=>{
-    rows.querySelectorAll(".qty").forEach(i=>i.value="0"); state.actions=0; changeInput.value=""; update(); clearAlert();
-    host.dataset.gameComplete="false"; host.dataset.gameScore="0";
-  });
-
-  wrap.querySelector("#btnCheck").addEventListener("click", ()=>{
-    const total = computeTotal();
-    const expectedChange = round2(cash - total);
-    const val = Number(changeInput.value ?? NaN);
-    const ok = isFinite(val) && round2(val) === expectedChange;
-    const ratio = ok ? 1 : 0;
-    showAlert(ok ? `¡Correcto! Vuelto: ${currency} ${fmt(expectedChange)} ✅` : `Revisa tu cálculo. El total es ${currency} ${fmt(total)}.`, ok);
-
-    host.dataset.gameDetail  = JSON.stringify({ total, cash, expectedChange, actions: state.actions });
-    host.dataset.gameCorrect = String(ok ? 1 : 0);
-    host.dataset.gameTotal   = "1";
-    host.dataset.gameScore   = String(ratio);
-    host.dataset.gameComplete= String(ok);
-
-    if (ok) addSuccessFlag();
-  });
-
-  function update(){
-    let total = 0;
-    rows.querySelectorAll("tr").forEach(tr=>{
-      const id = tr.dataset.id;
-      const price = products.find(p=>p.id===id)?.price || 0;
-      const qty = Math.max(0, parseInt(tr.querySelector(".qty").value||"0",10)||0);
-      state.qty[id] = qty;
-      const sub = round2(price * qty);
-      total += sub;
-      tr.querySelector(".subtotal").textContent = `${currency} ${fmt(sub)}`;
+  function changeQty(card, delta) {
+    const q = Math.max(0, Number(card.querySelector(".qv").textContent) + delta);
+    card.querySelector(".qv").textContent = String(q);
+    steps++; sfx.flip();
+    renderCart(); updatePay();
+  }
+  function renderCart() {
+    const ul = cart.querySelector(".lines");
+    ul.innerHTML = "";
+    products.forEach(p => {
+      const q = getQty(p.id); if (!q) return;
+      ul.appendChild(el("li", "", `${escapeHtml(p.name)} ×${q} <span class="line-right">${fmt(q * p.price)}</span>`));
     });
-    totalCell.textContent = `${currency} ${fmt(round2(total))}`;
+    const total = getTotal();
+    cart.querySelector(".subtotal").textContent = fmt(total);
+    cart.querySelector(".tax").textContent = fmt(0);
+    cart.querySelector(".grand").textContent = fmt(total);
   }
-  function computeTotal(){
-    let t = 0; Object.entries(state.qty).forEach(([id,q])=>{
-      const p = products.find(p=>p.id===id); if (p) t += p.price * q;
-    }); return round2(t);
+  function updatePay() {
+    // tope monedero (opcional)
+    if (given > wallet) given = wallet;
+    givenBox.querySelector(".given-val").textContent = fmt(given);
+    const change = Math.max(0, round2(given - getTotal()));
+    changeBox.querySelector(".change-val").textContent = fmt(change);
+    meta.querySelector(".steps b").textContent = String(steps);
+  }
+  function getQty(id) {
+    const card = prods.querySelector(`.product[data-id="${id}"]`);
+    return Number(card?.querySelector(".qv").textContent || 0);
+  }
+  function getTotal() {
+    return round2(products.reduce((acc, p) => acc + getQty(p.id) * p.price, 0));
   }
 
-  // utils
-  function normalizeProducts(a){
-    if (!Array.isArray(a)) return [];
-    return a.map((x,i)=>({
-      id: String(x.id ?? ('p'+(i+1))), name: String(x.name ?? x.nombre ?? 'Producto'), price: Number(x.price ?? x.precio ?? 0)
-    })).filter(p=>p.name && p.price>0);
+  // helpers
+  function getProducts(cfg) {
+    if (Array.isArray(cfg.products) && cfg.products.length) return cfg.products.map(p => ({ id: String(p.id), name: String(p.name), price: Number(p.price), emoji: p.emoji }));
+    // Fallback simple desde texto: "Nombre | precio"
+    const out = []; (String(cfg.text || cfg.game_pairs || "")).split(/\r?\n/).forEach((ln, i) => {
+      ln = (ln || "").trim(); if (!ln) return; const p = ln.split("|").map(s => s.trim());
+      if (p.length >= 2) out.push({ id: "p" + i, name: p[0], price: Number(p[1]) || 0, emoji: "🛒" });
+    });
+    return out;
   }
-  function round2(n){ return Math.round(n*100)/100; }
-  function fmt(n){ return n.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
-  function addSuccessFlag(){ const ok=document.createElement('div'); ok.className='alert alert-success d-none'; ok.textContent='OK'; host.appendChild(ok); }
-
-  // inicial
-  update();
+  function el(tag, cls, html) { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; }
+  function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
+  function fmt(n) { return currency + " " + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function round2(n) { return Math.round(n * 100) / 100; }
+  function shake(n) { n.classList.add("shake"); setTimeout(() => n.classList.remove("shake"), 260); }
+  function confetti(root) { const wrap = el("div", "confetti-wrap"); root.appendChild(wrap); for (let k = 0; k < 80; k++) { const p = el("i", "confetti"); p.style.setProperty("--tx", (Math.random() * 200 - 100).toFixed(0)); p.style.setProperty("--d", (0.6 + Math.random() * 0.8).toFixed(2) + "s"); p.style.left = (10 + Math.random() * 80).toFixed(0) + "%"; wrap.appendChild(p); } setTimeout(() => wrap.remove(), 1200); }
+  function createSfx(enabled = true) {
+    let ctx = null;
+    function beep(freq = 440, dur = 0.12, type = "sine", gain = 0.05) {
+      if (!enabled) return;
+      try {
+        ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = type; o.frequency.value = freq; g.gain.value = gain; o.connect(g); g.connect(ctx.destination);
+        o.start(); o.stop(ctx.currentTime + dur);
+      } catch { }
+    }
+    return {
+      get enabled() { return enabled; }, set enabled(v) { enabled = !!v; },
+      flip() { beep(400, .07, "triangle", .04); }, ok() { beep(760, .10, "sine", .07); }, bad() { beep(180, .18, "sawtooth", .07); }, win() { [660, 880, 990].forEach((f, i) => setTimeout(() => beep(f, .10, "sine", .09), i * 120)); }
+    };
+  }
 }

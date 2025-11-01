@@ -1,158 +1,131 @@
-// classify.js — Arrastra fichas a canastas (o clic para asignar)
+// classify.js — Clasificación con DnD + menú "Enviar a…"
 export default async function initClassify(host, cfg = {}) {
-  const items = normItems(cfg.items);
-  const bins  = normBins(cfg.bins);
-  const answers = cfg.answers || cfg.solutions || {};
-  if (!items.length || !bins.length) {
+  const { bins, items } = getData(cfg);
+  if (!bins.length || !items.length) {
     host.innerHTML = `<div class="alert alert-warning" data-game-rendered>Faltan ítems o canastas.</div>`;
     return false;
   }
 
+  const sfx = createSfx(cfg.sfx !== false);
+
   host.innerHTML = "";
   host.dataset.gameComplete = "false";
-  host.setAttribute("data-game-rendered","1");
+  host.setAttribute("data-game-rendered", "1");
 
-  const wrap = document.createElement("div");
-  wrap.className = "lv-card";
-  wrap.innerHTML = `
-    <div class="lv-header">
-      <div class="lv-title">Clasifica en canastas</div>
-      <div class="lv-meta"><span class="pill">Ítems: ${items.length}</span><span class="pill">Canastas: ${bins.length}</span></div>
-    </div>
-    <div class="row g-3">
-      <div class="col-lg-4">
-        <div class="border rounded p-2" aria-label="Banco de fichas" id="pool"></div>
-      </div>
-      <div class="col-lg-8">
-        <div class="row g-2" id="bins"></div>
-      </div>
-    </div>
-    <div class="d-flex gap-2 mt-2">
-      <button class="btn btn-primary btn-sm" type="button" id="btnCheck">Validar</button>
-      <button class="btn btn-outline-secondary btn-sm" type="button" id="btnReset">Reiniciar</button>
-    </div>
-  `;
+  const wrap = el("div", "lv-card classify-board");
+  const left = el("div", "classify-pool");
+  const right = el("div", "classify-bins");
+  wrap.appendChild(left); wrap.appendChild(right);
   host.appendChild(wrap);
 
-  const pool = wrap.querySelector("#pool");
-  const binsEl = wrap.querySelector("#bins");
-
-  // Render bins
-  bins.forEach(b=>{
-    const col = document.createElement("div"); col.className = "col-12 col-md-6";
-    col.innerHTML = `
-      <div class="border rounded p-2 bin" data-id="${b.id}" tabindex="0">
-        <div class="fw-bold mb-1">${b.label}</div>
-        <div class="bin-drop min-vh-25" style="min-height:72px;"></div>
-      </div>`;
-    binsEl.appendChild(col);
-  });
-
-  // Render items (chips)
-  items.forEach(it=>{
-    const chip = makeChip(it);
-    pool.appendChild(chip);
-  });
-
-  // Drag & drop delegación
-  host.addEventListener("dragstart", (e)=>{
-    const chip = e.target.closest(".cf-chip"); if(!chip) return;
-    e.dataTransfer.setData("text/plain", chip.dataset.id);
-    e.dataTransfer.effectAllowed = "move";
-    setTimeout(()=>chip.classList.add("opacity-50"),0);
-  });
-  host.addEventListener("dragend", (e)=>{
-    const chip = e.target.closest(".cf-chip"); if(!chip) return;
-    chip.classList.remove("opacity-50");
-  });
-  host.addEventListener("dragover", (e)=>{
-    if (e.target.closest(".bin-drop") || e.target.id === "pool") { e.preventDefault(); }
-  });
-  host.addEventListener("drop", (e)=>{
-    const id = e.dataTransfer.getData("text/plain");
-    const chip = host.querySelector(`.cf-chip[data-id="${css(id)}"]`);
-    const dest = e.target.closest(".bin-drop") || (e.target.id === "pool" ? pool : null);
-    if (chip && dest) dest.appendChild(chip);
-  });
-
-  // Accesibilidad: clic → menú “Enviar a…”
-  host.addEventListener("click", (e)=>{
-    const chip = e.target.closest(".cf-chip"); if (!chip) return;
-    const menu = document.createElement("div");
-    menu.className = "dropdown-menu show";
-    menu.style.position = "absolute"; menu.style.zIndex = 10;
-    const rect = chip.getBoundingClientRect();
-    menu.style.left = rect.left+"px"; menu.style.top = (rect.bottom+4)+"px";
-    menu.innerHTML = `<button class="dropdown-item" data-to="pool">Devolver al banco</button>` +
-      bins.map(b=>`<button class="dropdown-item" data-to="${b.id}">${b.label}</button>`).join("");
-    document.body.appendChild(menu);
-    const close = ()=>menu.remove();
-    setTimeout(()=>document.addEventListener("click", close, {once:true}), 0);
-    menu.addEventListener("click",(ev)=>{
-      const to = ev.target.dataset.to; if(!to) return;
-      if (to === "pool") pool.appendChild(chip);
-      else { const drop = host.querySelector(`.bin[data-id="${css(to)}"] .bin-drop`); drop && drop.appendChild(chip); }
-      close();
+  // build bins
+  const binEls = bins.map((b, i) => {
+    const box = el("div", "classify-bin", `<div class="bin-title">${escapeHtml(b.title)}</div><div class="bin-drop" data-bin="${b.id}"></div>`);
+    right.appendChild(box);
+    const drop = box.querySelector(".bin-drop");
+    drop.addEventListener("dragover", ev => { ev.preventDefault(); drop.classList.add("over"); });
+    drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+    drop.addEventListener("drop", ev => {
+      ev.preventDefault(); drop.classList.remove("over");
+      const chip = left.querySelector(".classify-chip.dragging") || document.querySelector(".classify-chip.dragging");
+      chip && drop.appendChild(chip);
+      sfx.flip(); checkPartial();
     });
+    return drop;
   });
 
-  // Botones
-  wrap.querySelector("#btnReset").addEventListener("click", ()=>{
-    [...host.querySelectorAll(".cf-chip")].forEach(ch=>pool.appendChild(ch));
-    clearAlert(); setScore(0, items.length, 0); host.dataset.gameComplete="false";
+  // build chips
+  shuffle(items.slice()).forEach(it => {
+    const chip = el("button", "classify-chip btn btn-light btn-sm", escapeHtml(it.text));
+    chip.type = "button"; chip.draggable = true; chip.dataset.id = it.id; chip.dataset.bin = it.bin;
+    chip.addEventListener("dragstart", () => { chip.classList.add("dragging"); sfx.flip(); });
+    chip.addEventListener("dragend", () => chip.classList.remove("dragging"));
+    chip.addEventListener("click", () => {
+      // Accesibilidad: menú "Enviar a…"
+      const names = bins.map((b, idx) => `${idx + 1}) ${b.title}`).join("\n");
+      const pick = window.prompt(`Enviar a…\n${names}\n(Número)`);
+      const idx = Number(pick) - 1;
+      if (!isNaN(idx) && idx >= 0 && idx < binEls.length) {
+        binEls[idx].appendChild(chip); sfx.flip(); checkPartial();
+      }
+    });
+    left.appendChild(chip);
   });
 
-  wrap.querySelector("#btnCheck").addEventListener("click", ()=>{
-    const placed = {};
-    bins.forEach(b=>{
-      const drop = host.querySelector(`.bin[data-id="${css(b.id)}"] .bin-drop`);
-      const chips = [...drop.querySelectorAll(".cf-chip")];
-      chips.forEach(ch => placed[ch.dataset.id] = b.id);
-    });
-    let correct = 0;
-    items.forEach(it=>{
-      const exp = String(answers[it.id] ?? "");
-      const got = String(placed[it.id] ?? "");
-      if (exp && got && exp === got) correct++;
-    });
-    const total = items.length;
-    const ratio = total ? correct/total : 0;
-    setScore(correct, total, ratio);
-    showAlert(ratio >= 1 ? "¡Todo correcto! ✅" : `Correctos: ${correct}/${total}`, ratio>=1);
+  const checkBtn = el("button", "btn btn-primary btn-sm mt-2", "Corregir");
+  left.appendChild(checkBtn);
 
-    // Señales
+  checkBtn.addEventListener("click", () => {
+    let correct = 0, total = items.length;
+    document.querySelectorAll(".bin-drop").forEach(drop => {
+      const binId = drop.dataset.bin;
+      drop.querySelectorAll(".classify-chip").forEach(ch => {
+        const ok = (ch.dataset.bin === binId);
+        ch.classList.toggle("ok", ok);
+        ch.classList.toggle("bad", !ok);
+        if (ok) correct++;
+      });
+    });
+    host.dataset.gameComplete = "true";
     host.dataset.gameCorrect = String(correct);
-    host.dataset.gameTotal   = String(total);
-    host.dataset.gameScore   = String(Math.max(0, Math.min(1, ratio)));
-    host.dataset.gameComplete= String(ratio >= 1 ? true : false);
-
-    if (ratio >= 1) addSuccessFlag();
+    host.dataset.gameTotal = String(total);
+    host.dataset.gameScore = String((correct / total).toFixed(4));
+    if (correct === total) { sfx.ok(); confetti(host); } else sfx.bad();
   });
 
-  function setScore(c,t,r){
-    host.dataset.gameCorrect = String(c||0);
-    host.dataset.gameTotal   = String(t||0);
-    host.dataset.gameScore   = String(Math.max(0, Math.min(1, r||0)));
+  function checkPartial() {
+    // Pinta solo el porcentaje en título (feedback suave)
+    document.querySelectorAll(".classify-bin").forEach(box => {
+      const drop = box.querySelector(".bin-drop");
+      const binId = drop.dataset.bin;
+      const chips = Array.from(drop.querySelectorAll(".classify-chip"));
+      if (!chips.length) { box.style.setProperty("--pct", "0%"); return; }
+      const ok = chips.filter(c => c.dataset.bin === binId).length;
+      const pct = Math.round((ok / chips.length) * 100);
+      box.style.setProperty("--pct", pct + "%");
+    });
   }
-  function showAlert(msg, ok){
-    clearAlert();
-    const div = document.createElement("div"); div.className = `alert ${ok?'alert-success':'alert-info'} mt-2`; div.textContent = msg;
-    wrap.appendChild(div);
-  }
-  function clearAlert(){ const a = wrap.querySelector(".alert"); a && a.remove(); }
-  function addSuccessFlag(){ const ok = document.createElement('div'); ok.className='alert alert-success d-none'; ok.textContent='OK'; host.appendChild(ok); }
 
-  function makeChip(it){
-    const el = document.createElement("button");
-    el.type="button"; el.className="cf-chip btn btn-light btn-sm me-2 mb-2"; el.draggable = true;
-    el.dataset.id = it.id; el.textContent = it.text;
-    return el;
+  // helpers
+  function getData(cfg) {
+    // Preferir estructuras explícitas
+    if (Array.isArray(cfg.bins) && Array.isArray(cfg.items) && cfg.bins.length && cfg.items.length) {
+      return {
+        bins: cfg.bins.map(b => ({ id: String(b.id ?? b.value ?? b.key ?? b.title), title: String(b.title ?? b.name ?? b.id) })),
+        items: cfg.items.map((it, idx) => ({ id: String(it.id ?? idx), text: String(it.text ?? it.label ?? it.left ?? it.term), bin: String(it.bin ?? it.to) }))
+      };
+    }
+    // Texto: "item | bin"
+    const outBins = new Map(); const outItems = [];
+    (String(cfg.text || cfg.game_pairs || "")).split(/\r?\n/).forEach((ln, i) => {
+      ln = (ln || "").trim(); if (!ln) return;
+      const p = ln.split("|").map(s => s.trim());
+      if (p.length >= 2) {
+        const item = p[0], binName = p[1];
+        if (!outBins.has(binName)) outBins.set(binName, { id: binName, title: binName });
+        outItems.push({ id: "i" + i, text: item, bin: binName });
+      }
+    });
+    return { bins: Array.from(outBins.values()), items: outItems };
   }
-  function normItems(a){
-    return Array.isArray(a) ? a.map((x,i)=>({id:String(x.id??i+1), text:String(x.text??x??'')})).filter(x=>x.text) : [];
+  function shuffle(a) { return a.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(x => x[1]); }
+  function el(tag, cls, html) { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; }
+  function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
+  function confetti(root) { const wrap = el("div", "confetti-wrap"); root.appendChild(wrap); for (let k = 0; k < 60; k++) { const p = el("i", "confetti"); p.style.setProperty("--tx", (Math.random() * 200 - 100).toFixed(0)); p.style.setProperty("--d", (0.6 + Math.random() * 0.8).toFixed(2) + "s"); p.style.left = (10 + Math.random() * 80).toFixed(0) + "%"; wrap.appendChild(p); } setTimeout(() => wrap.remove(), 1200); }
+  function createSfx(enabled = true) {
+    let ctx = null;
+    function beep(freq = 440, dur = 0.12, type = "sine", gain = 0.05) {
+      if (!enabled) return;
+      try {
+        ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = type; o.frequency.value = freq; g.gain.value = gain; o.connect(g); g.connect(ctx.destination);
+        o.start(); o.stop(ctx.currentTime + dur);
+      } catch { }
+    }
+    return {
+      get enabled() { return enabled; }, set enabled(v) { enabled = !!v; },
+      flip() { beep(400, .07, "triangle", .04); }, ok() { beep(760, .10, "sine", .07); }, bad() { beep(180, .18, "sawtooth", .07); }
+    };
   }
-  function normBins(a){
-    return Array.isArray(a) ? a.map((x,i)=>({id:String(x.id??('b'+(i+1))), label:String(x.label??x??'')})).filter(x=>x.label) : [];
-  }
-  function css(s){ return String(s).replace(/"/g,'\\"'); }
 }

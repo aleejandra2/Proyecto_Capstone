@@ -1,113 +1,126 @@
-// cloze.js — Texto con [[huecos]] y banco de opciones
+// cloze.js — Rellenar huecos con banco de opciones, drag & drop y SFX
 export default async function initCloze(host, cfg = {}) {
-  const norm = (s)=>String(s??'').trim();
-  const unaccent = (s)=>norm(s).normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
-
-  const text = String(cfg.text ?? "");
-  const blanks = cfg.blanks || {};
-  if (!text || !Object.keys(blanks).length) {
-    host.innerHTML = `<div class="alert alert-warning" data-game-rendered>Falta texto o configuración de huecos.</div>`;
+  const text = String(cfg.text || cfg.cloze || cfg.game_pairs || "").trim();
+  const bank = Array.isArray(cfg.bank) ? cfg.bank : parseBank(cfg.text || cfg.game_pairs || "");
+  if (!text) {
+    host.innerHTML = `<div class="alert alert-warning" data-game-rendered>Falta el texto con [huecos].</div>`;
     return false;
   }
+  const sfx = createSfx(cfg.sfx !== false);
 
-  host.innerHTML = "";
-  host.dataset.gameComplete = "false";
-  host.setAttribute("data-game-rendered","1");
-
-  const wrap = document.createElement("div");
-  wrap.className = "lv-card";
-  const content = document.createElement("div");
-  content.className = "cloze-text";
-
-  // Construye nodos: texto + controles
-  const parts = splitCloze(text);
-  parts.forEach(p=>{
-    if (p.kind === "text") {
-      const span = document.createElement("span"); span.textContent = p.value; content.appendChild(span);
+  // parse: [palabra] hueco
+  const tokens = []; const holes = [];
+  text.split(/(\[[^\]]+\])/g).forEach(tok => {
+    if (/^\[[^\]]+\]$/.test(tok)) {
+      const ans = tok.slice(1, -1).trim();
+      const id = holes.length;
+      holes.push(ans);
+      tokens.push({ type: "hole", id, ans });
     } else {
-      const key = p.key;
-      const cfgB = blanks[key] || {};
-      const opts = Array.isArray(cfgB.options) ? cfgB.options.slice() : null;
-      const ans  = String(cfgB.answer ?? "");
-      const node = document.createElement(opts && opts.length ? "select" : "input");
-      node.className = "form-control d-inline-block mx-1";
-      node.style.width = "auto";
-      node.dataset.key = key;
-      if (opts && opts.length) {
-        node.innerHTML = `<option value="">—</option>` + opts.map(o=>`<option value="${esc(o)}">${o}</option>`).join("");
-      } else {
-        node.type = "text";
-        node.placeholder = "Respuesta";
-      }
-      content.appendChild(node);
+      if (tok) tokens.push({ type: "text", text: tok });
     }
   });
 
-  wrap.innerHTML = `
-    <div class="lv-header">
-      <div class="lv-title">Completa el texto</div>
-      <div class="lv-meta"><span class="pill">Huecos: ${Object.keys(blanks).length}</span></div>
-    </div>
-  `;
-  wrap.appendChild(content);
-  const actions = document.createElement("div");
-  actions.className = "d-flex gap-2 mt-2";
-  actions.innerHTML = `
-    <button class="btn btn-primary btn-sm" type="button" id="btnCheck">Validar</button>
-    <button class="btn btn-outline-secondary btn-sm" type="button" id="btnReset">Reiniciar</button>
-  `;
-  wrap.appendChild(actions);
+  const options = unique(bank.concat(holes)).filter(Boolean);
+  shuffle(options);
+
+  host.innerHTML = "";
+  host.dataset.gameComplete = "false";
+  host.setAttribute("data-game-rendered", "1");
+
+  const wrap = el("div", "cloze-wrap");
+  const p = el("p", "cloze-text");
+  tokens.forEach(t => {
+    if (t.type === "text") p.appendChild(document.createTextNode(t.text));
+    else {
+      const s = el("span", "cloze-hole", "_____"); s.dataset.id = String(t.id);
+      s.dataset.ans = t.ans;
+      s.addEventListener("dragover", ev => { ev.preventDefault(); s.classList.add("over"); });
+      s.addEventListener("dragleave", () => s.classList.remove("over"));
+      s.addEventListener("drop", ev => {
+        ev.preventDefault(); s.classList.remove("over");
+        const val = ev.dataTransfer.getData("text/plain");
+        s.textContent = val; s.dataset.value = val;
+        s.classList.add("filled");
+        sfx.flip();
+        check();
+      });
+      p.appendChild(s);
+    }
+  });
+
+  const bankBox = el("div", "cloze-bank");
+  options.forEach(opt => {
+    const b = el("button", "btn btn-light btn-sm me-2 mb-2", escapeHtml(opt));
+    b.type = "button"; b.draggable = true;
+    b.addEventListener("dragstart", ev => {
+      b.classList.add("dragging"); ev.dataTransfer.setData("text/plain", opt); sfx.flip();
+    });
+    b.addEventListener("dragend", () => b.classList.remove("dragging"));
+    b.addEventListener("click", () => {
+      const hole = wrap.querySelector(".cloze-hole:not(.filled)");
+      if (hole) { hole.textContent = opt; hole.dataset.value = opt; hole.classList.add("filled"); sfx.flip(); check(); }
+    });
+    bankBox.appendChild(b);
+  });
+
+  const reset = el("button", "btn btn-outline-secondary btn-sm mt-2", "Limpiar");
+  reset.type = "button";
+  reset.addEventListener("click", () => {
+    wrap.querySelectorAll(".cloze-hole").forEach(h => { h.textContent = "_____"; h.dataset.value = ""; h.classList.remove("filled", "ok", "bad"); });
+  });
+
+  wrap.appendChild(p);
+  wrap.appendChild(el("div", "small text-muted mt-2", "Arrastra o haz clic para completar los espacios."));
+  wrap.appendChild(bankBox);
+  wrap.appendChild(reset);
   host.appendChild(wrap);
 
-  actions.querySelector("#btnReset").addEventListener("click", ()=>{
-    wrap.querySelectorAll("select,input").forEach(x=>{ if (x.tagName==='SELECT') x.selectedIndex = 0; else x.value = ""; });
-    clearAlert(); setScore(0, Object.keys(blanks).length, 0); host.dataset.gameComplete="false";
-  });
-
-  actions.querySelector("#btnCheck").addEventListener("click", ()=>{
-    const nodes = [...wrap.querySelectorAll("select,input")];
-    let correct = 0, total = 0;
-    const detail = [];
-
-    nodes.forEach(n=>{
-      const key = n.dataset.key;
-      const cfgB = blanks[key] || {};
-      const ans  = String(cfgB.answer ?? "");
-      const val  = n.tagName === "SELECT" ? (n.value||"") : (n.value||"");
-      if (ans) {
-        total++;
-        if (unaccent(val) === unaccent(ans)) correct++;
-      }
-      detail.push({ key, value: val });
+  function check() {
+    const holesEls = Array.from(wrap.querySelectorAll(".cloze-hole"));
+    let correct = 0;
+    holesEls.forEach(h => {
+      const ok = (h.dataset.value || "").trim().toLowerCase() === (h.dataset.ans || "").trim().toLowerCase();
+      h.classList.toggle("ok", ok);
+      h.classList.toggle("bad", h.classList.contains("filled") && !ok);
+      if (ok) correct++;
     });
-
-    const ratio = total ? (correct/total) : 0;
-    setScore(correct, total, ratio);
-    showAlert(ratio >= 1 ? "¡Todo correcto! ✅" : `Correctos: ${correct}/${total}`, ratio>=1);
-
-    host.dataset.gameDetail  = JSON.stringify(detail);
-    host.dataset.gameCorrect = String(correct);
-    host.dataset.gameTotal   = String(total);
-    host.dataset.gameScore   = String(Math.max(0, Math.min(1, ratio)));
-    host.dataset.gameComplete= String(ratio >= 1 ? true : false);
-
-    if (ratio >= 1) addSuccessFlag();
-  });
-
-  function setScore(c,t,r){
-    host.dataset.gameCorrect = String(c||0);
-    host.dataset.gameTotal   = String(t||0);
-    host.dataset.gameScore   = String(Math.max(0, Math.min(1, r||0)));
+    if (correct === holesEls.length) {
+      host.dataset.gameComplete = "true";
+      host.dataset.gameCorrect = String(correct);
+      host.dataset.gameTotal = String(holesEls.length);
+      host.dataset.gameScore = "1";
+      sfx.ok(); confetti(host);
+    }
   }
-  function showAlert(msg, ok){ clearAlert(); const d=document.createElement('div'); d.className=`alert ${ok?'alert-success':'alert-info'} mt-2`; d.textContent=msg; wrap.appendChild(d); }
-  function clearAlert(){ const a=wrap.querySelector('.alert'); a&&a.remove(); }
-  function addSuccessFlag(){ const ok=document.createElement('div'); ok.className='alert alert-success d-none'; ok.textContent='OK'; host.appendChild(ok); }
 
-  function splitCloze(t){
-    const out=[]; let last=0; const rx=/\[\[(.+?)\]\]/g; let m;
-    while((m=rx.exec(t))){ if(m.index>last) out.push({kind:'text', value:t.slice(last,m.index)}); out.push({kind:'blank', key:m[1]}); last = m.index + m[0].length; }
-    if (last < t.length) out.push({kind:'text', value:t.slice(last)});
+  // helpers
+  function unique(arr) { return Array.from(new Set(arr)); }
+  function parseBank(text) {
+    const out = []; (text || "").split(/\r?\n/).forEach(ln => { ln = (ln || "").trim(); if (!ln) return; const p = ln.split("|").map(s => s.trim()); if (p.length >= 2) { out.push(p[0]); out.push(p[1]); } });
     return out;
   }
-  function esc(s){ return String(s).replace(/"/g,'&quot;'); }
+  function el(tag, cls, html) { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; }
+  function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
+  function shuffle(a) { return a.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(x => x[1]); }
+  function confetti(root) { const wrap = el("div", "confetti-wrap"); root.appendChild(wrap); for (let k = 0; k < 60; k++) { const p = el("i", "confetti"); p.style.setProperty("--tx", (Math.random() * 200 - 100).toFixed(0)); p.style.setProperty("--d", (0.6 + Math.random() * 0.8).toFixed(2) + "s"); p.style.left = (10 + Math.random() * 80).toFixed(0) + "%"; wrap.appendChild(p); } setTimeout(() => wrap.remove(), 1200); }
+  function createSfx(enabled = true) {
+    let ctx = null;
+    function beep(freq = 440, dur = 0.12, type = "sine", gain = 0.05) {
+      if (!enabled) return;
+      try {
+        ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = type; o.frequency.value = freq; g.gain.value = gain;
+        o.connect(g); g.connect(ctx.destination);
+        o.start(); o.stop(ctx.currentTime + dur);
+      } catch { }
+    }
+    return {
+      get enabled() { return enabled; }, set enabled(v) { enabled = !!v; },
+      flip() { beep(400, .07, "triangle", .04); },
+      ok() { beep(760, .10, "sine", .07); },
+      bad() { beep(180, .18, "sawtooth", .07); },
+    };
+  }
 }

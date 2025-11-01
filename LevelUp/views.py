@@ -17,6 +17,7 @@ from django.views.decorators.http import require_POST
 from django import forms
 from .rewards import compute_rewards, apply_rewards
 from django.templatetags.static import static
+from django.contrib.staticfiles import finders
 
 # Formularios de actividades
 
@@ -914,6 +915,55 @@ def portal_estudiante(request):
 # Misiones
 # =============================================================
 
+def _load_static_map(path):
+    """Intenta cargar el JSON del static map; si falla devuelve plantilla base."""
+    try:
+        real = finders.find(path)
+        if real:
+            with open(real, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    # mapa base simple por defecto
+    return {"name": "default", "questions": []}
+
+@login_required
+def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
+    """
+    Devuelve JSON del mapa. Si se pasa actividad_pk, inyecta las preguntas
+    definidas en los ItemActividad (tipo 'game') dentro del mapa.
+    """
+    # carga mapa base según slug/nivel o usa el primer mapa por defecto
+    default_map = MAPS.get((slug, nivel)) if slug and nivel else next(iter(MAPS.values()))
+    base = _load_static_map(default_map)
+
+    # si se pidió una actividad concreta, intenta inyectarle items tipo 'game'
+    if actividad_pk:
+        try:
+            act = Actividad.objects.get(pk=int(actividad_pk))
+            items = act.items.filter(tipo__iexact="game")
+            questions = []
+            for it in items:
+                # suponemos que it.datos es JSON con keys relevantes: question/options/answer...
+                datos = it.datos or {}
+                q = {
+                    "id": it.pk,
+                    "title": datos.get("title") or it.enunciado or datos.get("question"),
+                    "payload": datos,          # todo dato adicional que necesite el front
+                    "puntaje": it.puntaje or 0,
+                }
+                questions.append(q)
+            # asegurarse de que la clave questions exista
+            new_map = dict(base)
+            new_map["questions"] = questions
+            new_map["actividad_id"] = act.pk
+            return JsonResponse(new_map, safe=False)
+        except Actividad.DoesNotExist:
+            return JsonResponse({"error": "Actividad no encontrada"}, status=404)
+
+    # Sin actividad, devolver el mapa base
+    return JsonResponse(base, safe=False)
+
 # Mapeo simple: (mundo, nivel) -> archivo de mapa (dentro de static)
 MAPS = {
     ("bosque", 1): "LevelUp/maps/escenario1.json",
@@ -923,9 +973,15 @@ MAPS = {
 }
 
 def misiones_jugar(request, slug, nivel):
-    # busca el mapa o usa uno por defecto
-    map_path = MAPS.get((slug, nivel), "LevelUp/maps/escenario1.json")
-    map_url = static(map_path)
+    # Si se pasa ?actividad=PK, se usará el endpoint dinámico
+    actividad_pk = request.GET.get("actividad")
+    if actividad_pk:
+        # URL relativa al endpoint (agrega URLconf como en el siguiente bloque)
+        map_url = reverse("misiones_mapa_actividad", args=[actividad_pk])
+    else:
+        # busca el mapa o usa uno por defecto
+        map_path = MAPS.get((slug, int(nivel)), "LevelUp/maps/escenario1.json")
+        map_url = static(map_path)
     return render(request, "LevelUp/misiones/jugar.html", {
         "map_url": map_url,
         "mundo": slug,
