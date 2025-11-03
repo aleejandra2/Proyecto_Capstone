@@ -108,15 +108,24 @@
         <div class="alert alert-danger">{{ f.non_field_errors }}</div>
         {% endif %}
 
-        <div class="feature-card activity-card mb-3 item-form" data-form-index="{{ forloop.counter0 }}">
+        <div class="feature-card activity-card mb-3 item-form" data-item-form data-form-index="{{ forloop.counter0 }}">
           <div class="card-body p-0 border-0">
             {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
 
-            <div class="row g-3">
-              <div class="col-md-3">
-                <label class="form-label" for="{{ f.puntaje.id_for_label }}">Puntaje</label>
-                {{ f.puntaje }} {{ f.puntaje.errors }}
-              </div>
+            <div class="col-md-3">
+              <label class="form-label">Tipo de ítem</label>
+              {{ f.tipo }} {{ f.tipo.errors }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="{{ f.puntaje.id_for_label }}">Puntaje</label>
+              {{ f.puntaje }} {{ f.puntaje.errors }}
+            </div>
+
+            <div class="small text-muted mb-2">
+              QID sugerido: <code>{{ forloop.counter }}</code>
+              {% if f.instance.pk %}<span class="ms-2">Item PK: {{ f.instance.pk }}</span>{% endif %}
+              <button type="button" class="btn btn-xs btn-outline-secondary ms-2 gb-copy-qid"
+                data-qid="{{ forloop.counter }}">Copiar QID</button>
             </div>
 
             <div class="row g-3 mt-1 align-items-end">
@@ -173,13 +182,13 @@
       {# =================== Template del empty_form =================== #}
       <template id="empty-form-template">
         {% with ef=formset.empty_form %}
-        <div class="feature-card activity-card mb-3 item-form" data-form-index="__prefix__">
+        <div class="feature-card activity-card mb-3 item-form" data-item-form data-form-index="__prefix__">
           <div class="card-body p-0 border-0">
             {% for hidden in ef.hidden_fields %}{{ hidden }}{% endfor %}
 
             <div class="row g-3">
               <div class="col-md-3">
-                <label class="form-label">Puntaje</label>{{ ef.puntaje }}
+                <div class="col-md-3"><label class="form-label">Puntaje</label>{{ ef.puntaje }}</div>
               </div>
             </div>
 
@@ -233,6 +242,12 @@
         <button class="btn btn-primary" type="submit" name="accion" value="guardar_y_asignar">Guardar y
           asignar…</button>
         {% endif %}
+        {% if editar and act %}
+        <a class="btn btn-dark" target="_blank" href="{% url 'misiones_jugar' 'bosque' 1 %}?actividad={{ act.pk }}">
+          Vista previa del juego
+        </a>
+        {% endif %}
+
 
         <button class="btn btn-outline-secondary" type="button" id="btn-preview" data-bs-toggle="modal"
           data-bs-target="#previewModal">Vista previa</button>
@@ -310,4 +325,75 @@
 <script src="{% static 'LevelUp/js/actividad_formset.js' %}"></script>
 <script src="{% static 'LevelUp/js/game_builder_helper.js' %}"></script>
 <script src="{% static 'LevelUp/js/actividad_preview.js' %}"></script>
+
+<script>
+  // (a) Auto-abrir el modal "Asignar" si vienes con ?open=asignar o abrir_asignar=True
+  document.addEventListener("DOMContentLoaded", () => {
+    const params = new URLSearchParams(location.search);
+    const fromQuery = params.get("open") === "asignar";
+    const abrir = "{{ abrir_asignar|default_if_none:'' }}"; // "True" / "1" / ""
+    const fromCtx = (abrir === "True" || abrir === "1");
+    if (fromQuery || fromCtx) {
+      const m = document.getElementById("asignarModal");
+      if (m && window.bootstrap && typeof window.bootstrap.Modal === "function") {
+        new bootstrap.Modal(m).show();
+      }
+    }
+  });
+</script>
+
+{% if editar and act %}
+<script>
+  // (b) Fijar el "Tipo de actividad" en JUEGO cuando es misión (evita que lo cambien)
+  document.addEventListener("DOMContentLoaded", () => {
+    const tipoActual = "{{ act.tipo|default_if_none:'' }}".toLowerCase();
+    if (tipoActual === "game") {
+      let sel = document.getElementById("{{ form.tipo.id_for_label }}");
+      if (!sel) sel = document.querySelector('[name="{{ form.tipo.html_name }}"]');
+
+      if (sel) {
+        sel.setAttribute("disabled", "disabled");
+        const hidden = document.createElement("input");
+        hidden.type = "hidden";
+        hidden.name = "{{ form.tipo.html_name }}";
+        hidden.value = sel.value || "game";
+        sel.closest("form").appendChild(hidden);
+      }
+    }
+  });
+</script>
+
+<script>
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".gb-copy-qid");
+    if (!btn) return;
+    const qid = btn.getAttribute("data-qid") || "";
+    navigator.clipboard.writeText(qid).then(() => {
+      btn.textContent = "Copiado ✓";
+      setTimeout(() => btn.textContent = "Copiar QID", 1200);
+    });
+  });
+</script>
+<script>
+  document.addEventListener("change", (e) => {
+    if (!e.target.matches('select[name$="-tipo"]')) return;
+    const wrap = e.target.closest("[data-item-form]") || e.target.closest(".lv-item") || e.target.closest(".card");
+    if (!wrap) return;
+    const area = wrap.querySelector('textarea[name$="-game_pairs"]');
+    if (!area) return;
+
+    if (e.target.value === "game_config" && !area.value.trim()) {
+      area.value = JSON.stringify({
+        fallback_q: "Si falta alguna, usa esta pregunta",
+        fallback_opts: ["A", "B", "C"],
+        fallback_correct: 1,   // 0=A, 1=B, 2=C
+        mapping_mode: "index"  // "id" o "index"
+      }, null, 2);
+    }
+  });
+</script>
+
+
+{% endif %}
+
 {% endblock %}

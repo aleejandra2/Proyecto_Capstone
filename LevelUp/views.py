@@ -1,55 +1,54 @@
-﻿from django.shortcuts import render, redirect, get_object_or_404
+﻿# LevelUp/views.py
+from __future__ import annotations
+import json
+from django.views.decorators.clickjacking import xframe_options_exempt
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, Http404, HttpResponseForbidden, JsonResponse, HttpResponseBadRequest
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
-from django.contrib.auth import update_session_auth_hash
-from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
-from django.db import transaction, models
-import json
+from django.db import transaction
 from django.db.models import Count, Q
-from .forms import RegistrationForm, LoginForm, ProfileForm
-from .forms import ActividadForm, ItemFormSet
+from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.views.decorators.http import require_POST
-from django import forms
-from .rewards import compute_rewards, apply_rewards
 from django.templatetags.static import static
 from django.contrib.staticfiles import finders
 
-# Formularios de actividades
+from .forms import RegistrationForm, LoginForm, ProfileForm, ActividadForm, ItemForm
+from .rewards import compute_rewards, apply_rewards
 
 
 # Modelos
 from .models import (
-    Asignatura, Estudiante, Docente, Actividad, AsignacionActividad,
-    ItemActividad, Submission, Answer, Usuario,
-    Matricula, GrupoRefuerzoNivelAlumno, GrupoRefuerzoNivel, NIVELES, Curso
+    Usuario, Asignatura, Estudiante, Docente, Actividad, AsignacionActividad,
+    ItemActividad, Submission, Answer, Matricula,
+    GrupoRefuerzoNivelAlumno, GrupoRefuerzoNivel, NIVELES, Curso,
+    # Si tienes este modelo en tu app:
+    # AsignacionDocente,
 )
+
+User = get_user_model()
 
 # -------------------------------------------------------------------
 # Helpers de rol
 # -------------------------------------------------------------------
 def es_docente(user) -> bool:
-    # En tu proyecto request.user es Usuario (custom) y tiene 'rol'
     return getattr(user, "rol", None) == Usuario.Rol.DOCENTE
 
 def es_estudiante(user) -> bool:
     return getattr(user, "rol", None) == Usuario.Rol.ESTUDIANTE
 
-
 # -------------------------------------------------------------------
 # Home pública (sin login)
 # -------------------------------------------------------------------
 def home(request):
-    # Renderiza una homepage simple (puedes poner tu landing aquÃ­)
     return render(request, "LevelUp/home.html")
 
-
 # -------------------------------------------------------------------
-# Catalogo / Ranking / Reportes (con login)
+# Catálogo / Ranking / Reportes (con login)
 # -------------------------------------------------------------------
 @login_required
 def actividades_view(request):
@@ -70,28 +69,24 @@ def reportes_docente_view(request):
         "total_actividades": total_actividades
     })
 
-
-User = get_user_model()
-
+# -------------------------------------------------------------------
+# Auth
+# -------------------------------------------------------------------
 def register_view(request):
     if request.method == "POST":
         form = RegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
             login(request, user)
-            messages.success(request, "¡Cuenta creada con Ã©xito! Bienvenido/a a LevelUp.")
-            # â¬‡â¬‡ redirige al portal por rol
+            messages.success(request, "¡Cuenta creada con éxito! Bienvenido/a a LevelUp.")
             return redirect("dashboard")
-        else:
-            messages.error(request, "Por favor corrige los errores del formulario.")
+        messages.error(request, "Por favor corrige los errores del formulario.")
     else:
         form = RegistrationForm()
     return render(request, "LevelUp/auth/register.html", {"form": form})
 
-
 def login_view(request):
     if request.user.is_authenticated:
-        # si ya está logueado, al portal por rol
         return redirect("dashboard")
 
     if request.method == "POST":
@@ -100,7 +95,6 @@ def login_view(request):
             email = form.cleaned_data["email"].lower()
             password = form.cleaned_data["password"]
             remember = form.cleaned_data.get("remember")
-
             try:
                 user_obj = User.objects.get(email=email)
                 user = authenticate(request, username=user_obj.username, password=password)
@@ -111,16 +105,12 @@ def login_view(request):
                 login(request, user)
                 if not remember:
                     request.session.set_expiry(0)
-                messages.success(request, f"Â¡Hola {user.first_name or user.username}!")
-                # al portal por rol
+                messages.success(request, f"¡Hola {user.first_name or user.username}!")
                 return redirect("dashboard")
-            else:
-                messages.error(request, "Credenciales inválidas. Verifica tu email y contraseÃ±a.")
+            messages.error(request, "Credenciales inválidas. Verifica tu email y contraseña.")
     else:
         form = LoginForm()
-
     return render(request, "LevelUp/auth/login.html", {"form": form})
-
 
 @login_required
 def logout_view(request):
@@ -128,16 +118,11 @@ def logout_view(request):
     messages.info(request, "Sesión cerrada correctamente.")
     return redirect("login")
 
-
 # -------------------------------------------------------------------
-# Portal por rol (ahora en /inicio/)
+# Portal por rol (/inicio/)
 # -------------------------------------------------------------------
 @login_required(login_url='login')
 def home_view(request):
-    """
-    Enruta a una plantilla distinta según el rol del usuario
-    y arma el contexto básico de cada portal.
-    """
     rol = getattr(request.user, "rol", None)
     ctx = {}
 
@@ -151,9 +136,7 @@ def home_view(request):
         try:
             est = Estudiante.objects.select_related("usuario").get(usuario=request.user)
             ctx.update({
-                "nivel": est.nivel,
-                "puntos": est.puntos,
-                "medallas": est.medallas,
+                "nivel": est.nivel, "puntos": est.puntos, "medallas": est.medallas,
                 "curso": getattr(est, "curso", "Sin curso"),
             })
         except Estudiante.DoesNotExist:
@@ -164,7 +147,7 @@ def home_view(request):
         ctx.update({
             "total_estudiantes": Estudiante.objects.count(),
             "total_actividades": Actividad.objects.count(),
-            "promedio_general": "â€”",
+            "promedio_general": "—",
             "dias_activos": 7,
         })
 
@@ -179,43 +162,36 @@ def home_view(request):
     template = template_by_role.get(rol, "LevelUp/portal/estudiante.html")
     return render(request, template, ctx)
 
-
-
 # -------------------------------------------------------------------
-# PERFIL 
+# Perfil
 # -------------------------------------------------------------------
 @login_required
 def perfil_view(request):
-    """Resumen del perfil del usuario."""
     return render(request, "LevelUp/perfil/ver.html", {"user_obj": request.user})
 
 @login_required
 def perfil_editar_view(request):
-    """Editar datos basicos del perfil (nombre, apellido, email, RUT)."""
     if request.method == "POST":
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, "Perfil actualizado correctamente.")
             return redirect("perfil")
-        else:
-            messages.error(request, "Revisa los campos del formulario.")
+        messages.error(request, "Revisa los campos del formulario.")
     else:
         form = ProfileForm(instance=request.user)
     return render(request, "LevelUp/perfil/editar.html", {"form": form})
 
 @login_required
 def cambiar_password_view(request):
-    """Cambiar contraseñaa (mantiene la sesión activa al cambiarla)."""
     if request.method == "POST":
         form = PasswordChangeForm(user=request.user, data=request.POST)
         if form.is_valid():
             user = form.save()
-            update_session_auth_hash(request, user)  # mantener sesiÃ³n
-            messages.success(request, "Tu contraseÃ±a fue actualizada.")
+            update_session_auth_hash(request, user)
+            messages.success(request, "Tu contraseña fue actualizada.")
             return redirect("perfil")
-        else:
-            messages.error(request, "Corrige los errores e inténtalo nuevamente.")
+        messages.error(request, "Corrige los errores e inténtalo nuevamente.")
     else:
         form = PasswordChangeForm(user=request.user)
     return render(request, "LevelUp/perfil/cambiar_password.html", {"form": form})
@@ -224,43 +200,24 @@ def cambiar_password_view(request):
 # Flujo de Actividades (Docente y Estudiante)
 # ===================================================================
 
-# -----------------------
-# Docente
-# -----------------------
-# imports usuales
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect, get_object_or_404
-
-# importa tus modelos
-from .models import Docente, Actividad, AsignacionDocente
-
-
 @login_required
 def actividades_docente_lista(request):
+    if not es_docente(request.user):
+        raise Http404
     docente = Docente.objects.filter(usuario=request.user).first()
 
-    # Base: actividades creadas por el docente
-    qs = (Actividad.objects
-          .select_related("docente", "asignatura")
-          .order_by("-id"))
+    qs = (Actividad.objects.select_related("docente", "asignatura").order_by("-id"))
     if docente:
         qs = qs.filter(docente=docente)
 
-    # Detecta la asignatura "propia" del docente
+    # Si tienes AsignacionDocente, puedes detectar asignatura del profe:
+    # from .models import AsignacionDocente
+    # rels = AsignacionDocente.objects.filter(profesor=request.user).select_related("asignatura")
+    # asignatura_prof = rels.first().asignatura if rels.count() == 1 else None
     asignatura_prof = None
-    rels = AsignacionDocente.objects.filter(
-        profesor=request.user
-    ).select_related("asignatura")
+    if docente and getattr(docente, "asignatura", None):
+        asignatura_prof = Asignatura.objects.filter(nombre__iexact=docente.asignatura.strip()).first()
 
-    if rels.count() == 1:
-        asignatura_prof = rels.first().asignatura
-    elif docente and docente.asignatura:
-        asignatura_prof = Asignatura.objects.filter(
-            nombre__iexact=docente.asignatura.strip()
-        ).first()
-
-    # Si la encontramos, filtramos por ella
     if asignatura_prof:
         qs = qs.filter(asignatura=asignatura_prof)
 
@@ -269,10 +226,29 @@ def actividades_docente_lista(request):
         "asignatura_prof": asignatura_prof,
     })
 
+# -----------------------
+# Formset para ítems GAME
+# -----------------------
+class ItemInlineFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        for form in self.forms:
+            if form.cleaned_data.get("DELETE"):
+                # Evita que errores de forms marcados para borrar bloqueen el guardado
+                form._errors.clear()
+
+ItemFormSet = inlineformset_factory(
+    Actividad, ItemActividad,
+    form=ItemForm,
+    formset=ItemInlineFormSet,
+    fields=("tipo", "enunciado", "puntaje"),  # agrega "orden" si tu modelo lo tiene
+    extra=1,
+    can_delete=True,
+)
+
 @login_required
 def actividad_crear(request):
-    # Solo docentes
-    if getattr(request.user, "rol", None) != "DOCENTE":
+    if not es_docente(request.user):
         raise Http404
 
     docente = get_object_or_404(Docente, usuario=request.user)
@@ -280,7 +256,7 @@ def actividad_crear(request):
     if request.method == "POST":
         form = ActividadForm(request.POST, request.FILES)
 
-        # formset contra un objeto "temporal" sin guardar (para validar campos)
+        # formset contra un objeto temporal para validar
         temp_act = Actividad(docente=docente)
         formset = ItemFormSet(request.POST, request.FILES, instance=temp_act, prefix="items")
 
@@ -288,12 +264,12 @@ def actividad_crear(request):
             with transaction.atomic():
                 act = form.save(commit=False)
                 act.docente = docente
-                if getattr(act, "es_publicada", False) and not getattr(act, "fecha_publicacion", None):
+                if act.es_publicada and not act.fecha_publicacion:
                     act.fecha_publicacion = timezone.now()
                 act.save()
                 form.save_m2m()
 
-                # ahora sÃ­, asociamos y guardamos los Ã­tems
+                # ahora sí, asociamos y guardamos los ítems
                 formset.instance = act
                 formset.save()
 
@@ -303,11 +279,10 @@ def actividad_crear(request):
                 return redirect(f"/actividades/docente/{act.pk}/editar/?open=asignar")
 
             return redirect("docente_lista")
-        else:
-            messages.error(request, "Revisa los errores en el formulario y los í­tems.")
+        messages.error(request, "Revisa los errores en el formulario y los ítems.")
     else:
         form = ActividadForm()
-        temp_act = Actividad(docente=docente)              # <-- agrega esto
+        temp_act = Actividad(docente=docente)
         formset = ItemFormSet(instance=temp_act, prefix="items")
 
     ctx = {
@@ -324,41 +299,38 @@ def actividad_crear(request):
 
 @login_required
 def actividad_editar(request, pk):
-    # Solo docentes
-    if getattr(request.user, "rol", None) != "DOCENTE":
+    if not es_docente(request.user):
         raise Http404
 
     docente = get_object_or_404(Docente, usuario=request.user)
     act = get_object_or_404(Actividad, pk=pk, docente=docente)
 
+    # SOLO ítems tipo 'game'
+    qs_items = ItemActividad.objects.filter(actividad=act, tipo__in=["game", "game_config"]).order_by("orden", "id") 
+
     if request.method == "POST":
         form = ActividadForm(request.POST, request.FILES, instance=act)
-        formset = ItemFormSet(request.POST, request.FILES, instance=act, prefix="items")
-
+        formset = ItemFormSet(request.POST, request.FILES, instance=act, prefix="items", queryset=qs_items)
         if form.is_valid() and formset.is_valid():
             with transaction.atomic():
                 obj = form.save(commit=False)
                 obj.docente = docente
-                if getattr(obj, "es_publicada", False) and not getattr(obj, "fecha_publicacion", None):
+                if obj.es_publicada and not obj.fecha_publicacion:
                     obj.fecha_publicacion = timezone.now()
                 obj.save()
                 form.save_m2m()
                 formset.save()
-
             messages.success(request, "Actividad actualizada.")
             return redirect("docente_lista")
-        else:
-            messages.error(request, "Revisa los errores en el formulario y los í­tems.")
+        messages.error(request, "Revisa los errores en el formulario y los ítems.")
     else:
         form = ActividadForm(instance=act)
-        formset = ItemFormSet(instance=act, prefix="items")
+        formset = ItemFormSet(instance=act, prefix="items", queryset=qs_items)
+        for f in formset.forms:
+            if not f.instance.pk:
+                f.fields["tipo"].initial = "game"
 
-    # Acepta ambos parametros para abrir el modal
-    abrir_asignar = (
-        request.GET.get("open") == "asignar"
-    ) or (
-        request.GET.get("abrir_asignar") == "1"
-    )
+    abrir_asignar = (request.GET.get("open") == "asignar") or (request.GET.get("abrir_asignar") == "1")
 
     ctx = {
         "form": form,
@@ -366,77 +338,62 @@ def actividad_editar(request, pk):
         "editar": True,
         "act": act,
         "abrir_asignar": abrir_asignar,
+        # clave: flag para la plantilla (ocultar todo lo que no sea del juego)
+        "only_game": request.GET.get("only_game") in ("1","true","True"),
         "cursos": Curso.objects.all().order_by("nivel", "letra"),
-        "estudiantes": Estudiante.objects.select_related("usuario").order_by(
-            "usuario__first_name", "usuario__last_name"
-        ),
+        "estudiantes": Estudiante.objects.select_related("usuario").order_by("usuario__first_name", "usuario__last_name"),
     }
     return render(request, "LevelUp/actividades/actividad_form.html", ctx)
+
+
 
 @login_required
 @require_POST
 def actividad_asignar(request, pk):
-    # Solo docentes
-    if getattr(request.user, "rol", None) != "DOCENTE":
+    if not es_docente(request.user):
         raise Http404
 
     docente = get_object_or_404(Docente, usuario=request.user)
     act = get_object_or_404(Actividad, pk=pk, docente=docente)
 
-    # IDs que vienen del formulario
     cursos_ids = [int(x) for x in request.POST.getlist("cursos") if str(x).strip()]
     alumnos_usuario_ids = [int(x) for x in request.POST.getlist("alumnos") if str(x).strip()]
-    # "alumnos" envi­a Usuario.id (no Estudiante.id)
 
-    # 1) Junta todos los Usuario.id objetivo
     usuario_ids = set(alumnos_usuario_ids)
 
     if cursos_ids:
-        # Matricula.estudiante_id -> Usuario.id
         usuario_ids.update(
-            Matricula.objects
-            .filter(curso_id__in=cursos_ids)
-            .values_list("estudiante_id", flat=True)
+            Matricula.objects.filter(curso_id__in=cursos_ids).values_list("estudiante_id", flat=True)
         )
 
     if not usuario_ids:
         messages.warning(request, "Selecciona al menos un curso o un alumno.")
         return redirect(reverse("actividad_editar", args=[act.pk]) + "?open=asignar")
 
-    # 2) Limita a Estudiantes que EXISTEN (su PK = usuario_id)
     est_pks = set(
-        Estudiante.objects
-        .filter(usuario_id__in=usuario_ids)
-        .values_list("usuario_id", flat=True)   # <-- PK de Estudiante
+        Estudiante.objects.filter(usuario_id__in=usuario_ids).values_list("usuario_id", flat=True)
     )
 
     if not est_pks:
-        messages.warning(request, "No se encontraron perfiles de estudiante para la selecciÃ³n.")
+        messages.warning(request, "No se encontraron perfiles de estudiante para la selección.")
         return redirect(reverse("actividad_editar", args=[act.pk]) + "?open=asignar")
 
-    # 3) Crea asignaciones evitando duplicados
     creadas = existentes = 0
     for est_pk in est_pks:
         _, created = AsignacionActividad.objects.get_or_create(
             actividad=act,
-            estudiante_id=est_pk,  # FK directa al PK de Estudiante (usuario_id)
+            estudiante_id=est_pk,  # FK a Estudiante (pk == usuario_id en tu modelo)
         )
-        if created:
-            creadas += 1
-        else:
-            existentes += 1
+        creadas += 1 if created else 0
+        existentes += 0 if created else 1
 
-    messages.success(
-        request,
-        f"Actividad asignada: {creadas} nuevas, {existentes} ya existí­an."
-    )
+    messages.success(request, f"Actividad asignada: {creadas} nuevas, {existentes} ya existían.")
     return redirect(reverse("actividad_editar", args=[act.pk]) + "?open=asignar")
 
 @login_required
 def actividad_eliminar(request, pk):
     a = get_object_or_404(Actividad, pk=pk)
 
-    # Chequeo básico de pertenencia/permiso: adapta al campo correcto (docente/creador/autor)
     owner_ok = (
         (hasattr(a, "docente") and a.docente_id == request.user.id) or
         (hasattr(a, "creador") and getattr(a, "creador_id", None) == request.user.id) or
@@ -449,38 +406,25 @@ def actividad_eliminar(request, pk):
         titulo = a.titulo
         a.delete()
         messages.success(request, f"Actividad «{titulo}» eliminada.")
-        # Ajusta el nombre del listado si es distinto
         return redirect("docente_lista")
 
-    # Si llegan por GET, muestra confirmación (opcional)
     return render(request, "LevelUp/actividades/confirmar_eliminar.html", {"a": a})
 
 # -----------------------
-# Helpers de corrección (estudiante) 
+# Helpers de corrección (estudiante)
 # -----------------------
 def _post_bool(v):
     return str(v).lower() in ("true", "1", "on", "si", "sí")
 
 def _grade_game(item, POST):
-    """
-    Evalúa un ítem 'game' a partir de valores enviados desde el front.
-    Campos esperados (opcionales):
-      - item_{id}_completado: 'true'/'false'
-      - item_{id}_score: float 0..1 (si no viene, usa 1.0 si completado)
-      - item_{id}_correctas / item_{id}_total (solo para juegos que lo reportan)
-      - item_{id}_detail: JSON con telemetría adicional
-    """
     base = f"item_{item.pk}"
     done = _post_bool(POST.get(f"{base}_completado", True))
-
-    # ratio 0..1 (si no viene, 1.0 si completado; 0.0 en caso contrario)
     try:
         ratio = float(POST.get(f"{base}_score", ""))
     except Exception:
         ratio = 1.0 if done else 0.0
     ratio = max(0.0, min(1.0, ratio))
 
-    # opcionales
     try:
         corr = int(float(POST.get(f"{base}_correctas", "0") or 0))
     except Exception:
@@ -496,20 +440,12 @@ def _grade_game(item, POST):
     except Exception:
         detail = None
 
-    payload = {
-        "completado": done,
-        "score": ratio,
-        "kind": (item.datos or {}).get("kind"),
-    }
-    if detail is not None:
-        payload["detail"] = detail
-    if corr is not None:
-        payload["correctas"] = corr
-    if tot is not None:
-        payload["total"] = tot
+    payload = {"completado": done, "score": ratio, "kind": (item.datos or {}).get("kind")}
+    if detail is not None: payload["detail"] = detail
+    if corr   is not None: payload["correctas"] = corr
+    if tot    is not None: payload["total"] = tot
 
     return (ratio >= 1.0), payload, ratio
-
 
 # -----------------------
 # Estudiante
@@ -520,7 +456,6 @@ def estudiante_mis_actividades(request):
         raise Http404
     estudiante = get_object_or_404(Estudiante, usuario=request.user)
 
-    # Solo PUBLICADAS y ASIGNADAS al estudiante
     act_qs = (
         Actividad.objects
         .filter(es_publicada=True, asignacionactividad__estudiante=estudiante)
@@ -528,7 +463,6 @@ def estudiante_mis_actividades(request):
         .order_by("-fecha_publicacion", "-id")
     )
 
-    # Conteos de intentos por actividad para este estudiante
     subs_counts = (
         Submission.objects
         .filter(estudiante=estudiante, actividad__in=act_qs)
@@ -541,7 +475,6 @@ def estudiante_mis_actividades(request):
     )
     counts_map = {row["actividad"]: row for row in subs_counts}
 
-    # Overrides de intentos por alumno (AsignacionActividad.intentos_permitidos)
     overrides = (
         AsignacionActividad.objects
         .filter(estudiante=estudiante, actividad__in=act_qs)
@@ -550,58 +483,44 @@ def estudiante_mis_actividades(request):
     ov_map = {r["actividad_id"]: r["intentos_permitidos"] for r in overrides if r["intentos_permitidos"]}
 
     now = timezone.now()
-    rows = []
-    grupos = {}
+    rows, grupos = [], {}
     for a in act_qs:
         c = counts_map.get(a.id, {"total": 0, "abiertos": 0, "finalizados": 0})
-        usados = int(c["total"])
-        abiertos = int(c["abiertos"])
-        finalizados = int(c["finalizados"])
-
+        usados, abiertos, finalizados = int(c["total"]), int(c["abiertos"]), int(c["finalizados"])
         cerrada = bool(a.fecha_cierre and now > a.fecha_cierre)
         max_for_student = ov_map.get(a.id) or (a.intentos_max or 1)
-
-        # Puede intentar si estÃ¡ abierta y no agotÃ³ intentos
         puede_intentar = (not cerrada) and (usados < max_for_student)
         tiene_abierto = abiertos > 0
         tiene_resultados = finalizados > 0
 
-        row = {
-            "a": a,
-            "usados": usados,
-            "max": max_for_student,
-            "tiene_abierto": tiene_abierto,
-            "puede_intentar": puede_intentar,
-            "tiene_resultados": tiene_resultados,
-            "cerrada": cerrada,
-        }
         try:
             asignatura_nombre = getattr(a.docente, "asignatura", None)
         except Exception:
             asignatura_nombre = None
         if not asignatura_nombre:
             asignatura_nombre = "Asignatura"
-        row["asignatura"] = asignatura_nombre
+
+        row = {
+            "a": a, "usados": usados, "max": max_for_student,
+            "tiene_abierto": tiene_abierto, "puede_intentar": puede_intentar,
+            "tiene_resultados": tiene_resultados, "cerrada": cerrada,
+            "asignatura": asignatura_nombre,
+        }
         rows.append(row)
         grupos.setdefault(asignatura_nombre, []).append(row)
 
     return render(
         request,
         "LevelUp/actividades/estudiante_lista.html",
-        {
-            "rows": rows,
-            "actividades": [r["a"] for r in rows],
-            "grupos": [{"asignatura": k, "rows": v} for k, v in grupos.items()],
-        }
+        {"rows": rows, "actividades": [r["a"] for r in rows],
+         "grupos": [{"asignatura": k, "rows": v} for k, v in grupos.items()]}
     )
 
 @login_required
 def actividad_resolver(request, pk):
     return redirect("resolver_play", pk=pk)
 
-
 def _letra(i):
-    # 0->A, 1->B...
     try:
         i = int(i)
     except Exception:
@@ -616,16 +535,12 @@ def actividad_resultados(request, pk):
     estudiante = get_object_or_404(Estudiante, usuario=request.user)
     act = get_object_or_404(Actividad, pk=pk)
 
-    # ultimo intento por defecto; permite ?intento=2 para ver uno especi­fico
     intento_qs = Submission.objects.filter(
         actividad=act, estudiante=estudiante, finalizado=True
     ).order_by("-intento", "-id")
 
     if not intento_qs.exists():
-        # Si nunca ha enviado, no hay resultados; redirige a resolver si tiene intento abierto
-        if Submission.objects.filter(
-            actividad=act, estudiante=estudiante, finalizado=False
-        ).exists():
+        if Submission.objects.filter(actividad=act, estudiante=estudiante, finalizado=False).exists():
             return redirect("resolver_play", pk=act.pk)
         messages.info(request, "Aún no has enviado esta actividad.")
         return redirect("resolver_play", pk=act.pk)
@@ -636,21 +551,18 @@ def actividad_resultados(request, pk):
     else:
         sub = intento_qs.first()
 
-        items_data = []
-    for item in act.items.all():
+    items_data = []
+    for item in act.items.all():  # requiere related_name="items" en ItemActividad
         tipo = (item.tipo or "").lower()
         ans = Answer.objects.filter(submission=sub, item=item).first()
         respuesta = ans.respuesta if ans else {}
-        correcto = bool(ans.es_correcta) if ans else False
+        correcto = bool(getattr(ans, "es_correcta", False)) if ans else False
 
         detalle = {
-            "tipo": tipo,
-            "correcto": correcto,
-            "puntaje": item.puntaje,
-            "obtenido": ans.puntaje_obtenido if ans else 0,
+            "tipo": tipo, "correcto": correcto,
+            "puntaje": item.puntaje, "obtenido": getattr(ans, "puntaje_obtenido", 0) if ans else 0,
         }
 
-        # Único flujo soportado: 'game'
         if tipo == "game":
             comp = bool(respuesta.get("completado", True))
             try:
@@ -661,29 +573,18 @@ def actividad_resultados(request, pk):
             tot  = respuesta.get("total")
             inc  = (tot - corr) if (isinstance(corr, (int, float)) and isinstance(tot, (int, float))) else None
             detalle.update({
-                "completado": comp,
-                "score": score,
-                "correctas": corr,
-                "total": tot,
-                "incorrectas": inc,
-                "kind": respuesta.get("kind"),
-                "detail": respuesta.get("detail"),
+                "completado": comp, "score": score, "correctas": corr, "total": tot,
+                "incorrectas": inc, "kind": respuesta.get("kind"), "detail": respuesta.get("detail"),
             })
         else:
-            # Cualquier otro tipo (residual) se muestra crudo
             detalle.update({"respuesta": respuesta})
 
         items_data.append({"item": item, "detalle": detalle})
 
-    # Intentos usados / máximo y lógica de reintento SOLO si no está cerrada
     intentos_usados = Submission.objects.filter(actividad=act, estudiante=estudiante).count()
     intentos_max = act.intentos_max
     now = timezone.now()
-    puede_reintentar = (
-        act.es_publicada
-        and (not act.fecha_cierre or now <= act.fecha_cierre)
-        and intentos_usados < intentos_max
-    )
+    puede_reintentar = act.es_publicada and (not act.fecha_cierre or now <= act.fecha_cierre) and intentos_usados < intentos_max
 
     return render(request, "LevelUp/actividades/estudiante_resultados.html", {
         "actividad": act,
@@ -701,22 +602,18 @@ def actividad_resultados(request, pk):
 
 @login_required
 def actividad_play(request, pk):
-    """Vista interactiva tipo juego: un i­tem a la vez con feedback inmediato via AJAX."""
     if not es_estudiante(request.user):
         raise Http404
     estudiante = get_object_or_404(Estudiante, usuario=request.user)
     act = get_object_or_404(Actividad, pk=pk, es_publicada=True)
 
-    # Validar asignación
     if not AsignacionActividad.objects.filter(estudiante=estudiante, actividad=act).exists():
         raise Http404
 
-    # Cierre
     if act.fecha_cierre and timezone.now() > act.fecha_cierre:
         messages.warning(request, "La actividad está cerrada.")
         return redirect("estudiante_lista")
 
-    # Intentos
     intentos_usados = Submission.objects.filter(actividad=act, estudiante=estudiante).count()
     intentos_max = act.intentos_max or 1
     sub = (Submission.objects
@@ -726,35 +623,23 @@ def actividad_play(request, pk):
         if intentos_usados >= intentos_max:
             messages.info(request, "Ya no tienes intentos disponibles.")
             return redirect("resolver_resultado", pk=act.pk)
-        sub = Submission.objects.create(
-            actividad=act, estudiante=estudiante, intento=intentos_usados + 1
-        )
+        sub = Submission.objects.create(actividad=act, estudiante=estudiante, intento=intentos_usados + 1)
 
-    # Progreso actual
     items = list(act.items.all().values("id", "tipo", "enunciado", "datos", "puntaje"))
     respondidas_ids = set(Answer.objects.filter(submission=sub).values_list("item_id", flat=True))
     total = len(items)
-    hechas = sum(1 for i in respondidas_ids)
+    hechas = sum(1 for _ in respondidas_ids)
 
     return render(request, "LevelUp/actividades/play.html", {
-        "actividad": act,
-        "submission": sub,
-        "items": items,
-        "total_items": total,
-        "hechas": hechas,
+        "actividad": act, "submission": sub, "items": items,
+        "total_items": total, "hechas": hechas,
         "xp_total": act.xp_total or 0,
-        "intento_actual": sub.intento,
-        "intentos_max": intentos_max,
+        "intento_actual": sub.intento, "intentos_max": intentos_max,
     })
 
-
 def _eval_item(item, payload: dict):
-    """
-    Evalúa payload para 'game'. Los demás tipos ya no se usan.
-    """
     t = (item.tipo or "").lower()
     if t == "game":
-        # el front puede ya haber calculado ratio; si no, considera completado como éxito total
         try:
             ratio = float(payload.get("score", 1.0))
         except Exception:
@@ -764,37 +649,28 @@ def _eval_item(item, payload: dict):
         return (ratio >= 1.0), pts, {}
     return False, 0, {}
 
-
 @login_required
 @require_POST
 def api_item_answer(request, pk, item_id):
-    """
-    Recibe: {"payload": {"completado": true, "meta": {...}, "kind":"memory|dragmatch|trivia"}}
-    Guarda telemetrí­a en Submission.detalle y otorga XP/coins/desbloqueos.
-    """
     try:
         body = json.loads(request.body.decode("utf-8"))
     except Exception:
         return HttpResponseBadRequest("JSON inválido")
+
     payload = body.get("payload") or {}
     meta = payload.get("meta") or {}
     completado = bool(payload.get("completado"))
     kind = (payload.get("kind") or "").lower()
 
     actividad = get_object_or_404(Actividad, pk=pk)
-    try:
-        estudiante = Estudiante.objects.get(usuario=request.user)
-    except Estudiante.DoesNotExist:
-        return HttpResponseBadRequest("Solo estudiantes pueden responder")
+    estudiante = get_object_or_404(Estudiante, usuario=request.user)
 
-    # Obtiene o crea submission para esta actividad
     sub, _ = Submission.objects.get_or_create(
         actividad=actividad,
-        estudiante=request.user,  # si tu Submission usa Usuario
+        estudiante=estudiante,  # <<< FIX importante (no request.user)
         defaults={"started_at": timezone.now(), "detalle": {}}
     )
 
-    # Guarda telemetrí­a por i­tem
     detalle = sub.detalle or {}
     detalle[str(item_id)] = {
         "completado": completado,
@@ -804,14 +680,12 @@ def api_item_answer(request, pk, item_id):
     }
     sub.detalle = detalle
 
-    # puntajes básicos (opcional)
     sub.score = int(sub.score or 0) + int(meta.get("hits", meta.get("found", 0)) or 0) * 10
     sub.correctas = int(sub.correctas or 0) + int(meta.get("hits", meta.get("found", 0)) or 0)
     sub.incorrectas = int(sub.incorrectas or 0) + int(meta.get("misses", 0))
     sub.finished_at = timezone.now()
     sub.save()
 
-    # Recompensas
     outcome = compute_rewards(meta)
     res = apply_rewards(estudiante, outcome)
 
@@ -821,11 +695,9 @@ def api_item_answer(request, pk, item_id):
         "reward": {"xp": outcome.xp, "coins": outcome.coins, "unlocks": outcome.unlocks, **res},
     })
 
-
 @require_POST
 @login_required
 def api_item_hint(request, pk, item_id):
-    """Devuelve pista (si existe en datos.hint) para el item en modo play."""
     if not es_estudiante(request.user):
         return JsonResponse({"ok": False, "error": "No autorizado."}, status=403)
 
@@ -839,14 +711,10 @@ def api_item_hint(request, pk, item_id):
     hint = (item.datos or {}).get("hint") or "Piensa en los conceptos clave que viste en clase."
     return JsonResponse({"ok": True, "hint": hint})
 
-
 # -------------------------------------------------------------------
-# Portal estudiante (info de curso y docentes de refuerzo)
+# Portal estudiante (info curso y docentes de refuerzo)
 # -------------------------------------------------------------------
 def _nombre_docente(obj):
-    """
-    Devuelve un nombre bonito tanto si obj es Usuario como si es Docente (con .usuario).
-    """
     if not obj:
         return None
     usuario = getattr(obj, "usuario", None)
@@ -861,31 +729,21 @@ def _nombre_docente(obj):
 def portal_estudiante(request):
     u = request.user
 
-    # Curso actual (toma la matrÃ­cula mÃ¡s reciente)
-    matricula = (Matricula.objects
-                 .select_related("curso")
-                 .filter(estudiante=u)
-                 .order_by("-fecha")
-                 .first())
+    matricula = (Matricula.objects.select_related("curso").filter(estudiante=u).order_by("-fecha").first())
 
     curso_str = None
     if matricula and matricula.curso:
         c = matricula.curso
-        # Si Curso.nivel es choice, usa display; si es int, muestra nÃºmero:
         try:
             nivel_display = c.get_nivel_display()
         except Exception:
-            nivel_display = f"{c.nivel}A° Básico"
+            nivel_display = f"{c.nivel}° Básico"
         curso_str = f'{nivel_display} {c.letra}'
 
     docente_matematicas = None
     docente_ingles = None
 
-    # 1) Si el alumno está en un grupo de refuerzo, usamos ese grupo
-    gr_alum = (GrupoRefuerzoNivelAlumno.objects
-               .select_related("grupo")
-               .filter(alumno=u)
-               .first())
+    gr_alum = (GrupoRefuerzoNivelAlumno.objects.select_related("grupo").filter(alumno=u).first())
     if gr_alum and gr_alum.grupo:
         g = gr_alum.grupo
         dm = getattr(g, "docente_matematicas", None) or getattr(g, "profesor_matematicas", None)
@@ -893,7 +751,6 @@ def portal_estudiante(request):
         docente_matematicas = _nombre_docente(dm)
         docente_ingles = _nombre_docente(di)
 
-    # 2) Si no hay grupo del alumno, usa el grupo del nivel del curso (si existe)
     if (not docente_matematicas or not docente_ingles) and matricula and matricula.curso:
         g = GrupoRefuerzoNivel.objects.filter(nivel=matricula.curso.nivel).first()
         if g:
@@ -904,19 +761,13 @@ def portal_estudiante(request):
             if not docente_ingles:
                 docente_ingles = _nombre_docente(di)
 
-    context = {
-        "curso": curso_str,
-        "docente_matematicas": docente_matematicas,
-        "docente_ingles": docente_ingles,
-    }
+    context = {"curso": curso_str, "docente_matematicas": docente_matematicas, "docente_ingles": docente_ingles}
     return render(request, "LevelUp/estudiante_portal.html", context)
 
 # =============================================================
 # Misiones
 # =============================================================
-
 def _load_static_map(path):
-    """Intenta cargar el JSON del static map; si falla devuelve plantilla base."""
     try:
         real = finders.find(path)
         if real:
@@ -924,66 +775,216 @@ def _load_static_map(path):
                 return json.load(f)
     except Exception:
         pass
-    # mapa base simple por defecto
     return {"name": "default", "questions": []}
-
-@login_required
-def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
-    """
-    Devuelve JSON del mapa. Si se pasa actividad_pk, inyecta las preguntas
-    definidas en los ItemActividad (tipo 'game') dentro del mapa.
-    """
-    # carga mapa base según slug/nivel o usa el primer mapa por defecto
-    default_map = MAPS.get((slug, nivel)) if slug and nivel else next(iter(MAPS.values()))
-    base = _load_static_map(default_map)
-
-    # si se pidió una actividad concreta, intenta inyectarle items tipo 'game'
-    if actividad_pk:
-        try:
-            act = Actividad.objects.get(pk=int(actividad_pk))
-            items = act.items.filter(tipo__iexact="game")
-            questions = []
-            for it in items:
-                # suponemos que it.datos es JSON con keys relevantes: question/options/answer...
-                datos = it.datos or {}
-                q = {
-                    "id": it.pk,
-                    "title": datos.get("title") or it.enunciado or datos.get("question"),
-                    "payload": datos,          # todo dato adicional que necesite el front
-                    "puntaje": it.puntaje or 0,
-                }
-                questions.append(q)
-            # asegurarse de que la clave questions exista
-            new_map = dict(base)
-            new_map["questions"] = questions
-            new_map["actividad_id"] = act.pk
-            return JsonResponse(new_map, safe=False)
-        except Actividad.DoesNotExist:
-            return JsonResponse({"error": "Actividad no encontrada"}, status=404)
-
-    # Sin actividad, devolver el mapa base
-    return JsonResponse(base, safe=False)
 
 # Mapeo simple: (mundo, nivel) -> archivo de mapa (dentro de static)
 MAPS = {
     ("bosque", 1): "LevelUp/maps/escenario1.json",
-    # agrega más niveles si quieres:
-    # ("bosque", 2): "LevelUp/maps/escenario2.json",
-    # ("desierto", 1): "LevelUp/maps/desierto_n1.json",
 }
 
+@xframe_options_exempt
+@login_required
+def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
+    """
+    Devuelve el mapa Tiled enriquecido con:
+      - questions: preguntas normalizadas (id=1..N para calzar con qid)
+      - actividad_id: pk de la actividad
+      - config: configuración opcional (de un ítem tipo game_config)
+      - Auto-asigna qid secuenciales a enemigos sin esa propiedad
+    Soporta recibir la actividad por URL param o por querystring (?actividad=).
+    """
+    # 0) Permitir ?actividad=ID si no vino por la URL
+    if not actividad_pk:
+        qs_id = request.GET.get("actividad")
+        if qs_id:
+            try:
+                actividad_pk = int(qs_id)
+            except (TypeError, ValueError):
+                actividad_pk = None
+
+    # 1) Cargar mapa base (estático) por slug/nivel o el primero por defecto
+    default_map = MAPS.get((slug, int(nivel))) if slug and nivel else next(iter(MAPS.values()))
+    base = _load_static_map(default_map)
+
+    # 2) Si viene una actividad, injerta las preguntas creadas por el docente
+    if actividad_pk:
+        try:
+            act = Actividad.objects.get(pk=int(actividad_pk))
+        except Actividad.DoesNotExist:
+            return JsonResponse({"error": "Actividad no encontrada"}, status=404)
+
+        # Solo ítems de tipo GAME (preguntas del minijuego)
+        try:
+            items_qs = act.items.filter(tipo__iexact="game").order_by("orden", "id")
+        except Exception:
+            items_qs = act.items.filter(tipo__iexact="game").order_by("id")
+
+        # Ítem opcional de configuración del juego (fallbacks/mapeo)
+        try:
+            cfg_qs = act.items.filter(tipo__iexact="game_config")[:1]
+        except Exception:
+            cfg_qs = []
+
+        game_config = {}
+        if cfg_qs:
+            it_cfg = cfg_qs[0]
+            try:
+                # Esperado: {"fallback_q":"...", "fallback_opts":[...], "fallback_correct":1, "mapping_mode":"index|id"}
+                if isinstance(it_cfg.datos, dict):
+                    game_config = it_cfg.datos or {}
+            except Exception:
+                game_config = {}
+
+        questions = []
+
+        def _coerce_to_trivia(it):
+            """
+            Normaliza cualquier ItemActividad(tipo='game') a:
+              { id, q, options, correct }   # correct es 0-based
+
+            Soportado:
+            - Trivia (plano):    {question: str, options: [..], answer: int}
+            - Trivia (array):    {questions: [{q, opts, ans}, ...]}
+            - Drag/Memory:       {pairs: [[A,B], ...]} -> usa 1er par
+            - V/F:               {items: ["Afirmación|V", ...]}
+            - Fallback genérico: "¿2 + 2 = ?"
+            """
+            datos = it.datos or {}
+            kind = str(datos.get("kind") or "").lower()
+
+            # ---------- TRIVIA (array de preguntas) ----------
+            if kind == "trivia" and isinstance(datos.get("questions"), list) and datos["questions"]:
+                first = datos["questions"][0] or {}
+                qtxt = (first.get("q") or it.enunciado or "Pregunta").strip()
+                opts = list(first.get("opts") or first.get("options") or [])
+                ans = first.get("ans")
+                if not isinstance(opts, list) or len(opts) < 2:
+                    opts = ["Opción 1", "Opción 2"]
+                # ans 0-based seguro
+                if not isinstance(ans, int) or ans < 0 or ans >= len(opts):
+                    ans = 0
+                return {"id": it.pk, "q": qtxt, "options": opts, "correct": ans}
+
+            # ---------- TRIVIA (plano) ----------
+            if kind == "trivia":
+                qtxt = (datos.get("question") or it.enunciado or "Pregunta").strip()
+                opts = list(datos.get("options") or [])
+                ans = datos.get("answer")
+                if not isinstance(opts, list) or len(opts) < 2:
+                    opts = ["Opción 1", "Opción 2"]
+                if not isinstance(ans, int) or ans < 0 or ans >= len(opts):
+                    ans = 0
+                return {"id": it.pk, "q": qtxt, "options": opts, "correct": ans}
+
+            # ---------- DRAGMATCH / MEMORY ----------
+            if kind in {"dragmatch", "memory"}:
+                pairs = datos.get("pairs") or []
+                if isinstance(pairs, list) and pairs:
+                    a, b = str(pairs[0][0]), str(pairs[0][1])
+                    qtxt = (it.enunciado or f"Empareja: {a} con…").strip()
+                    opts = [b, "Otra", "Otra 2"]
+                    return {"id": it.pk, "q": qtxt, "options": opts, "correct": 0}
+
+            # ---------- VERDADERO/FALSO ----------
+            if kind in {"vf", "tf"}:
+                its = datos.get("items") or []
+                if its:
+                    raw = str(its[0])
+                    txt, _, flag = (raw + "||").split("|", 2)
+                    qtxt = (it.enunciado or txt).strip() or "Verdadero o Falso"
+                    opts = ["Verdadero", "Falso"]
+                    ans = 0 if (flag or "").strip().upper().startswith("V") else 1
+                    return {"id": it.pk, "q": qtxt, "options": opts, "correct": ans}
+
+            # ---------- FALLBACK GENÉRICO ----------
+            return {"id": it.pk, "q": "¿2 + 2 = ?", "options": ["3", "4", "5"], "correct": 1}
+
+        # Construir preguntas desde los ítems de juego
+        for it in items_qs:
+            questions.append(_coerce_to_trivia(it))
+
+        # Renumerar 1..N para calzar con qid del mapa (conservar pk real en item_pk)
+        questions = [
+            {**q, "item_pk": q.get("id"), "id": i + 1}
+            for i, q in enumerate(questions)
+        ]
+
+        # Inyectar preguntas + actividad + configuración
+        new_map = dict(base)
+        new_map["questions"] = questions
+        new_map["actividad_id"] = act.pk
+        new_map["config"] = game_config  # <-- disponible en cliente: window.LEVEL.config
+
+        # Auto-asignar qid secuencial a enemigos que no lo tengan
+        idx = 1
+        for layer in new_map.get("layers", []) or []:
+            if layer.get("type") != "objectgroup":
+                continue
+            for obj in layer.get("objects", []) or []:
+                name = (obj.get("name") or "").lower()
+                if name != "enemy":
+                    continue
+                props_list = obj.get("properties") or []
+                has_qid = any(p.get("name") == "qid" for p in props_list)
+                if not has_qid:
+                    props_list.append({"name": "qid", "type": "int", "value": idx})
+                    obj["properties"] = props_list
+                    idx += 1
+
+        return JsonResponse(new_map, safe=False)
+
+    # Sin actividad: devolver mapa base tal cual
+    return JsonResponse(base, safe=False)
+
+
+@xframe_options_exempt
 def misiones_jugar(request, slug, nivel):
-    # Si se pasa ?actividad=PK, se usará el endpoint dinámico
     actividad_pk = request.GET.get("actividad")
     if actividad_pk:
-        # URL relativa al endpoint (agrega URLconf como en el siguiente bloque)
         map_url = reverse("misiones_mapa_actividad", args=[actividad_pk])
     else:
-        # busca el mapa o usa uno por defecto
         map_path = MAPS.get((slug, int(nivel)), "LevelUp/maps/escenario1.json")
         map_url = static(map_path)
-    return render(request, "LevelUp/misiones/jugar.html", {
-        "map_url": map_url,
-        "mundo": slug,
-        "nivel": nivel,
-    })
+    return render(request, "LevelUp/misiones/jugar.html", {"map_url": map_url, "mundo": slug, "nivel": nivel})
+
+# -------------------------------------------------------------
+# Atajo para crear misión base y llevar al editor
+# -------------------------------------------------------------
+
+@login_required
+def actividad_crear_mision(request):
+    if getattr(request.user, "rol", None) != "DOCENTE":
+        raise Http404
+
+    docente = get_object_or_404(Docente, usuario=request.user)
+
+    with transaction.atomic():
+        act = Actividad.objects.create(
+            titulo="Misión sin título",
+            descripcion="Videojuego con preguntas editables por el docente.",
+            tipo="game",
+            dificultad="medio",      # ajusta al valor real de tu Choice
+            docente=docente,
+            es_publicada=False,
+            xp_total=100,
+            intentos_max=3,
+        )
+        ItemActividad.objects.create(
+            actividad=act,
+            tipo="game",
+            enunciado="Pregunta de ejemplo (edítame)",
+            datos={
+                "kind": "trivia",
+                "questions": [{
+                    "q": "¿Cuánto es 12 × 12?",
+                    "opts": ["122", "124", "144", "132"],
+                    "ans": 2
+                }],
+                "timeLimit": 60
+            },
+            puntaje=10,
+        )
+
+    # si viene ?preview=1, abre el editor con la vista previa automáticamente
+    open_preview = "1" if request.GET.get("preview") == "1" else "0"
+    return redirect(f"{reverse('actividad_editar', args=[act.pk])}?open_preview={open_preview}")

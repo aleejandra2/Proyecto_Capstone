@@ -15,7 +15,7 @@ urlpatterns = [
     # Portal por rol
     path("inicio/", views.home_view, name="dashboard"),
 
-    # Catálogo/Ranking/Reportes
+    # Catálogo / Ranking / Reportes
     path("actividades/", views.actividades_view, name="actividades"),
     path("ranking/", views.ranking_view, name="ranking"),
     path("reportes/docente/", views.reportes_docente_view, name="reportes_docente"),
@@ -25,32 +25,29 @@ urlpatterns = [
     path("perfil/editar/", views.perfil_editar_view, name="perfil_editar"),
     path("perfil/cambiar-password/", views.cambiar_password_view, name="cambiar_password"),
 
-    # Docente (crear/editar actividades con formset)
+    # DOCENTE — lista / crear / editar / asignar / eliminar
     path("actividades/docente/", views.actividades_docente_lista, name="docente_lista"),
-    path("actividades/docente/nueva/", views.actividad_crear, name="crear"),
-    #path("actividades/docente/<int:pk>/editar/", views.actividad_editar, name="editar"),
+    path("actividades/docente/nueva/", views.actividad_crear, name="actividad_crear"),
+    path("actividades/docente/crear/", views.actividad_crear, name="crear"),  # alias opcional (ruta distinta)
     path("actividades/docente/<int:pk>/editar/", views.actividad_editar, name="actividad_editar"),
     path("actividades/docente/<int:pk>/asignar/", views.actividad_asignar, name="actividad_asignar"),
     path("actividades/<int:pk>/eliminar/", views.actividad_eliminar, name="actividad_eliminar"),
-    path("portal/docente/", views.Docente, name="portal_docente"),
 
-    # Estudiante (resolver con autocorrección)
+    # “Crear misión/videojuego” para el docente
+    path("misiones/crear/", views.actividad_crear_mision, name="actividad_crear_mision"),
+
+    # ESTUDIANTE — lista / resultados / jugar
     path("actividades/estudiante/", views.estudiante_mis_actividades, name="estudiante_lista"),
     path("actividades/estudiante/<int:pk>/resultado/", views.actividad_resultados, name="resolver_resultado"),
     path("actividades/estudiante/<int:pk>/play/", views.actividad_play, name="resolver_play"),
+
+    # APIs de juego
     path("api/actividades/<int:pk>/answer/<int:item_id>/", views.api_item_answer, name="api_item_answer"),
-    path("api/actividades/<int:pk>/hint/<int:item_id>/", views.api_item_hint, name="api_item_hint"),  # opcional
+    path("api/actividades/<int:pk>/hint/<int:item_id>/", views.api_item_hint, name="api_item_hint"),
+
+    # Misiones / mapa (para jugar.html + play.js)
     path("misiones/<slug:slug>/<int:nivel>/", views.misiones_jugar, name="misiones_jugar"),
-    path('misiones/mapa/<int:actividad_pk>/', views.misiones_mapa, name='misiones_mapa_actividad'),
-
-    #Juegos (duplicado conservado por compatibilidad)
-    path("api/actividades/<int:pk>/answer/<int:item_id>/", views.api_item_answer, name="api_item_answer"),
-
-    # Misiones (mapa -> mundo -> nivel -> jugar -> logros)
-    #path("misiones/", views.misiones_mapa, name="misiones_mapa"),
-    #path("misiones/mundo/<slug:slug>/", views.misiones_mundo, name="misiones_mundo"),
-    #path("misiones/jugar/<slug:slug>/<int:nivel>/", views.misiones_jugar, name="misiones_jugar"),
-    #path("misiones/logros/", views.misiones_logros, name="misiones_logros"),
+    path("misiones/mapa/<int:actividad_pk>/", views.misiones_mapa, name="misiones_mapa_actividad"),
 
     # Recuperar / Restablecer contraseña
     path(

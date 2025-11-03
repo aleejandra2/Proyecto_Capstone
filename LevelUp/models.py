@@ -1,11 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
-from .validators import validar_formato_rut
-
 from django.conf import settings
 from django.core.exceptions import ValidationError
-
+from .validators import validar_formato_rut
 
 USER = settings.AUTH_USER_MODEL
 
@@ -20,12 +18,17 @@ NIVELES = (
     (8, "8° Básico"),
 )
 
+ITEM_TIPOS = [
+    ("quiz", "Cuestionario"),
+    ("game", "Juego (minijuego)"),
+    ("game_config", "Juego • Configuración"),
+]
 
 # --------------------------------------------------------------------
 # Utilidades JSONField (compat)
 # --------------------------------------------------------------------
 try:
-    from django.db.models import JSONField 
+    from django.db.models import JSONField
 except Exception:  # pragma: no cover
     from django.contrib.postgres.fields import JSONField  # type: ignore
 
@@ -33,7 +36,6 @@ except Exception:  # pragma: no cover
 # ---------------------------------------------------------
 # Usuario del sistema (Custom User)
 # ---------------------------------------------------------
-
 class Usuario(AbstractUser):
     """
     Usuario del sistema integrándose con auth de Django.
@@ -56,8 +58,6 @@ class Usuario(AbstractUser):
     # Email único ("email único para login/recuperación")
     email = models.EmailField(max_length=128, unique=True)
 
-    #rol = models.CharField(max_length=20, choices=Rol.choices)
-
     def __str__(self):
         nombre = f"{self.first_name} {self.last_name}".strip() or self.username
         return f"{nombre} ({self.rut}) - {self.rol}"
@@ -66,7 +66,6 @@ class Usuario(AbstractUser):
 # ---------------------------------------------------------
 # Perfiles por rol (1–1 con Usuario)
 # ---------------------------------------------------------
-
 class Administrador(models.Model):
     usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, primary_key=True)
 
@@ -125,11 +124,9 @@ class Estudiante(models.Model):
         return f"{nombre} · {self.curso} · Nivel {self.nivel} ({self.xp} XP)"
 
 
-
 # ---------------------------------------------------------
 # Catálogos y entidades académicas
 # ---------------------------------------------------------
-
 class Ranking(models.Model):
     descripcion = models.TextField()
 
@@ -162,15 +159,15 @@ class Recompensa(models.Model):
 # ---------------------------------------------------------
 # Actividades (EXTENDIDO para publicación/XP y autor)
 # ---------------------------------------------------------
-
 class Actividad(models.Model):
     class Tipo(models.TextChoices):
         QUIZ = "quiz", "Quiz"
         JUEGO = "juego", "Juego"
-    class Dificultad(models.IntegerChoices):
-        FACIL = 1, "Fácil"
-        MEDIO = 2, "Medio"
-        DIFICIL = 3, "Difícil"
+
+    class Dificultad(models.TextChoices):
+        FACIL = "FACIL", "Fácil"
+        MEDIO = "MEDIO", "Medio"
+        DIFICIL = "DIFICIL", "Difícil"
 
     # -----------------------------------------
     # Datos principales
@@ -179,16 +176,22 @@ class Actividad(models.Model):
     descripcion = models.TextField()
     tipo = models.CharField(max_length=20, choices=Tipo.choices)
 
-    dificultad = models.IntegerField(
+    dificultad = models.CharField(
+        max_length=16,
         choices=Dificultad.choices,
         default=Dificultad.MEDIO,
-        validators=[MinValueValidator(1), MaxValueValidator(3)],
+    )
+    
+    dificultad_default = models.CharField(
+        max_length=16,
+        choices=Dificultad.choices,
+        default=Dificultad.MEDIO,
     )
 
     recurso = models.ForeignKey(Recurso, on_delete=models.SET_NULL, null=True, blank=True)
     recompensa = models.ForeignKey(Recompensa, on_delete=models.SET_NULL, null=True, blank=True)
 
-    # Autor de la actividad 
+    # Autor de la actividad
     docente = models.ForeignKey(
         "LevelUp.Docente",
         on_delete=models.SET_NULL,
@@ -291,40 +294,137 @@ class Actividad(models.Model):
 
         return super().save(*args, **kwargs)
 
+    # --- Helpers para minijuego (serialización de preguntas) ---
+
+    def _map_dificultad_to_slug(self) -> str:
+        """
+        Mapea la dificultad entera (1/2/3) a slug 'facil|medio|dificil'.
+        """
+        mapa = {
+            self.Dificultad.FACIL: "facil",
+            self.Dificultad.MEDIO: "medio",
+            self.Dificultad.DIFICIL: "dificil",
+        }
+        return mapa.get(self.dificultad, "medio")
+
+    def preguntas_para_juego(self, dificultad=None, limit=3):
+        """
+        Retorna queryset de preguntas activas filtradas por dificultad,
+        ordenadas por 'orden' y 'id'. Si no pasas 'dificultad',
+        usa la propia de la actividad.
+        """
+        dif = (dificultad or self._map_dificultad_to_slug()).strip().lower()
+        qs = self.preguntas.filter(activa=True, dificultad=dif).order_by("orden", "id")
+        if limit and limit > 0:
+            qs = qs[:limit]
+        return qs
+
+    def build_questions_payload(self, dificultad=None, limit=3) -> dict:
+        """
+        Estructura JSON que el minijuego puede consumir directamente.
+        {
+          "difficulty": "medio",
+          "count": 3,
+          "questions": [
+            {"id": 12, "q": "¿...?", "opts": ["A","B","C"], "ans": 1},
+            ...
+          ]
+        }
+        """
+        dif = (dificultad or self._map_dificultad_to_slug()).strip().lower()
+        preguntas = self.preguntas_para_juego(dificultad=dif, limit=limit)
+        items = []
+        for p in preguntas:
+            items.append({
+                "id": p.id,
+                "q": p.texto,
+                "opts": list(p.opciones or []),
+                "ans": int(p.correcta),
+            })
+        return {
+            "difficulty": dif,
+            "count": len(items),
+            "questions": items,
+        }
+
 class AsignacionActividad(models.Model):
     class Estado(models.TextChoices):
-        PENDIENTE = "pendiente", "Pendiente"
+        PENDIENTE   = "pendiente",   "Pendiente"
         EN_PROGRESO = "en_progreso", "En progreso"
-        COMPLETADA = "completada", "Completada"
+        COMPLETADA  = "completada",  "Completada"
 
-    estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE)
-    actividad = models.ForeignKey(Actividad, on_delete=models.CASCADE)
-    estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.PENDIENTE)
+    estudiante = models.ForeignKey("LevelUp.Estudiante", on_delete=models.CASCADE)
+    actividad  = models.ForeignKey("LevelUp.Actividad", on_delete=models.CASCADE)
+
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.PENDIENTE
+    )
     nota = models.FloatField(null=True, blank=True)
     fecha_asignacion = models.DateField(auto_now_add=True)
     fecha_completada = models.DateField(null=True, blank=True)
 
+    # Si se define, reemplaza los intentos máximos de la actividad para este estudiante.
     intentos_permitidos = models.PositiveSmallIntegerField(
         null=True, blank=True,
         validators=[MinValueValidator(1), MaxValueValidator(20)],
         help_text="Si se define, reemplaza los intentos máximos de la actividad para este estudiante."
     )
+
     class Meta:
-        unique_together = ('estudiante', 'actividad')
+        unique_together = ("estudiante", "actividad")
+        ordering = ["-fecha_asignacion", "actividad_id"]
 
     def __str__(self):
         return f"{self.estudiante.usuario.username} -> {self.actividad.titulo} ({self.get_estado_display()})"
 
 
-class ReporteProgreso(models.Model):
-    estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE, related_name="reportes")
-    avance = models.FloatField()      # porcentaje 0–100
-    fecha = models.DateField()
-    rendimiento = models.CharField(max_length=50)
-    ranking = models.ForeignKey(Ranking, on_delete=models.SET_NULL, null=True, blank=True, related_name="reportes")
+# ---------------------------------------------------------
+# Preguntas del minijuego (editables por docente)
+# ---------------------------------------------------------
+class Pregunta(models.Model):
+    class Dificultad(models.TextChoices):
+        FACIL   = "facil", "Fácil"
+        MEDIO   = "medio", "Medio"
+        DIFICIL = "dificil", "Difícil"
+
+    actividad = models.ForeignKey(
+        Actividad,
+        related_name="preguntas",
+        on_delete=models.CASCADE
+    )
+    texto = models.TextField("Pregunta")
+    opciones = JSONField(
+        "Opciones",
+        default=list,
+        help_text="Lista de 2 a 6 opciones (en orden)"
+    )
+    correcta = models.PositiveSmallIntegerField(
+        "Índice de la respuesta correcta (0-based)",
+        validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+    dificultad = models.CharField(
+        max_length=10,
+        choices=Dificultad.choices,
+        default=Dificultad.MEDIO
+    )
+    orden = models.PositiveSmallIntegerField(default=1)
+    activa = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["orden", "id"]
+        unique_together = [("actividad", "orden")]
+
+    def clean(self):
+        # Debe haber 2–6 opciones y la 'correcta' debe estar en rango
+        if not isinstance(self.opciones, list) or not (2 <= len(self.opciones) <= 6):
+            raise ValidationError("Debes ingresar entre 2 y 6 opciones.")
+        if self.correcta >= len(self.opciones):
+            raise ValidationError("Índice de respuesta correcta fuera de rango.")
 
     def __str__(self):
-        return f"Reporte {self.pk} - {self.estudiante.usuario.username} - {self.fecha}"
+        return f"[Act {self.actividad_id}] {self.texto[:60]}..."
 
 
 # ---------------------------------------------------------
@@ -341,22 +441,14 @@ class ItemActividad(models.Model):
         IMAGE = "image", "Pregunta con imagen"
         INTERACTIVE = "interactive", "Interactiva (embed/url)"
         GAME = "game", "Juego (embed)"
+        GAME_CONFIG = "game_config", "Juego • Configuración"
 
-    actividad = models.ForeignKey(Actividad, on_delete=models.CASCADE, related_name="items")
+    actividad = models.ForeignKey("Actividad", on_delete=models.CASCADE, related_name="items")
     tipo = models.CharField(max_length=20, choices=ItemType.choices)
-    enunciado = models.TextField()
+    # Permite enunciado vacío
+    enunciado = models.TextField(blank=True)
     imagen = models.ImageField(upload_to="actividades/items", null=True, blank=True)
-
-    # Estructura por tipo (ejemplos):
-    # mcq: {"opciones": ["A","B","C"], "correctas": [0,2], "multiple": true}
-    # tf: {"respuesta": true}
-    # fib: {"items":[{"id":"f1","respuestas":["4","cuatro"]}]}
-    # sort: {"items":[{"id":"s1","texto":"1"},...], "orden_correcto":["s1","s3","s2"]}
-    # match: {"pares":[{"left":{"id":"l1","texto":"🐶"},"right":{"id":"rA","texto":"perro"}}, ...]}
-    # text: {"palabras_clave": ["agua","ciclo"], "long_min": 0}
-    # interactive/game: {"url": "https://...", "proveedor": "itch.io"}
-    datos = JSONField(default=dict, blank=True)
-
+    datos = models.JSONField(default=dict, blank=True)
     puntaje = models.PositiveIntegerField(
         default=10, validators=[MinValueValidator(1), MaxValueValidator(1000)]
     )
@@ -366,7 +458,8 @@ class ItemActividad(models.Model):
         ordering = ["orden", "id"]
 
     def __str__(self):
-        return f"[{self.get_tipo_display()}] {self.enunciado[:40]}"
+        title = (self.enunciado or "").strip()
+        return f"[{self.get_tipo_display()}] {title[:40] or '(sin enunciado)'}"
 
 
 class Submission(models.Model):
@@ -419,14 +512,10 @@ class Answer(models.Model):
     def __str__(self):
         return f"Answer({self.item_id}) by {self.submission.estudiante_id}"
 
+
 # ---------------------------------------------------------
 # Cursos y Asignaturas
 # ---------------------------------------------------------
-from django.conf import settings
-from django.core.exceptions import ValidationError
-from django.db import models
-
-
 class Asignatura(models.Model):
     nombre = models.CharField(max_length=60, unique=True)   # "Matemáticas", "Inglés", "Lenguaje", "Historia", "Ciencias Naturales"
     codigo = models.SlugField(max_length=30, unique=True)   # "matematicas", "ingles", "lenguaje", "historia", "ciencias"
@@ -562,3 +651,20 @@ class GrupoRefuerzoNivelAlumno(models.Model):
 
     def __str__(self):
         return f"{self.alumno} → {self.grupo} ({self.asignatura})"
+
+class ReporteProgreso(models.Model):
+    estudiante = models.ForeignKey(
+        Estudiante, on_delete=models.CASCADE, related_name="reportes"
+    )
+    avance = models.FloatField(help_text="Porcentaje 0–100")
+    fecha = models.DateField()
+    rendimiento = models.CharField(max_length=50)
+    ranking = models.ForeignKey(
+        Ranking, on_delete=models.SET_NULL, null=True, blank=True, related_name="reportes"
+    )
+
+    class Meta:
+        ordering = ["-fecha", "id"]
+
+    def __str__(self):
+        return f"Reporte {self.pk} - {self.estudiante.usuario.username} - {self.fecha}"

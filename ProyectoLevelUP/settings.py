@@ -151,6 +151,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = "no-reply@levelup.local"
 
+X_FRAME_OPTIONS = "SAMEORIGIN"
+
 import mimetypes
 
 # Algunos Windows registran .js como text/plain. Forzamos el MIME correcto:

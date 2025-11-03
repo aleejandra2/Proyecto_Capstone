@@ -481,28 +481,74 @@
         }
       }
 
-      // Entidades
-      let spawn = null; const coins = [], enemies = [], questions = [];
-      for (const layer of map.layers) {
-        if (layer.type !== 'objectgroup') continue;
-        for (const obj of (layer.objects || [])) {
-          const t = typeOf(obj, layer); const R = objRect(obj, map); const P = readProps(obj);
-          const cx = (R.kind === 'point') ? R.x : (R.x + R.w / 2);
-          const cy = (R.kind === 'point') ? R.y : (R.y + R.h / 2);
-          if (t === 'spawn' || t === 'player') spawn = { x: cx, y: cy };
-          else if (t === 'coin' || t === 'coins') coins.push({ id: obj.id, x: cx, y: cy });
-          else if (t === 'enemy') {
-            if (R.kind === 'rect' && R.w > cellW * 0.8 && R.h < cellH * 0.6) {
-              enemies.push({ id: obj.id, x: R.x + R.w / 2, y: R.y + R.h, patrolMinX: R.x, patrolMaxX: R.x + R.w, speed: +(P.speed ?? 60), dir: (P.dir || 'right'), qid: (P.qid != null ? +P.qid : null) });
-            } else {
-              const range = +(P.range ?? 2 * cellW);
-              enemies.push({ id: obj.id, x: cx, y: cy, patrolMinX: cx - range * 0.5, patrolMaxX: cx + range * 0.5, speed: +(P.speed ?? 60), dir: (P.dir || 'right'), qid: (P.qid != null ? +P.qid : null) });
-            }
-          } else if (t === 'question' || t === 'quiz' || t === 'pregunta') {
-            questions.push({ id: obj.id, x: cx, y: cy, q: P.q || '¿Pregunta?', a1: P.a1 || 'Opción 1', a2: P.a2 || 'Opción 2', a3: P.a3 || 'Opción 3', correct: +(P.correct ?? 1) });
-          }
-        }
+      // ===== Entidades =====
+let spawn = null;
+const coins = [];
+const enemies = [];
+
+// 1) Empieza con las preguntas que vienen inyectadas por la vista (map.questions)
+let questions = Array.isArray(map.questions)
+  ? map.questions.map((q, i) => ({
+      // asegura que tengan id (por si la vista no lo puso)
+      id: (q && q.id != null) ? q.id : (10000 + i),
+      q: q.q || q.question || '¿Pregunta?',
+      // formato nuevo: options[] + correct (índice 0..n-1)
+      options: Array.isArray(q.options) && q.options.length >= 2
+        ? q.options
+        : [q.a1, q.a2, q.a3, q.a4].filter(Boolean), // fallback a formato viejo
+      correct: Number.isInteger(q.correct) ? q.correct : Math.max(0, (q.correct || 1) - 1)
+    }))
+  : [];
+
+// 2) Recorre object layers para sumar monedas, enemigos y (si hubiera) preguntas sueltas
+for (const layer of map.layers) {
+  if (layer.type !== 'objectgroup') continue;
+
+  for (const obj of (layer.objects || [])) {
+    const t  = typeOf(obj, layer);
+    const R  = objRect(obj, map);
+    const P  = readProps(obj);
+    const cx = (R.kind === 'point') ? R.x : (R.x + R.w / 2);
+    const cy = (R.kind === 'point') ? R.y : (R.y + R.h / 2);
+
+    if (t === 'spawn' || t === 'player') {
+      spawn = { x: cx, y: cy };
+    } else if (t === 'coin' || t === 'coins') {
+      coins.push({ id: obj.id, x: cx, y: cy });
+    } else if (t === 'enemy') {
+      if (R.kind === 'rect' && R.w > cellW * 0.8 && R.h < cellH * 0.6) {
+        enemies.push({
+          id: obj.id,
+          x: R.x + R.w / 2, y: R.y + R.h,
+          patrolMinX: R.x, patrolMaxX: R.x + R.w,
+          speed: +(P.speed ?? 60),
+          dir: (P.dir || 'right'),
+          // MUY IMPORTANTE: qid debe coincidir con el id de una pregunta en `questions`
+          qid: (P.qid != null ? String(P.qid) : null)
+        });
+      } else {
+        const range = +(P.range ?? 2 * cellW);
+        enemies.push({
+          id: obj.id, x: cx, y: cy,
+          patrolMinX: cx - range * 0.5, patrolMaxX: cx + range * 0.5,
+          speed: +(P.speed ?? 60),
+          dir: (P.dir || 'right'),
+          qid: (P.qid != null ? String(P.qid) : null)
+        });
       }
+    } else if (t === 'question' || t === 'quiz' || t === 'pregunta') {
+      // Permite definir preguntas como objetos en Tiled (opcional)
+      const opts = [P.a1, P.a2, P.a3, P.a4].filter(Boolean);
+      const corr = Number.isInteger(P.correct) ? P.correct : Math.max(0, (P.correct || 1) - 1);
+      questions.push({
+        id: obj.id,
+        q: P.q || '¿Pregunta?',
+        options: (opts.length >= 2) ? opts : ['Opción 1', 'Opción 2'],
+        correct: Math.min(Math.max(0, corr), Math.max(0, (opts.length - 1)))
+      });
+    }
+  }
+}
 
       // Pintar mapa en #bg
       bgCtx.clearRect(0, 0, bg.width, bg.height);
@@ -586,13 +632,66 @@
       return { open, close };
     })();
 
-    function askQuestion(qid, onOk, onBad) {
-      const QL = (window.LEVEL?.questions || []);
-      const q = QL.find(x => String(x.id) === String(qid));
-      if (q) { ASK.open(q.q, [q.a1, q.a2, q.a3].filter(Boolean), (q.correct || 1) - 1, onOk, onBad); }
-      else { ASK.open('¿2 + 2 = ?', ['3', '4', '5'], 1, onOk, onBad); }
-    }
-  </script>
-</body>
 
+  function askQuestion(qid, onOk, onBad) {
+    const level = window.LEVEL || {};
+    const cfg = window.LEVEL?.config || {};
+    const list = Array.isArray(level.questions) ? level.questions : [];
+    const mapping = (cfg.mapping_mode || "id").toLowerCase();
+
+  // 1) Buscar pregunta por modo
+  let q = null;
+  if (mapping === "index") {
+    const n = Number(qid);
+    if (Number.isFinite(n) && n >= 1 && n <= list.length) q = list[n - 1];
+  } else {
+    q = list.find(x => String(x?.id) === String(qid)) || null;
+    // respaldo por índice si no hay match por id
+    if (!q) {
+      const n = Number(qid);
+      if (Number.isFinite(n) && n >= 1 && n <= list.length) q = list[n - 1];
+    }
+  }
+
+  // 2) Defaults (Docente puede sobrescribirlos en game_config)
+  let prompt = (cfg.fallback_q && String(cfg.fallback_q).trim()) || "¿2 + 2 = ?";
+  let options = Array.isArray(cfg.fallback_opts) && cfg.fallback_opts.length >= 2
+    ? cfg.fallback_opts.slice(0, 6).map(String)
+    : ["3", "4", "5"];
+  let correctIdx = Number.isInteger(cfg.fallback_correct) ? cfg.fallback_correct : 1;
+
+  // 3) Si hay pregunta válida, normaliza
+  if (q) {
+    const txt = q.q ?? q.question ?? q.pregunta;
+    if (typeof txt === "string" && txt.trim()) prompt = txt.trim();
+
+    if (Array.isArray(q.options)) options = q.options.slice();
+    else if (Array.isArray(q.opts)) options = q.opts.slice();
+    else if (Array.isArray(q.alternativas)) options = q.alternativas.slice();
+    else options = [q.a1, q.a2, q.a3, q.a4, q.a5, q.a6].filter(v => typeof v === "string" && v.trim());
+
+    options = options.map(String).filter(Boolean).slice(0, 6);
+    if (options.length < 2) options = ["Opción 1", "Opción 2"];
+
+    if (Number.isInteger(q.correct)) correctIdx = Number(q.correct);
+    else if (Number.isInteger(q.ans)) correctIdx = Number(q.ans) - 1;
+    else if (Number.isInteger(q.answer)) correctIdx = Number(q.answer) - 1;
+    else if (typeof q.correctText === "string") {
+      const pos = options.findIndex(o => o === q.correctText);
+      if (pos >= 0) correctIdx = pos;
+    }
+
+    if (!(correctIdx >= 0 && correctIdx < options.length)) {
+      const maybe1 = Number(q.correct);
+      if (Number.isFinite(maybe1) && maybe1 >= 1 && maybe1 <= options.length) correctIdx = maybe1 - 1;
+      else correctIdx = 0;
+    }
+  }
+
+  // 4) UI original
+  ASK.open(prompt, options, correctIdx, onOk, onBad);
+}
+
+</script>
+</body>
 </html>
