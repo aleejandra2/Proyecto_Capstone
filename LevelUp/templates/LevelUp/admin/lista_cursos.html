@@ -1,0 +1,25 @@
+{% extends "LevelUp/base.html" %}
+{% block title %}Cursos{% endblock %}
+{% block content %}
+<main class="container py-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h1 class="section-title m-0">Cursos</h1>
+        <a href="{% url 'adm_cursos_nuevo' %}" class="btn btn-edu-navy">+ Nuevo curso</a>
+    </div>
+
+    <div class="row g-2">
+        {% for c in cursos %}
+        <div class="col-12 col-md-4">
+            <div class="kpi-card">
+                <div class="kpi-label">Curso</div>
+                <div class="kpi-value">{{ c.get_nivel_display|default:c.nivel }} {{ c.letra }}</div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <p class="text-muted m-0">No hay cursos registrados.</p>
+        </div>
+        {% endfor %}
+    </div>
+</main>
+{% endblock %}

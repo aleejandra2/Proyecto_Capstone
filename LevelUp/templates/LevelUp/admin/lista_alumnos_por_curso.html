@@ -1,0 +1,46 @@
+{% extends "LevelUp/base.html" %}
+{% block title %}Alumnos por curso{% endblock %}
+{% block content %}
+<main class="container py-3">
+    <form method="get" class="d-flex gap-2 align-items-end mb-3">
+        <div>
+            <label class="form-label">Curso</label>
+            <select name="curso" class="form-select">
+                {% for c in cursos %}
+                <option value="{{ c.id }}" {% if c.id==curso_id %}selected{% endif %}>
+                    {{ c.get_nivel_display|default:c.nivel }} {{ c.letra }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <button class="btn btn-edu-navy" type="submit">Ver alumnos por curso</button>
+    </form>
+
+    <div class="card">
+        <div class="card-content">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>RUT</th>
+                        <th>Email</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in alumnos %}
+                    <tr>
+                        <td>{{ e.usuario.get_full_name|default:e.usuario.username }}</td>
+                        <td>{{ e.usuario.rut }}</td>
+                        <td>{{ e.usuario.email }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-muted">Selecciona un curso y pulsa “Ver”.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+{% endblock %}

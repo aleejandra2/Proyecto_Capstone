@@ -1,0 +1,40 @@
+{% extends "LevelUp/base.html" %}
+{% block title %}Matrículas{% endblock %}
+{% block content %}
+<main class="container py-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h1 class="section-title m-0">Matrículas</h1>
+        <a href="{% url 'adm_matriculas_nueva' %}" class="btn btn-edu-navy">+ Matricular</a>
+    </div>
+
+    <div class="card">
+        <div class="card-content">
+            <div class="table-responsive">
+                <table class="table mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th>Alumno</th>
+                            <th>Curso</th>
+                            <th style="width:140px">Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in filas %}
+                        <tr>
+                            {# m.estudiante es Usuario (FK en Matricula) #}
+                            <td>{{ m.estudiante.get_full_name|default:m.estudiante.username }}</td>
+                            <td>{{ m.curso.get_nivel_display|default:m.curso.nivel }} {{ m.curso.letra }}</td>
+                            <td>{{ m.fecha|date:"d/m/Y" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-muted">Sin matrículas.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}

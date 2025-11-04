@@ -181,5 +181,28 @@
       if (hasError) e.preventDefault();
     });
   })();
-  </script>
+  
+  // Preseleccionar el rol por query param (?rol=docente|estudiante|administrador)
+  (function () {
+    const params = new URLSearchParams(location.search);
+    const rolParam = (params.get('rol') || '').toLowerCase();
+    if (!rolParam) return;
+
+    const select = document.getElementById('{{ form.rol.id_for_label }}') || document.querySelector('select[name="{{ form.rol.html_name }}"]');
+    if (!select) return;
+
+    // Intenta matchear por value o por texto visible
+    const wanted = ['docente', 'estudiante', 'administrador'].find(r => rolParam.startsWith(r));
+    if (!wanted) return;
+
+    [...select.options].forEach(opt => {
+      const val = (opt.value || '').toLowerCase();
+      const txt = (opt.textContent || '').toLowerCase();
+      if (val.includes(wanted) || txt.includes(wanted)) {
+        select.value = opt.value;
+      }
+    });
+  })();
+</script>
 {% endblock %}
+

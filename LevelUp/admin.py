@@ -112,12 +112,34 @@ class AsignaturaAdmin(admin.ModelAdmin):
     search_fields = ("nombre", "codigo")
 
 # ✅ Estudiante con search_fields (requisito para varios autocompletes)
+
+# --- Filtro seguro por curso (para Estudiante) ---
+class CursoMatriculaFilter(admin.SimpleListFilter):
+    title = "Curso"
+    parameter_name = "curso"  # <- parámetro simple y permitido
+
+    def lookups(self, request, model_admin):
+        # Muestra los cursos como aparecen en __str__
+        return [(str(c.id), str(c)) for c in Curso.objects.order_by("nivel", "letra")]
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value:
+            return queryset.filter(usuario__matriculas__curso_id=value).distinct()
+        return queryset
+
 @admin.register(Estudiante)
 class EstudianteAdmin(admin.ModelAdmin):
     list_display  = ("usuario", "nivel", "puntos", "medallas")
-    list_filter   = ("nivel",)
-    search_fields = ("usuario__username", "usuario__first_name", "usuario__last_name", "usuario__rut", "usuario__email")
+    list_filter   = ("nivel", CursoMatriculaFilter)  # <- usa el filtro
+    search_fields = (
+        "usuario__username", "usuario__first_name", "usuario__last_name",
+        "usuario__rut", "usuario__email"
+    )
     autocomplete_fields = ("usuario",)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).distinct()
 
 class MatriculaInline(admin.TabularInline):
     model = Matricula

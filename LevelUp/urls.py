@@ -49,6 +49,23 @@ urlpatterns = [
     path("misiones/<slug:slug>/<int:nivel>/", views.misiones_jugar, name="misiones_jugar"),
     path("misiones/mapa/<int:actividad_pk>/", views.misiones_mapa, name="misiones_mapa_actividad"),
 
+    # Panel Admin (admin-app)
+    path("panel/admin/cursos/", views.adm_cursos_lista, name="adm_cursos_lista"),
+    path("panel/admin/cursos/nuevo/", views.adm_cursos_nuevo, name="adm_cursos_nuevo"),
+
+    path("panel/admin/asignaturas/", views.adm_asignaturas_lista, name="adm_asignaturas_lista"),
+    path("panel/admin/asignaturas/nueva/", views.adm_asignaturas_nueva, name="adm_asignaturas_nueva"),
+
+    path("panel/admin/asignaciones/", views.adm_asignaciones_lista, name="adm_asignaciones_lista"),
+    path("panel/admin/asignaciones/nueva/", views.adm_asignaciones_nueva, name="adm_asignaciones_nueva"),
+
+    path("panel/admin/matriculas/", views.adm_matriculas_lista, name="adm_matriculas_lista"),
+    path("panel/admin/matriculas/nueva/", views.adm_matriculas_nueva, name="adm_matriculas_nueva"),
+
+    path("panel/admin/listas/profesores/", views.adm_list_profesores, name="adm_list_profesores"),
+    path("panel/admin/listas/alumnos/", views.adm_list_alumnos, name="adm_list_alumnos"),
+    path("panel/admin/listas/alumnos-por-curso/", views.adm_list_alumnos_por_curso, name="adm_list_alumnos_por_curso"),
+
     # Recuperar / Restablecer contraseña
     path(
         "password/recuperar/",

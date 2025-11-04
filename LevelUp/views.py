@@ -10,14 +10,17 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
 from django.urls import reverse
 from django.utils import timezone
-from django.db import transaction
-from django.db.models import Count, Q
+import time
+from django.db import transaction, models, connection
+from django.core.cache import cache
+from django.db.models import Count, Q, Prefetch
 from django.forms import inlineformset_factory, BaseInlineFormSet
+from django import get_version as django_get_version
 from django.views.decorators.http import require_POST
 from django.templatetags.static import static
 from django.contrib.staticfiles import finders
 
-from .forms import RegistrationForm, LoginForm, ProfileForm, ActividadForm, ItemForm
+from .forms import RegistrationForm, LoginForm, ProfileForm, ActividadForm, ItemForm, CursoForm, AsignaturaForm, AsignacionDocenteForm, MatriculaForm
 from .rewards import compute_rewards, apply_rewards
 
 
@@ -25,7 +28,7 @@ from .rewards import compute_rewards, apply_rewards
 from .models import (
     Usuario, Asignatura, Estudiante, Docente, Actividad, AsignacionActividad,
     ItemActividad, Submission, Answer, Matricula,
-    GrupoRefuerzoNivelAlumno, GrupoRefuerzoNivel, NIVELES, Curso,
+    GrupoRefuerzoNivelAlumno, GrupoRefuerzoNivel, NIVELES, Curso, AsignacionDocente
     # Si tienes este modelo en tu app:
     # AsignacionDocente,
 )
@@ -123,7 +126,14 @@ def logout_view(request):
 # -------------------------------------------------------------------
 @login_required(login_url='login')
 def home_view(request):
+    """
+    Enruta a una plantilla distinta según el rol del usuario
+    y arma el contexto básico de cada portal.
+    """
     rol = getattr(request.user, "rol", None)
+    if request.user.is_superuser:
+        rol = Usuario.Rol.ADMINISTRADOR
+
     ctx = {}
 
     template_by_role = {
@@ -136,7 +146,9 @@ def home_view(request):
         try:
             est = Estudiante.objects.select_related("usuario").get(usuario=request.user)
             ctx.update({
-                "nivel": est.nivel, "puntos": est.puntos, "medallas": est.medallas,
+                "nivel": est.nivel,
+                "puntos": est.puntos,
+                "medallas": est.medallas,
                 "curso": getattr(est, "curso", "Sin curso"),
             })
         except Estudiante.DoesNotExist:
@@ -152,11 +164,54 @@ def home_view(request):
         })
 
     elif rol == Usuario.Rol.ADMINISTRADOR:
+        # --- KPIs ---
+        alumnos = User.objects.filter(rol=Usuario.Rol.ESTUDIANTE).count()
+        profesores = User.objects.filter(rol=Usuario.Rol.DOCENTE).count()
+        cursos = Curso.objects.count()
+        asignaturas = Asignatura.objects.count()
+
+        # --- Salud del sistema (real) ---
+        # Servidor
+        server_ok = True  # si llegamos aquí, el servidor respondió
+        server_time = timezone.now()
+        server_version = django_get_version()
+
+        # DB
+        db_ok = False
+        db_vendor = connection.vendor
+        db_name = connection.settings_dict.get("NAME", "")
+        try:
+            with connection.cursor() as cur:
+                cur.execute("SELECT 1")
+            db_ok = True
+        except Exception:
+            db_ok = False
+
+        # Cache (latencia simple set/get)
+        cache_ok = False
+        cache_backend = f"{cache.__class__.__module__}.{cache.__class__.__name__}"
+        t0 = time.perf_counter()
+        try:
+            _k = "healthcheck_key"
+            cache.set(_k, "ok", 5)
+            got = cache.get(_k)
+            cache_ok = (got == "ok")
+        except Exception:
+            cache_ok = False
+        latency_ms = int((time.perf_counter() - t0) * 1000)
+
         ctx.update({
-            "usuarios_total": User.objects.count(),
-            "profesores_total": User.objects.filter(rol=Usuario.Rol.DOCENTE).count(),
-            "estudiantes_total": User.objects.filter(rol=Usuario.Rol.ESTUDIANTE).count(),
-            "actividades_total": Actividad.objects.count(),
+            "alumnos_total": alumnos,
+            "profesores_total": profesores,
+            "cursos_total": cursos,
+            "asignaturas_total": asignaturas,
+
+            "health": {
+                "server": {"ok": server_ok, "time": server_time, "version": server_version},
+                "db": {"ok": db_ok, "vendor": db_vendor, "name": db_name},
+                "cache": {"ok": cache_ok, "backend": cache_backend, "latency_ms": latency_ms},
+            },
+            "cursos_list": Curso.objects.only("id", "nivel", "letra").order_by("nivel", "letra"),
         })
 
     template = template_by_role.get(rol, "LevelUp/portal/estudiante.html")
@@ -195,6 +250,118 @@ def cambiar_password_view(request):
     else:
         form = PasswordChangeForm(user=request.user)
     return render(request, "LevelUp/perfil/cambiar_password.html", {"form": form})
+
+# ===================================================================
+# Funciones de administración 
+# ===================================================================
+
+# ---------- Decorador ----------
+def admin_required(viewfunc):
+    @login_required
+    def _wrapped(request, *args, **kwargs):
+        if request.user.is_superuser or getattr(request.user, "rol", None) == Usuario.Rol.ADMINISTRADOR:
+            return viewfunc(request, *args, **kwargs)
+        messages.error(request, "No tienes permisos para esta sección.")
+        return redirect("dashboard")
+    return _wrapped
+
+# ---------- CURSOS ----------
+@admin_required
+def adm_cursos_lista(request):
+    cursos = Curso.objects.all().order_by("nivel", "letra")
+    return render(request, "LevelUp/admin/lista_cursos.html", {"cursos": cursos})
+
+@admin_required
+def adm_cursos_nuevo(request):
+    form = CursoForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Curso creado.")
+        return redirect("adm_cursos_lista")
+    return render(request, "LevelUp/admin/admin_form.html", {"form": form, "titulo": "Nuevo curso", "post_url": reverse("adm_cursos_nuevo")})
+
+# ---------- ASIGNATURAS ----------
+@admin_required
+def adm_asignaturas_lista(request):
+    asignaturas = Asignatura.objects.all().order_by("nombre")
+    return render(request, "LevelUp/admin/lista_asignaturas.html", {"asignaturas": asignaturas})
+
+@admin_required
+def adm_asignaturas_nueva(request):
+    form = AsignaturaForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Asignatura creada.")
+        return redirect("adm_asignaturas_lista")
+    return render(request, "LevelUp/admin/admin_form.html", {"form": form, "titulo": "Nueva asignatura", "post_url": reverse("adm_asignaturas_nueva")})
+
+# ---------- ASIGNACIÓN DOCENTE → ASIGNATURA ----------
+@admin_required
+def adm_asignaciones_lista(request):
+    filas = (AsignacionDocente.objects
+             .select_related("profesor", "asignatura")
+             .order_by("asignatura__nombre", "profesor__last_name"))
+    return render(request, "LevelUp/admin/docente_asignatura.html", {"filas": filas})
+
+@admin_required
+def adm_asignaciones_nueva(request):
+    form = AsignacionDocenteForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Asignación creada.")
+        return redirect("adm_asignaciones_lista")
+    return render(request, "LevelUp/admin/admin_form.html", {"form": form, "titulo": "Asignar profesor → asignatura", "post_url": reverse("adm_asignaciones_nueva")})
+
+# ---------- MATRÍCULAS ----------
+@admin_required
+def adm_matriculas_lista(request):
+    filas = (
+        Matricula.objects
+        .select_related("estudiante", "curso")  
+        .order_by("-fecha")
+    )
+    return render(request, "LevelUp/admin/lista_cursos.html", {"filas": filas})
+
+@admin_required
+def adm_matriculas_nueva(request):
+    form = MatriculaForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Matrícula registrada.")
+        return redirect("adm_matriculas_lista")
+    return render(request, "LevelUp/admin/admin_form.html", {"form": form, "titulo": "Matricular alumno → curso", "post_url": reverse("adm_matriculas_nueva")})
+
+# ---------- LISTADOS ----------
+@admin_required
+def adm_list_profesores(request):
+    profesores = User.objects.filter(rol=Usuario.Rol.DOCENTE).order_by("last_name", "first_name")
+    return render(request, "LevelUp/admin/lista_docentes.html", {"profesores": profesores})
+
+@admin_required
+def adm_list_alumnos(request):
+    alumnos = (Estudiante.objects.select_related("usuario")
+               .order_by("usuario__last_name", "usuario__first_name"))
+    return render(request, "LevelUp/admin/lista_alumnos.html", {"alumnos": alumnos})
+
+@admin_required
+def adm_list_alumnos_por_curso(request):
+    curso_id = request.GET.get("curso")
+    cursos = Curso.objects.all().order_by("nivel", "letra")
+    alumnos = []
+    if curso_id:
+        alumnos = (
+            Estudiante.objects
+            .filter(usuario__matriculas__curso_id=curso_id)  # <-- a través de Usuario
+            .select_related("usuario")
+            .order_by("usuario__last_name", "usuario__first_name")
+            .distinct()
+        )
+    return render(request, "LevelUp/admin/lista_alumnos_por_curso.html", {
+        "cursos": cursos,
+        "alumnos": alumnos,
+        "curso_id": int(curso_id or 0),
+    })
+
 
 # ===================================================================
 # Flujo de Actividades (Docente y Estudiante)

@@ -9,7 +9,7 @@ from django.contrib.auth.forms import (
 )
 from django.contrib.auth import get_user_model
 
-from .models import Actividad, ItemActividad
+from .models import Actividad, ItemActividad, Curso, Asignatura, AsignacionDocente, Matricula, Estudiante
 from .validators import formatear_rut_usuario
 
 Usuario = get_user_model()
@@ -136,6 +136,75 @@ class ProfilePasswordForm(PasswordChangeForm):
     new_password1 = forms.CharField(label="Nueva contraseña", widget=forms.PasswordInput(attrs={"class":"form-input"}), help_text="")
     new_password2 = forms.CharField(label="Confirmar nueva contraseña", widget=forms.PasswordInput(attrs={"class":"form-input"}), help_text="")
 
+# ==============================
+# Crear Curso 
+# ==============================
+class CursoForm(forms.ModelForm):
+    class Meta:
+        model = Curso
+        fields = ("nivel", "letra")
+        widgets = {
+            "nivel": forms.NumberInput(attrs={"class":"form-control", "min":1, "max":8}),
+            "letra": forms.TextInput(attrs={"class":"form-control", "maxlength":1}),
+        }
+
+    def clean(self):
+        data = super().clean()
+        if Curso.objects.filter(nivel=data.get("nivel"), letra=data.get("letra")).exists():
+            raise forms.ValidationError("Ese curso ya existe.")
+        return data
+
+# ==============================
+# Crar Asignatura
+# ==============================
+class AsignaturaForm(forms.ModelForm):
+    class Meta:
+        model = Asignatura
+        fields = ("nombre", "codigo")
+        widgets = {
+            "nombre": forms.TextInput(attrs={"class":"form-control"}),
+            "codigo": forms.TextInput(attrs={"class":"form-control"}),
+        }
+
+    def clean_codigo(self):
+        c = (self.cleaned_data.get("codigo") or "").strip()
+        if Asignatura.objects.filter(codigo__iexact=c).exists():
+            raise forms.ValidationError("Ya existe una asignatura con ese código.")
+        return c
+
+# ==============================
+# Asignar Asignatura a Docente
+# ==============================
+class AsignacionDocenteForm(forms.ModelForm):
+    profesor = forms.ModelChoiceField(
+        queryset=Usuario.objects.filter(rol=Usuario.Rol.DOCENTE),
+        widget=forms.Select(attrs={"class":"form-select"})
+    )
+    class Meta:
+        model = AsignacionDocente
+        fields = ("profesor", "asignatura")
+        widgets = {"asignatura": forms.Select(attrs={"class":"form-select"})}
+
+
+# ==============================
+# Asignar Curso a Estudiante
+# ==============================
+class MatriculaForm(forms.ModelForm):
+    """
+    Matricula un USUARIO con rol ESTUDIANTE en un Curso.
+    NOTA: no incluimos 'fecha' porque es auto_now_add (no editable).
+    """
+    estudiante = forms.ModelChoiceField(
+        queryset=Usuario.objects.filter(rol=Usuario.Rol.ESTUDIANTE),
+        widget=forms.Select(attrs={"class": "form-select"})
+    )
+
+    class Meta:
+        model = Matricula
+        fields = ("estudiante", "curso")   
+        widgets = {
+            "curso": forms.Select(attrs={"class": "form-select"}),
+        }
 
 # ---------------------------------------------------------
 # Actividad

@@ -1,0 +1,33 @@
+{% extends "LevelUp/base.html" %}
+{% block title %}Lista de alumnos{% endblock %}
+{% block content %}
+<main class="container py-3">
+    <h1 class="section-title mb-3">Alumnos</h1>
+    <div class="card">
+        <div class="card-content">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>RUT</th>
+                        <th>Email</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in alumnos %}
+                    <tr>
+                        <td>{{ e.usuario.get_full_name|default:e.usuario.username }}</td>
+                        <td>{{ e.usuario.rut }}</td>
+                        <td>{{ e.usuario.email }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-muted">No hay alumnos registrados.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+{% endblock %}

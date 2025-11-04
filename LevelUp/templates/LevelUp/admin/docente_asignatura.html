@@ -1,0 +1,37 @@
+{% extends "LevelUp/base.html" %}
+{% block title %}Asignaciones Docentes{% endblock %}
+{% block content %}
+<main class="container py-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h1 class="section-title m-0">Profesor ↔ Asignatura</h1>
+        <a href="{% url 'adm_asignaciones_nueva' %}" class="btn btn-edu-navy">+ Nueva asignación</a>
+    </div>
+
+    <div class="card">
+        <div class="card-content">
+            <div class="table-responsive">
+                <table class="table mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th>Profesor</th>
+                            <th>Asignatura</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in filas %}
+                        <tr>
+                            <td>{{ r.profesor.get_full_name|default:r.profesor.username }}</td>
+                            <td>{{ r.asignatura.nombre }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-muted">Aún no hay asignaciones.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}

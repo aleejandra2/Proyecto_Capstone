@@ -1,119 +1,189 @@
 {% extends "LevelUp/base.html" %}
+{% load static %}
 {% block title %}Portal del Administrador · LevelUp{% endblock %}
 
 {% block content %}
 <main class="min-h-screen">
   <div class="container">
 
-    <!-- Encabezado -->
-    <div class="card mb-3">
-      <div class="card-body d-flex flex-wrap justify-content-between align-items-start gap-2">
-        <div>
-          <h1 class="h3 m-0">Panel de Administración 🛠️</h1>
-          <p class="text-muted mb-0 mt-1">Gestiona usuarios, contenidos y el estado general del sistema.</p>
+    <!-- Hero -->
+    <div class="card border-0 shadow-sm mb-3 admin-hero">
+      <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div class="text-white">
+          <h1 class="h4 fw-800 mb-1">Panel de Administración 🛠️</h1>
+          <p class="mb-0 opacity-75">Gestiona usuarios, cursos, asignaturas y matrículas desde la app.</p>
         </div>
-        <div class="d-flex gap-2 flex-wrap">
-          <a href="{% url 'home' %}" class="btn btn-primary">Ir a Django Admin</a>
-          <!-- Si tu Admin también puede usar el flujo de docente, descomenta la siguiente línea:
-          <a href="{% url 'crear' %}" class="btn btn-outline-primary">+ Nueva actividad (frontend)</a>
-          -->
-        </div>
+        <!-- Puedes dejar este acceso si quieres, no afecta a los nuevos botones -->
+        <a class="btn btn-hero" href="{% url 'admin:index' %}">Ir a Django Admin</a>
       </div>
     </div>
 
     <!-- KPIs -->
-    <div class="card mb-3">
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-6 col-md-3">
-            <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Total Usuarios</div>
-              <div class="fs-3 fw-bold">{{ usuarios_total|default:0 }}</div>
-            </div>
-          </div>
-          <div class="col-6 col-md-3">
-            <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Profesores</div>
-              <div class="fs-3 fw-bold">{{ profesores_total|default:0 }}</div>
-            </div>
-          </div>
-          <div class="col-6 col-md-3">
-            <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Estudiantes</div>
-              <div class="fs-3 fw-bold">{{ estudiantes_total|default:0 }}</div>
-            </div>
-          </div>
-          <div class="col-6 col-md-3">
-            <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Actividades</div>
-              <div class="fs-3 fw-bold">{{ actividades_total|default:0 }}</div>
-            </div>
-          </div>
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-md-3">
+        <div class="kpi-card text-center">
+          <div class="kpi-icon">👩‍🎓</div>
+          <div class="kpi-label">Alumnos</div>
+          <div class="kpi-value">{{ alumnos_total|default:0 }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="kpi-card text-center">
+          <div class="kpi-icon">👨‍🏫</div>
+          <div class="kpi-label">Profesores</div>
+          <div class="kpi-value">{{ profesores_total|default:0 }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="kpi-card text-center">
+          <div class="kpi-icon">🏫</div>
+          <div class="kpi-label">Cursos</div>
+          <div class="kpi-value">{{ cursos_total|default:0 }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="kpi-card text-center">
+          <div class="kpi-icon">📘</div>
+          <div class="kpi-label">Asignaturas</div>
+          <div class="kpi-value">{{ asignaturas_total|default:0 }}</div>
         </div>
       </div>
     </div>
 
-    <!-- Estado del sistema + Actividad -->
     <div class="row g-3">
+      <!-- Estado -->
       <div class="col-lg-6">
-        <div class="card h-100">
+        <div class="card h-100 shadow-sm">
           <div class="card-body">
-            <h2 class="h5 mb-3">Estado del Sistema</h2>
-            <div class="d-grid gap-2">
-              <div class="d-flex justify-content-between align-items-center border rounded p-2">
-                <span>Servidor</span><span class="btn btn-outline-secondary disabled">🟢 Activo</span>
-              </div>
-              <div class="d-flex justify-content-between align-items-center border rounded p-2">
-                <span>Base de Datos</span><span class="btn btn-outline-secondary disabled">🟢 Activo</span>
-              </div>
-              <div class="d-flex justify-content-between align-items-center border rounded p-2">
-                <span>API</span><span class="btn btn-outline-secondary disabled">🟢 Activo</span>
-              </div>
-              <div class="d-flex justify-content-between align-items-center border rounded p-2">
-                <span>Cache</span><span class="btn btn-outline-secondary disabled">🟡 Lento</span>
-              </div>
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h2 class="section-title mb-0">Estado del Sistema</h2>
+              {% if health.server.ok and health.db.ok and health.cache.ok %}
+              <span class="chip chip-success">Todo OK</span>
+              {% elif health.db.ok or health.cache.ok %}
+              <span class="chip chip-warn">Atención</span>
+              {% else %}
+              <span class="chip chip-danger">Fuera de servicio</span>
+              {% endif %}
             </div>
+
+            <ul class="list-group list-group-flush sys-list">
+              <li class="list-group-item d-flex justify-content-between align-items-start gap-3">
+                <div class="me-auto">
+                  <div class="fw-700">
+                    <span class="status-dot {% if health.server.ok %}ok{% else %}bad{% endif %}"></span>
+                    Servidor (Django)
+                  </div>
+                  <small class="text-muted d-block text-truncate">
+                    Hora servidor: {{ health.server.time|date:"d/m/Y H:i" }} · Django {{ health.server.version }}
+                  </small>
+                </div>
+                <span class="chip {% if health.server.ok %}chip-success{% else %}chip-danger{% endif %}">
+                  {% if health.server.ok %}OK{% else %}Caído{% endif %}
+                </span>
+              </li>
+
+              <li class="list-group-item d-flex justify-content-between align-items-start gap-3">
+                <div class="me-auto">
+                  <div class="fw-700">
+                    <span class="status-dot {% if health.db.ok %}ok{% else %}bad{% endif %}"></span>
+                    Base de datos
+                  </div>
+                  <small class="text-muted d-block text-truncate">
+                    {{ health.db.vendor }} · {{ health.db.name }}
+                  </small>
+                </div>
+                <span class="chip {% if health.db.ok %}chip-success{% else %}chip-danger{% endif %}">
+                  {% if health.db.ok %}Conectada{% else %}Sin conexión{% endif %}
+                </span>
+              </li>
+
+              <li class="list-group-item d-flex justify-content-between align-items-start gap-3">
+                <div class="me-auto">
+                  <div class="fw-700">
+                    <span class="status-dot {% if health.cache.ok %}ok{% else %}warn{% endif %}"></span>
+                    Cache
+                  </div>
+                  <small class="text-muted d-block text-truncate">
+                    {{ health.cache.backend }} · {{ health.cache.latency_ms }} ms
+                  </small>
+                </div>
+                <span class="chip {% if health.cache.ok %}chip-success{% else %}chip-warn{% endif %}">
+                  {% if health.cache.ok %}OK{% else %}Fallo/Off{% endif %}
+                </span>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
 
-      <!-- Actividad / accesos de contenido -->
+      <!-- Acciones rápidas -->
       <div class="col-lg-6">
-        <div class="card h-100">
+        <div class="card h-100 shadow-sm">
           <div class="card-body">
-            <h3 class="h6 mb-3">Contenido</h3>
-            <div class="d-grid gap-2">
-              <a class="btn btn-primary" href="/admin/LevelUp/actividad/add/" target="_blank">+ Nueva actividad
-                (Admin)</a>
-              <a class="btn btn-outline-primary" href="/admin/LevelUp/actividad/" target="_blank">Gestionar
-                actividades</a>
-              <a class="btn btn-outline-secondary" href="/admin/LevelUp/asignacionactividad/add/"
-                target="_blank">Asignar actividad</a>
-              <a class="btn btn-outline-secondary" href="/admin/LevelUp/asignacionactividad/" target="_blank">Ver
-                asignaciones</a>
+            <h3 class="section-title mb-3">Acciones rápidas</h3>
+
+            <!-- Usuarios -->
+            <div class="mb-4">
+              <div class="group-title mb-2">Usuarios</div>
+              <div class="d-grid gap-2">
+                <a class="btn btn-edu-navy btn-big" href="{% url 'register' %}" target="_blank">+ Crear usuario</a>
+                <a class="btn btn-chip btn-ghost" href="{% url 'adm_list_profesores' %}">Lista de profesores</a>
+                <a class="btn btn-chip btn-ghost" href="{% url 'adm_list_alumnos' %}">Lista de alumnos</a>
+              </div>
             </div>
 
-            <hr>
-            <h3 class="h6 mb-2">Actividad de hoy</h3>
-            <div class="d-grid gap-2">
-              <div class="d-flex justify-content-between align-items-center border rounded p-2">
-                <span>Nuevos usuarios</span><strong>+24</strong>
-              </div>
-              <div class="d-flex justify-content-between align-items-center border rounded p-2">
-                <span>Actividades completadas</span><strong>156</strong>
-              </div>
-              <div class="d-flex justify-content-between align-items-center border rounded p-2">
-                <span>Reportes generados</span><strong>12</strong>
-              </div>
-              <div class="d-flex justify-content-between align-items-center border rounded p-2">
-                <span>Tiempo activo</span><strong>98.7%</strong>
+            <!-- Asignaciones -->
+            <div class="mb-4">
+              <div class="group-title mb-2">Asignaciones</div>
+              <div class="d-grid gap-2">
+                <a class="btn btn-edu-navy btn-card" href="{% url 'adm_asignaciones_nueva' %}">Asignar profesor →
+                  asignatura</a>
+                <a class="btn btn-edu-navy btn-card" href="{% url 'adm_matriculas_nueva' %}">Matricular alumno →
+                  curso</a>
+                <a class="btn btn-chip btn-ghost" href="{% url 'adm_asignaciones_lista' %}">Ver asignaciones de
+                  docentes</a>
+                <a class="btn btn-chip btn-ghost" href="{% url 'adm_matriculas_lista' %}">Ver matrículas</a>
               </div>
             </div>
-          </div>
+
+            <!-- Listados -->
+            <div class="mb-4">
+              <div class="group-title mb-2">Listados</div>
+              <div class="d-flex flex-wrap gap-2 mb-2">
+                <a class="btn btn-chip" href="{% url 'adm_list_profesores' %}">Lista de profesores</a>
+                <a class="btn btn-chip" href="{% url 'adm_list_alumnos' %}">Lista de alumnos</a>
+              </div>
+              <form action="{% url 'adm_list_alumnos_por_curso' %}" method="get" class="row g-2 align-items-center">
+                <div class="col-12 col-sm">
+                  <select name="curso" class="form-select form-select-sm k-slim">
+                    {% for c in cursos_list %}
+                    <option value="{{ c.id }}">{{ c }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-auto">
+                  <button class="btn btn-chip" type="submit">Ver alumnos por curso</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Cursos y Asignaturas -->
+            <div>
+              <div class="group-title mb-2">Cursos y Asignaturas</div>
+              <div class="d-grid gap-2">
+                <a class="btn btn-edu-navy btn-big" href="{% url 'adm_cursos_nuevo' %}">+ Nuevo curso</a>
+                <a class="btn btn-edu-navy btn-big" href="{% url 'adm_asignaturas_nueva' %}">+ Nueva asignatura</a>
+              </div>
+              <div class="d-flex flex-wrap gap-2 mt-2">
+                <a class="btn btn-chip btn-ghost" href="{% url 'adm_cursos_lista' %}">Gestionar cursos</a>
+                <a class="btn btn-chip btn-ghost" href="{% url 'adm_asignaturas_lista' %}">Gestionar asignaturas</a>
+              </div>
+            </div>
+
+          </div><!-- card-body -->
         </div>
       </div>
-
-    </div>
+    </div><!-- row -->
 
   </div>
 </main>
