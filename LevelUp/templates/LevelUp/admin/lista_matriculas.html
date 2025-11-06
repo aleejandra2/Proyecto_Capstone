@@ -4,7 +4,7 @@
 <main class="container py-3">
     <div class="d-flex align-items-center justify-content-between mb-3">
         <h1 class="section-title m-0">Matrículas</h1>
-        <a href="{% url 'adm_matriculas_nueva' %}" class="btn btn-edu-navy">+ Matricular</a>
+        <a href="{% url 'adm_matriculas_nueva' %}" class="btn btn-edu-navy">+ Nueva matrícula</a>
     </div>
 
     <div class="card">
@@ -16,23 +16,18 @@
                             <th>Alumno</th>
                             <th>Curso</th>
                             <th>Fecha</th>
-                            <th style="width:160px">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for m in matriculas %}
+                        {% for m in filas %}
                         <tr>
                             <td>{{ m.estudiante.get_full_name|default:m.estudiante.username }}</td>
-                            <td>{{ m.curso.get_nivel_display|default:m.curso.nivel }} {{ m.curso.letra }}</td>
-                            <td>{{ m.fecha|date:"d/m/Y" }}</td>
-                            <td>
-                                <a class="btn btn-chip btn-ghost" href="{% url 'adm_matriculas_borrar' m.id %}"
-                                    onclick="return confirm('¿Eliminar esta matrícula?');">🗑 Eliminar</a>
-                            </td>
+                            <td>{{ m.curso }}</td>
+                            <td>{{ m.fecha }}</td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="4" class="text-muted">Sin matrículas.</td>
+                            <td colspan="3" class="text-muted">Sin registros.</td>
                         </tr>
                         {% endfor %}
                     </tbody>

@@ -9,10 +9,15 @@
 
     <div class="row g-2">
         {% for c in cursos %}
-        <div class="col-12 col-md-4">
+        <div class="col-12 col-md-6 col-lg-4">
             <div class="kpi-card">
                 <div class="kpi-label">Curso</div>
                 <div class="kpi-value">{{ c.get_nivel_display|default:c.nivel }} {{ c.letra }}</div>
+                <div class="d-flex gap-2 mt-2">
+                    <a class="btn btn-chip" href="{% url 'adm_cursos_editar' c.id %}">✎ Editar</a>
+                    <a class="btn btn-chip btn-ghost" href="{% url 'adm_cursos_borrar' c.id %}"
+                        onclick="return confirm('¿Eliminar este curso?');">🗑 Eliminar</a>
+                </div>
             </div>
         </div>
         {% empty %}

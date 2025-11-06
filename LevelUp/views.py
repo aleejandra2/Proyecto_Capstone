@@ -13,12 +13,13 @@ from django.utils import timezone
 import time
 from django.db import transaction, models, connection
 from django.core.cache import cache
-from django.db.models import Count, Q, Prefetch
+from django.db.models import Count, Q, Prefetch, ProtectedError
 from django.forms import inlineformset_factory, BaseInlineFormSet
 from django import get_version as django_get_version
 from django.views.decorators.http import require_POST
 from django.templatetags.static import static
 from django.contrib.staticfiles import finders
+from django import forms
 
 from .forms import RegistrationForm, LoginForm, ProfileForm, ActividadForm, ItemForm, CursoForm, AsignaturaForm, AsignacionDocenteForm, MatriculaForm
 from .rewards import compute_rewards, apply_rewards
@@ -280,6 +281,36 @@ def adm_cursos_nuevo(request):
         return redirect("adm_cursos_lista")
     return render(request, "LevelUp/admin/admin_form.html", {"form": form, "titulo": "Nuevo curso", "post_url": reverse("adm_cursos_nuevo")})
 
+@admin_required
+def adm_cursos_editar(request, pk):
+    curso = get_object_or_404(Curso, pk=pk)
+    # Para edición, evitamos el "duplicado" contra sí mismo:
+    class CursoEditForm(CursoForm):
+        def clean(self):
+            data = super().clean()
+            if Curso.objects.exclude(pk=curso.pk).filter(nivel=data.get("nivel"), letra=data.get("letra")).exists():
+                raise forms.ValidationError("Ese curso ya existe.")
+            return data
+
+    form = CursoEditForm(request.POST or None, instance=curso)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Curso actualizado.")
+        return redirect("adm_cursos_lista")
+    return render(request, "LevelUp/admin/admin_form.html", {
+        "form": form, "titulo": "Editar curso", "post_url": reverse("adm_cursos_editar", args=[pk])
+    })
+
+@admin_required
+def adm_cursos_borrar(request, pk):
+    curso = get_object_or_404(Curso, pk=pk)
+    try:
+        curso.delete()
+        messages.success(request, "Curso eliminado.")
+    except ProtectedError:
+        messages.error(request, "No se puede eliminar: el curso tiene matrículas u otros registros asociados.")
+    return redirect("adm_cursos_lista")
+
 # ---------- ASIGNATURAS ----------
 @admin_required
 def adm_asignaturas_lista(request):
@@ -295,13 +326,43 @@ def adm_asignaturas_nueva(request):
         return redirect("adm_asignaturas_lista")
     return render(request, "LevelUp/admin/admin_form.html", {"form": form, "titulo": "Nueva asignatura", "post_url": reverse("adm_asignaturas_nueva")})
 
+@admin_required
+def adm_asignaturas_editar(request, pk):
+    asign = get_object_or_404(Asignatura, pk=pk)
+
+    class AsignaturaEditForm(AsignaturaForm):
+        def clean_codigo(self):
+            c = (self.cleaned_data.get("codigo") or "").strip()
+            if Asignatura.objects.exclude(pk=asign.pk).filter(codigo__iexact=c).exists():
+                raise forms.ValidationError("Ya existe una asignatura con ese código.")
+            return c
+
+    form = AsignaturaEditForm(request.POST or None, instance=asign)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Asignatura actualizada.")
+        return redirect("adm_asignaturas_lista")
+    return render(request, "LevelUp/admin/admin_form.html", {
+        "form": form, "titulo": "Editar asignatura", "post_url": reverse("adm_asignaturas_editar", args=[pk])
+    })
+
+@admin_required
+def adm_asignaturas_borrar(request, pk):
+    asign = get_object_or_404(Asignatura, pk=pk)
+    try:
+        asign.delete()
+        messages.success(request, "Asignatura eliminada.")
+    except ProtectedError:
+        messages.error(request, "No se puede eliminar: hay actividades u otras referencias a esta asignatura.")
+    return redirect("adm_asignaturas_lista")
+
 # ---------- ASIGNACIÓN DOCENTE → ASIGNATURA ----------
 @admin_required
 def adm_asignaciones_lista(request):
     filas = (AsignacionDocente.objects
              .select_related("profesor", "asignatura")
              .order_by("asignatura__nombre", "profesor__last_name"))
-    return render(request, "LevelUp/admin/docente_asignatura.html", {"filas": filas})
+    return render(request, "LevelUp/admin/docente_asignatura.html", {"asignaciones": filas})
 
 @admin_required
 def adm_asignaciones_nueva(request):
@@ -312,15 +373,19 @@ def adm_asignaciones_nueva(request):
         return redirect("adm_asignaciones_lista")
     return render(request, "LevelUp/admin/admin_form.html", {"form": form, "titulo": "Asignar profesor → asignatura", "post_url": reverse("adm_asignaciones_nueva")})
 
-# ---------- MATRÍCULAS ----------
 @admin_required
+def adm_asignaciones_borrar(request, pk):
+    reg = get_object_or_404(AsignacionDocente, pk=pk)
+    reg.delete()
+    messages.success(request, "Asignación eliminada.")
+    return redirect("adm_asignaciones_lista")
+
+# ---------- MATRÍCULAS ----------
 def adm_matriculas_lista(request):
-    filas = (
-        Matricula.objects
-        .select_related("estudiante", "curso")  
-        .order_by("-fecha")
-    )
-    return render(request, "LevelUp/admin/lista_cursos.html", {"filas": filas})
+    filas = (Matricula.objects
+             .select_related("estudiante", "curso")
+             .order_by("-fecha"))
+    return render(request, "LevelUp/admin/lista_matriculas.html", {"filas": filas})
 
 @admin_required
 def adm_matriculas_nueva(request):
@@ -330,6 +395,13 @@ def adm_matriculas_nueva(request):
         messages.success(request, "Matrícula registrada.")
         return redirect("adm_matriculas_lista")
     return render(request, "LevelUp/admin/admin_form.html", {"form": form, "titulo": "Matricular alumno → curso", "post_url": reverse("adm_matriculas_nueva")})
+
+@admin_required
+def adm_matriculas_borrar(request, pk):
+    m = get_object_or_404(Matricula, pk=pk)
+    m.delete()
+    messages.success(request, "Matrícula eliminada.")
+    return redirect("adm_matriculas_lista")
 
 # ---------- LISTADOS ----------
 @admin_required

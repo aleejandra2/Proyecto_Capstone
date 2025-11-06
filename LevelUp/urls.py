@@ -50,18 +50,29 @@ urlpatterns = [
     path("misiones/mapa/<int:actividad_pk>/", views.misiones_mapa, name="misiones_mapa_actividad"),
 
     # Panel Admin (admin-app)
+    # --- Cursos ---
     path("panel/admin/cursos/", views.adm_cursos_lista, name="adm_cursos_lista"),
     path("panel/admin/cursos/nuevo/", views.adm_cursos_nuevo, name="adm_cursos_nuevo"),
+    path("panel/admin/cursos/<int:pk>/editar/",views.adm_cursos_editar,  name="adm_cursos_editar"),
+    path("panel/admin/cursos/<int:pk>/borrar/",views.adm_cursos_borrar,  name="adm_cursos_borrar"),
 
+    # --- Asignaturas ---
     path("panel/admin/asignaturas/", views.adm_asignaturas_lista, name="adm_asignaturas_lista"),
     path("panel/admin/asignaturas/nueva/", views.adm_asignaturas_nueva, name="adm_asignaturas_nueva"),
+    path("panel/admin/asignaturas/<int:pk>/editar/",views.adm_asignaturas_editar,  name="adm_asignaturas_editar"),
+    path("panel/admin/asignaturas/<int:pk>/borrar/",views.adm_asignaturas_borrar,  name="adm_asignaturas_borrar"),
 
+    # --- Asignaciones Docente ---
     path("panel/admin/asignaciones/", views.adm_asignaciones_lista, name="adm_asignaciones_lista"),
     path("panel/admin/asignaciones/nueva/", views.adm_asignaciones_nueva, name="adm_asignaciones_nueva"),
+    path("panel/admin/asignaciones/<int:pk>/borrar/",views.adm_asignaciones_borrar,name="adm_asignaciones_borrar"),
 
+    # --- Matrículas ---
     path("panel/admin/matriculas/", views.adm_matriculas_lista, name="adm_matriculas_lista"),
     path("panel/admin/matriculas/nueva/", views.adm_matriculas_nueva, name="adm_matriculas_nueva"),
+    path("panel/admin/matriculas/<int:pk>/borrar/", views.adm_matriculas_borrar,   name="adm_matriculas_borrar"),
 
+    # --- Listados ---
     path("panel/admin/listas/profesores/", views.adm_list_profesores, name="adm_list_profesores"),
     path("panel/admin/listas/alumnos/", views.adm_list_alumnos, name="adm_list_alumnos"),
     path("panel/admin/listas/alumnos-por-curso/", views.adm_list_alumnos_por_curso, name="adm_list_alumnos_por_curso"),

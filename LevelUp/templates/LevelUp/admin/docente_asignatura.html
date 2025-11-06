@@ -15,17 +15,22 @@
                         <tr>
                             <th>Profesor</th>
                             <th>Asignatura</th>
+                            <th style="width:160px">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for r in filas %}
+                        {% for r in asignaciones %}
                         <tr>
                             <td>{{ r.profesor.get_full_name|default:r.profesor.username }}</td>
                             <td>{{ r.asignatura.nombre }}</td>
+                            <td>
+                                <a class="btn btn-chip btn-ghost" href="{% url 'adm_asignaciones_borrar' r.id %}"
+                                    onclick="return confirm('¿Eliminar esta asignación?');">🗑 Eliminar</a>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="2" class="text-muted">Aún no hay asignaciones.</td>
+                            <td colspan="3" class="text-muted">Aún no hay asignaciones.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
