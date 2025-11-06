@@ -3,18 +3,22 @@
 {% block title %}LevelUp — Aprende, juega y progresa{% endblock %}
 
 {% block navbar %}
-<nav class="navbar navbar-expand-lg navbar-home shadow-sm">
+<nav class="navbar navbar-expand-lg navbar-home navbar-home--kids">
   <div class="container">
     <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
-      <img src="{% static 'LevelUp/img/logo png.png' %}" height="60" alt="LevelUp">
+      <img src="{% static 'LevelUp/img/logo png.png' %}" height="40" alt="LevelUp">
       <span class="ms-2 font-merienda">LevelUp</span>
     </a>
+
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#homeNav"
       aria-controls="homeNav" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
-    <div class="d-flex gap-3 flex-wrap">
-      <a href="{% url 'login' %}" class="btn btn-edu btn-lg">Acceder</a>
+
+    <div class="collapse navbar-collapse" id="homeNav">
+      <div class="ms-auto d-flex gap-2">
+        <a href="{% url 'login' %}" class="btn btn-edu pill btn-sm">Acceder</a>
+      </div>
     </div>
   </div>
 </nav>
@@ -24,10 +28,12 @@
 <main class="landing">
 
   <!-- HERO con emojis flotantes y botón de confetti -->
-  <section class="landing-hero position-relative overflow-hidden">
-    <div class="container">
-      <div class="row align-items-center g-4">
-        <div class="col-lg-6">
+ <section class="landing-hero position-relative overflow-hidden hero-photo-full"
+         style="--hero-photo: url('{% static 'LevelUp/img/fondo.jpg' %}');">
+  <div class="container">
+    <div class="row align-items-center g-4">
+      <div class="col-lg-6">
+        <div class="hero-copy">
           <h1 class="display-5 fw-800 font-merienda">
             Aprender es una <span class="grad-ink">aventura</span>
           </h1>
@@ -35,133 +41,109 @@
             LevelUp te motiva con puntos, niveles, misiones interactivas y celebra tus logros.
           </p>
 
-          <div class="d-flex flex-wrap gap-2">
-            <a href="{% url 'login' %}" class="btn btn-edu btn-lg">Solicita más información</a>
-            <button class="btn btn-edu-ghost btn-lg" id="btn-celebrar" type="button" aria-label="Celebrar logros">
-              ¡Celebrar! 🎉
-            </button>
-          </div>
-
-          <!-- Contadores animados -->
-          <div class="row g-3 mt-4">
-            <div class="col-6 col-md-4">
-              <div class="stat-card" data-count="1240">
-                <span class="stat-value">0</span>
-                <small class="stat-label">Puntos hoy</small>
-              </div>
-            </div>
-            <div class="col-6 col-md-4">
-              <div class="stat-card" data-count="86">
-                <span class="stat-value">0</span>
-                <small class="stat-label">Medallas</small>
-              </div>
-            </div>
-            <div class="col-12 col-md-4">
-              <div class="stat-card" data-count="12">
-                <span class="stat-value">0</span>
-                <small class="stat-label">Niveles</small>
-              </div>
-            </div>
-          </div>
-        </div>
+          <a href="{% url 'login' %}" class="btn btn-edu btn-lg pill">Solicita más información</a>
+          <button class="btn btn-edu-ghost btn-lg pill" id="btn-celebrar" type="button" aria-label="Celebrar logros">
+            ¡Celebrar! 🎉
+          </button>
 
         <div class="col-lg-6">
           <div class="hero-illustration tilt-on-move">
-            <img src="{% static 'LevelUp/img/landing/hero-edu.svg' %}" alt="Aprender jugando"
-                 onerror="this.style.display='none'">
-            <div class="hero-fallback">📚🧩🎯</div>
+            <img src="" alt="Aprender jugando"
+              onerror="this.style.display='none'">
+            <div class="hero-fallback"></div>
           </div>
         </div>
       </div>
     </div>
   </section>
+  
+  <!-- SECCIÓN CON LINEAS DE COLORES-->
+  <section class="kak-section section-pad">
+  <div class="container text-center">
 
-  <!-- FEATURES en tarjetas flip -->
-  <section class="landing-features section-pad">
-    <div class="container">
-      <div class="text-center mb-4">
-        <h2 class="fw-800">Todo lo que necesitas para <span class="grad-ink">enseñar mejor</span></h2>
-      </div>
+    <h2 class="kak-title">Motiva <span class="hl hl-teal">mide y</span> 
+      <span class="hl hl-pink">mejora en</span> <span class="hl hl-yellow">cada clase</span>
+    </h2>
 
-      <div class="row g-4 justify-content-center">
-        <div class="col-sm-6 col-lg-4">
-          <button class="flip-card w-100" aria-label="Actividades interactivas">
-            <div class="flip-inner">
-              <div class="flip-front feature-card">
-                <div class="icon">🧠</div>
-                <h3>Actividades</h3>
-                <p>Quizzes, retos y videos con niveles.</p>
-              </div>
-              <div class="flip-back feature-card">
-                <p class="m-0">¡Explora misiones diarias y gana estrellas con cada reto superado!</p>
-              </div>
-            </div>
-          </button>
-        </div>
+    
+    <p class="kak-sublead">
+      <strong>LevelUp combina minijuegos</strong>
+      LevelUp combina minijuegos y evaluaciones para que los estudiantes aprendan mientras tú ves su avance, dominen contenidos y ganen recompensas.
+    </p>
 
-        <div class="col-sm-6 col-lg-4">
-          <button class="flip-card w-100" aria-label="Recompensas divertidas">
-            <div class="flip-inner">
-              <div class="flip-front feature-card">
-                <div class="icon">🏅</div>
-                <h3>Recompensas</h3>
-                <p>Puntos, medallas y niveles.</p>
-              </div>
-              <div class="flip-back feature-card">
-                <p class="m-0">Canjea tus estrellas por medallas ¡y desbloquea avatares!</p>
-              </div>
-            </div>
-          </button>
-        </div>
-
-        <div class="col-sm-6 col-lg-4">
-          <button class="flip-card w-100" aria-label="Fácil para docentes">
-            <div class="flip-inner">
-              <div class="flip-front feature-card">
-                <div class="icon">👩‍🏫</div>
-                <h3>Para docentes</h3>
-                <p>Asigna, corrige y mide progreso.</p>
-              </div>
-              <div class="flip-back feature-card">
-                <p class="m-0">Plantillas rápidas, rúbricas y reportes en 1 clic.</p>
-              </div>
-            </div>
-          </button>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- CÓMO FUNCIONA con animación al hacer scroll -->
-  <section class="landing-how section-pad">
-  <div class="container">
-    <div class="text-center mb-4">
-      <h2 class="fw-bold mb-1">Cómo funciona</h2>
-      <p class="text-edu-ink-700 m-0">Comienza en minutos y ve resultados reales.</p>
-    </div>
-
-    <div class="how-rail">
-      <div class="how-step">
-        <div class="how-dot" aria-hidden="true">1</div>
-        <h3 class="how-title">Crea tu clase</h3>
-        <p class="how-text">Invita estudiantes con un código o link y define tus objetivos.</p>
-      </div>
-
-      <div class="how-step">
-        <div class="how-dot" aria-hidden="true">2</div>
-        <h3 class="how-title">Diseña actividades</h3>
-        <p class="how-text">Quizzes, tareas y minijuegos con niveles de dificultad.</p>
-      </div>
-
-      <div class="how-step">
-        <div class="how-dot" aria-hidden="true">3</div>
-        <h3 class="how-title">Motiva y mide</h3>
-        <p class="how-text">Otorga puntos y medallas; sigue el progreso y el ranking.</p>
-      </div>
-    </div>
+    <figure class="kak-shot mx-auto">
+      <img
+        src="{% static 'LevelUp/img/fondo.jpg' %}" alt="" class="img-fluid">
+    </figure>
   </div>
 </section>
 
+
+  <!-- CÓMO FUNCIONA con animación al hacer scroll -->
+  <section class="features-kids section-pad">
+  <div class="container">
+
+    <h2 class="kak-title mb-1">Todas las <span class="hl hl-teal">funciones</span> para <span class="hl hl-blue">aprender</span>.</h2>
+    <p class="kak-sublead">Herramientas simples para enseñar, motivar y medir sin fricción.</p>
+
+    <div class="feat-grid">
+      <!-- 1 -->
+      <article class="feat-card">
+        <header class="feat-head">
+          <h3 class="hl-teal feat-title">Cuestionarios</h3>
+          <span class="feat-badge" aria-hidden="true">
+            <img src="{% static 'LevelUp/img/estrella.webp' %}" alt="">
+          </span>
+        </header>
+        <p class="feat-text">Evalúa y respalda el aprendizaje con preguntas autocorregibles.</p>
+      </article>
+
+      <!-- 2 -->
+      <article class="feat-card">
+        <header class="feat-head">
+          <h3 class="feat-title">Misiones & minijuegos</h3>
+          <span class="feat-badge" aria-hidden="true">
+            <img src="{% static 'LevelUp/img/estrella.webp' %}" alt="">
+          </span>
+        </header>
+        <p class="feat-text">Aprender jugando: niveles, monedas y preguntas dentro del juego.</p>
+      </article>
+
+      <!-- 4 -->
+      <article class="feat-card">
+        <header class="feat-head">
+          <h3 class="feat-title">Grupos de refuerzo</h3>
+          <span class="feat-badge" aria-hidden="true">
+            <img src="{% static 'LevelUp/img/estrella.webp' %}" alt="">
+          </span>
+        </header>
+        <p class="feat-text">Detecta brechas y asigna prácticas enfocadas por nivel.</p>
+      </article>
+
+      <!-- 5 -->
+      <article class="feat-card">
+        <header class="feat-head">
+          <h3 class="feat-title">Ranking y recompensas</h3>
+          <span class="feat-badge" aria-hidden="true">
+            <img src="{% static 'LevelUp/img/estrella.webp' %}" alt="">
+          </span>
+        </header>
+        <p class="feat-text">Puntos, medallas y tablero para celebrar el progreso.</p>
+      </article>
+
+      <!-- 6 -->
+      <article class="feat-card">
+        <header class="feat-head">
+          <h3 class="feat-title">Rúbricas y reportes</h3>
+          <span class="feat-badge" aria-hidden="true">
+            <img src="{% static 'LevelUp/img/estrella.webp' %}" alt="">
+          </span>
+        </header>
+        <p class="feat-text">Mide objetivos por estudiante, curso y asignatura en 1 clic.</p>
+      </article>
+    </div>
+  </div>
+</section>
 
   <!-- ZONA DE PRUEBA: Mini-reto matemático -->
   <section class="kids-playground section-pad">
@@ -217,7 +199,6 @@
   <section class="landing-cta text-center">
     <div class="container">
       <h2 class="fw-800">¿Listo para <span class="grad-ink">LevelUp</span> en tu aula?</h2>
-      <p class="text-edu-ink-700 mb-4">Prueba gratis y descubre el poder de la gamificación.</p>
     </div>
   </section>
 </main>
@@ -225,4 +206,6 @@
 <!-- Archivos estáticos de esta página -->
 <link rel="stylesheet" href="{% static 'LevelUp/css/home-kids.css' %}">
 <script defer src="{% static 'LevelUp/js/home-kids.js' %}"></script>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap" rel="stylesheet">
+<style>.kak-title{ font-family: "Caveat", system-ui, sans-serif; font-weight:700; }</style>
 {% endblock %}

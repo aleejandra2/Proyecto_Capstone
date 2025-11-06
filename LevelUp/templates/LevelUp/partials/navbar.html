@@ -1,40 +1,38 @@
 {% load static %}
 <nav class="navbar navbar-expand-lg navbar-kids">
   <div class="container">
-    <div class="d-none d-lg-flex align-items-center gap-3 mx-auto order-0">
-      <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
-        <img src="{% static 'LevelUp/img/logo png.png' %}" width="32" height="32"
-             class="d-inline-block align-text-top me-2" style="object-fit:contain;">
-        <span id="levelupp">LevelUp</span>
-      </a>
-      <a class="nav-link px-2 {% if request.resolver_match.url_name == 'actividades' %}active{% endif %}"
-         href="{% url 'actividades' %}">Actividades</a>
-      <a class="nav-link px-2 {% if request.resolver_match.url_name == 'ranking' %}active{% endif %}"
-         href="{% url 'ranking' %}">Ranking</a>
-    </div>
 
-    <button class="navbar-toggler order-1" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain"
-            aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+    <!-- BRAND: siempre visible (mobile + desktop) -->
+    <a class="navbar-brand d-flex align-items-center order-0" href="{{ user_home_url }}">
+      <img src="{% static 'LevelUp/img/logo png.png' %}" width="32" height="32"
+           class="d-inline-block align-text-top me-2" style="object-fit:contain;">
+      <span id="levelupp">LevelUp</span>
+    </a>
+
+    <!-- Toggler -->
+    <button class="navbar-toggler order-1" type="button" data-bs-toggle="collapse"
+            data-bs-target="#navbarMain" aria-controls="navbarMain"
+            aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
 
-    {# Menú colapsable (móvil + resto de items) #}
+    <!-- Collapse -->
     <div class="collapse navbar-collapse order-2" id="navbarMain">
       {% with current=request.resolver_match.url_name %}
 
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        {# Duplicamos tabs para móvil (no se ven en desktop) #}
-        <li class="nav-item d-lg-none">
-          <a class="nav-link {% if current == 'actividades' %}active{% endif %}"
+      <!-- NAV LINKS: centrados en desktop, lista normal en mobile -->
+      <ul class="navbar-nav mx-lg-auto me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link px-2 {% if current == 'actividades' %}active{% endif %}"
              href="{% url 'actividades' %}">Actividades</a>
         </li>
-        <li class="nav-item d-lg-none">
-          <a class="nav-link {% if current == 'ranking' %}active{% endif %}"
+        <li class="nav-item">
+          <a class="nav-link px-2 {% if current == 'ranking' %}active{% endif %}"
              href="{% url 'ranking' %}">Ranking</a>
         </li>
       </ul>
 
-      {# Menú de usuario tipo Facebook (avatar dropdown) #}
+      <!-- USER MENU -->
       <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
         {% if user.is_authenticated %}
           {% with display_name=user.apodo|default:user.get_full_name|default:user.username %}
@@ -81,6 +79,7 @@
           </li>
         {% endif %}
       </ul>
+
       {% endwith %}
     </div>
   </div>

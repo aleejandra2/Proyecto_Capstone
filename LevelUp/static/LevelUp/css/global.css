@@ -231,7 +231,7 @@ body{
 .btn-edu-ghost{
   background:#eef2ff;color:#1e3a8a;border:0;border-radius:14px;padding:.85rem 1.2rem;font-weight:700;
 }
-.grad-ink{background:linear-gradient(90deg,#2563eb,#10b981 70%,#f59e0b);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.grad-ink{background:linear-gradient(90deg,#803e94,#6d089c);-webkit-background-clip:text;background-clip:text;color:transparent;}
 .section-pad{padding:72px 0;}
 .mini-bullets{list-style:none;padding:0;margin:0;display:flex;gap:1rem;flex-wrap:wrap}
 .mini-bullets li{position:relative;padding-left:1.25rem}

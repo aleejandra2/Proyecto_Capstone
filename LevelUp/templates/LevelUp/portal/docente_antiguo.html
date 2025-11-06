@@ -1,0 +1,105 @@
+{% extends "LevelUp/base.html" %}
+{% block title %}Portal del Docente · LevelUp{% endblock %}
+
+{% block content %}
+<main class="min-h-screen">
+  <div class="container">
+
+    <!-- Encabezado -->
+    <div class="card mb-3">
+      <div class="card-body d-flex flex-wrap justify-content-between align-items-start gap-2">
+        <div>
+          <h1 class="h3 m-0">Portal del Profesor 👨‍🏫</h1>
+          <p class="text-muted mb-0 mt-1">Gestiona tus clases y el progreso de tus estudiantes.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <a href="{% url 'crear' %}" class="btn btn-primary">+ Crear actividad</a>
+          <a href="{% url 'docente_lista' %}" class="btn btn-outline-primary">Mis actividades</a>
+          <a href="{% url 'reportes_docente' %}" class="btn btn-outline-secondary">Ver reportes</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-6 col-md-3">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Estudiantes</div>
+              <div class="fs-3 fw-bold">{{ total_estudiantes|default:0 }}</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Actividades</div>
+              <div class="fs-3 fw-bold">{{ total_actividades|default:0 }}</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Promedio General</div>
+              <div class="fs-3 fw-bold">{{ promedio_general|default:"—" }}</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Días activos</div>
+              <div class="fs-3 fw-bold">{{ dias_activos|default:0 }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dos columnas: Actividad reciente + Acciones -->
+    <div class="row g-3">
+      <!-- Actividad reciente (placeholder) -->
+      <div class="col-lg-8">
+        <div class="card h-100">
+          <div class="card-body">
+            <h2 class="h5 mb-3">Actividad reciente de tus alumnos👀</h2>
+
+            <div class="d-flex align-items-center gap-3 mb-3 border rounded p-2">
+              <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center"
+                style="width:40px;height:40px;">AV</div>
+              <div class="flex-grow-1">
+                <div class="fw-semibold">Ana Vargas completó “Fracciones Básicas”</div>
+                <div class="text-muted small">Hace 5 minutos</div>
+              </div>
+              <span class="btn btn-outline-secondary disabled">+150 pts</span>
+            </div>
+
+            <div class="d-flex align-items-center gap-3 border rounded p-2">
+              <div class="rounded-circle d-flex align-items-center justify-content-center"
+                style="width:40px;height:40px;background:#f59e0b;color:#111827;">LR</div>
+              <div class="flex-grow-1">
+                <div class="fw-semibold">Luis Ramírez subió al nivel 4</div>
+                <div class="text-muted small">Hace 12 minutos</div>
+              </div>
+              <span class="btn btn-outline-secondary disabled">Nivel Up!</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones rápidas -->
+      <div class="col-lg-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <h3 class="h6 mb-3">Acciones rápidas</h3>
+            <div class="d-grid gap-2">
+              <a href="{% url 'crear' %}" class="btn btn-primary">📝 Nueva actividad</a>
+              <a href="{% url 'docente_lista' %}" class="btn btn-outline-primary">📚 Mis actividades</a>
+              <a href="/admin/LevelUp/asignacionactividad/add/" target="_blank" class="btn btn-outline-secondary">🎯
+                Asignar actividad (Admin)</a>
+              <a href="{% url 'reportes_docente' %}" class="btn btn-outline-dark">📊 Reportes</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+{% endblock %}

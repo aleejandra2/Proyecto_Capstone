@@ -1,5 +1,4 @@
 /* ---------- Animaciones base ---------- */
-.grad-ink{ background: linear-gradient(90deg,var(--primary),#06b6d4); -webkit-background-clip:text; background-clip:text; color:transparent; }
 .tilt-on-move{ transition: transform .15s ease; will-change: transform; }
 
 .floating-emoji{
@@ -36,11 +35,6 @@
   box-shadow:0 8px 24px rgba(0,0,0,.06); display:flex; flex-direction:column; align-items:center; justify-content:center;
 }
 .feature-card .icon{ font-size:2rem; }
-
-/* ---------- (ELIMINADO: reveal on scroll) ----------
-   Se retiraron .how-timeline, .how-item, .how-badge, .reveal
-   para evitar parpadeos y dependencias JS.
------------------------------------------------------ */
 
 /* ===== Cómo funciona: rail sin JS ===== */
 .how-rail{
@@ -144,3 +138,151 @@
 /* ---------- Utils ---------- */
 .section-pad{ padding:3rem 0; }
 .btn-edu-ghost{ border:1px solid var(--border); background:#fff; }
+
+/* ===== THEME KIDS – overrides suaves (añadir al final) ===== */
+
+/* Paleta amable (cae sobre tus vars existentes) */
+:root{
+  --kids-ink: #183153;
+  --kids-teal: #00bfa6;
+  --kids-teal-weak: #e6fffb;
+  --kids-sky: #38bdf8;
+  --kids-border: rgba(0,0,0,.06);
+}
+
+/* Pills súper redondas para cualquier botón con .pill */
+.btn.pill, .btn-edu.pill, .btn-edu-ghost.pill{ border-radius: 9999px; }
+
+/* Degradé de hero con blobs suaves tipo KAK */
+.landing-hero{
+  background:
+    radial-gradient(1000px 380px at 20% -10%, var(--kids-teal-weak), transparent),
+    radial-gradient(900px 320px at 90% -20%, #e7f5ff, transparent),
+    linear-gradient(180deg, #f8fdff 0%, #ffffff 100%);
+  padding: 4.25rem 0 2.25rem; /* un poco más “acolchado” */
+}
+.landing-hero .display-5{
+  color: var(--kids-ink);
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+
+/* Texto con degradé bonito para .grad-ink si lo usas */
+.grad-ink{
+  background: linear-gradient(90deg, var(--kids-teal), var(--kids-sky));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+/* Tono de párrafos del hero */
+.text-edu-ink-700{ color: #415a77; }
+
+/* Tarjetas: bordes más redondos y sombra acolchada */
+.feature-card{
+  border: 1px solid var(--kids-border);
+  border-radius: 18px;
+  box-shadow: 0 10px 24px rgba(24,49,83,.07);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.feature-card .icon{ font-size: 2.2rem; }
+.feature-card:hover{ transform: translateY(-2px); box-shadow: 0 16px 32px rgba(24,49,83,.10); }
+
+/* Flip más suave */
+.flip-card{ perspective: 1200px; }
+.flip-inner{ transition: transform .55s; }
+
+/* “Cómo funciona”: línea y bolitas más KAK */
+.how-rail::before{
+  background: var(--kids-border);
+  height: 4px;
+  top: 36px;
+  border-radius: 8px;
+}
+.how-dot{
+  border-color: var(--kids-teal);
+  color: var(--kids-teal);
+  border-width: 4px;
+  box-shadow: 0 8px 24px rgba(24,49,83,.08);
+}
+
+/* Quiz card con cinta pastel y botones kids */
+.quiz-card{
+  background: linear-gradient(180deg, #fff 0%, #fcfffe 100%);
+  border: 1px solid var(--kids-border);
+  border-radius: 18px;
+  box-shadow: 0 12px 28px rgba(24,49,83,.08);
+}
+.btn-edu{
+  background: var(--kids-teal);
+  border: 2px solid var(--kids-teal);
+  color: #fff;
+  font-weight: 800;
+}
+.btn-edu:hover{ background: #00a490; }
+.btn-edu-ghost{
+  border: 2px solid var(--kids-teal);
+  background: #fff;
+  color: var(--kids-teal);
+  font-weight: 800;
+}
+.btn-edu-ghost:hover{ background: var(--kids-teal-weak); }
+
+/* Split: tags redondos y sombra suave */
+.split-card{
+  border: 1px solid var(--kids-border);
+  border-radius: 20px;
+  box-shadow: 0 12px 30px rgba(24,49,83,.08);
+}
+.split-card .tag{
+  display:inline-block; padding:.25rem .75rem;
+  border-radius: 9999px;
+  background: var(--kids-teal-weak);
+  color: var(--kids-teal);
+  font-weight: 900;
+}
+.split-card .tag.alt{ background: #eaffd0; color: #3a7f0a; }
+
+/* CTA final con banda pastel y línea interior */
+.landing-cta{
+  background: linear-gradient(90deg, #eafff8 0%, #e6f7ff 100%);
+  border-top: 1px solid var(--kids-border);
+  box-shadow: inset 0 2px 0 0 var(--kids-teal-weak);
+  padding: 2.5rem 0 3.25rem;
+}
+.landing-cta h2{ color: var(--kids-ink); }
+.landing-cta .grad-ink{
+  background: linear-gradient(90deg, var(--kids-teal), var(--kids-sky));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+/* Utilidades */
+.tilt-on-move{ transition: transform .15s ease; will-change: transform; }
+.section-pad{ padding: 3.25rem 0; }
+
+/* Foto a pantalla completa en el hero (con velo para legibilidad) */
+.hero-photo-full{
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-photo-full::before{
+  content:"";
+  position:absolute; inset:0;
+  background-image: var(--hero-photo);
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+  transform: scale(1.02); /* evita bordes vacíos al ajustar */
+}
+
+.hero-photo-full::after{
+  content:"";
+  position:absolute; inset:0;
+  
+  z-index: 1;
+}
+
+/* Asegura que el contenido quede por encima */
+.hero-photo-full .container,
+.hero-photo-full .row,
+.hero-photo-full [class*="col-"]{
+  position: relative; z-index: 2;
+}
