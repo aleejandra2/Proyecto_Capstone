@@ -9,7 +9,7 @@ window.Play = (function () {
         const dx = cx - nx, dy = cy - ny; return (dx * dx + dy * dy) <= r * r;
     }
 
-    // ===== input =====
+    // ===== input (teclado; móvil será traducido a teclas desde el HTML) =====
     const keys = Object.create(null);
     addEventListener('keydown', e => { keys[e.code] = true; });
     addEventListener('keyup', e => { keys[e.code] = false; });
@@ -21,7 +21,7 @@ window.Play = (function () {
         const n = Math.floor(ctx.sampleRate * d), buf = ctx.createBuffer(1, n, ctx.sampleRate), ch = buf.getChannelData(0);
         for (let i = 0; i < n; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / n);
         const s = ctx.createBufferSource(); s.buffer = buf; const gn = ctx.createGain(); gn.gain.value = g;
-        s.connect(gn); gn.connect(ctx.destination); s.start(); setTimeout(() => { try { s.stop() } catch { }; }, d * 1000 + 10);
+        s.connect(gn); gn.connect(ctx.destination); s.start(); setTimeout(() => { try { s.stop(); } catch { } }, d * 1000 + 10);
     }
     function sfx(type) {
         const ctx = ac(); if (!ctx) return;
@@ -64,13 +64,13 @@ window.Play = (function () {
 
         // grillas
         const solids = level.solids || [];
-        const fullBlocks = level.fullBlocks || [];           // sólo tierra (paredes)
-        const topGrid = level.solidTopGrid || [];         // yTop 0..th
-        const bottomGrid = level.solidBottomGrid || [];      // yBottom 0..th
+        const fullBlocks = level.fullBlocks || [];      // bloques completos (pared)
+        const topGrid = level.solidTopGrid || [];       // top parcial 0..th
+        const bottomGrid = level.solidBottomGrid || []; // bottom parcial 0..th
         const solidAtTile = (tx, ty) => !!(solids[ty] && solids[ty][tx]);
         const fullAtTile = (tx, ty) => !!(fullBlocks[ty] && fullBlocks[ty][tx]);
 
-        // AABB contra bloques completos (paredes/techo/tierra)
+        // AABB vs paredes completas
         function collideRectFull(x, y, w, h) {
             const x0 = Math.floor(x / tw), x1 = Math.floor((x + w - 1) / tw);
             const y0 = Math.floor(y / th), y1 = Math.floor((y + h - 1) / th);
@@ -80,7 +80,7 @@ window.Play = (function () {
             return false;
         }
 
-        // Suelo real bajo los pies (usa topGrid de plataformas)
+        // Top de suelo real bajo los pies (plataformas parciales)
         function groundTopUnder(feetX1, feetX2, startFeetY, maxTilesDown = 12) {
             const tx1 = Math.floor(feetX1 / tw), tx2 = Math.floor(feetX2 / tw);
             let ty = Math.floor(startFeetY / th);
@@ -98,7 +98,7 @@ window.Play = (function () {
             return startFeetY;
         }
 
-        // Techo real sobre la cabeza (usa bottomGrid)
+        // Bottom de techo real sobre la cabeza (parciales)
         function ceilingBottomAbove(headX1, headX2, startHeadY, maxTilesUp = 12) {
             const tx1 = Math.floor(headX1 / tw), tx2 = Math.floor(headX2 / tw);
             let ty = Math.floor((startHeadY - 1) / th);
@@ -177,7 +177,7 @@ window.Play = (function () {
                 const spd = Math.abs(p.vx); p.walkPhase += (spd > 0 ? 0.22 + spd * 0.06 : 0.1);
             } else p.vx = 0;
 
-            // X: sólo paredes completas
+            // X: paredes completas
             if (p.vx !== 0) {
                 const nx = p.x + p.vx;
                 if (!collideRectFull(nx, p.y, p.w, p.h)) p.x = nx;
@@ -248,7 +248,7 @@ window.Play = (function () {
         function draw() {
             ctx.clearRect(0, 0, W, H);
 
-            // monedas (recorte central cuadrado -> evita óvalo aunque la imagen fuente no sea cuadrada)
+            // monedas
             for (const c of coins) {
                 if (c.taken) continue;
                 const s = c.r * 2;

@@ -17,7 +17,6 @@
       color-scheme: light dark;
     }
 
-    /* Stage centrado + escala uniforme (X==Y) */
     .stage {
       position: fixed;
       left: 0;
@@ -48,11 +47,11 @@
       align-items: center;
       justify-content: center;
       background: rgba(0, 0, 0, .5);
-      z-index: 9000;
+      z-index: 9000
     }
 
     .ask.show {
-      display: flex;
+      display: flex
     }
 
     .ask-card {
@@ -63,18 +62,18 @@
       border-radius: 12px;
       padding: 16px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, .4);
-      font: 14px/1.35 system-ui;
+      font: 14px/1.35 system-ui
     }
 
     .ask-card h3 {
       margin: 0 0 10px;
-      font-size: 18px;
+      font-size: 18px
     }
 
     .ask-card .ops {
       display: flex;
       gap: 8px;
-      flex-wrap: wrap;
+      flex-wrap: wrap
     }
 
     .ask-card button {
@@ -82,19 +81,19 @@
       border-radius: 8px;
       border: 1px solid #444;
       background: #f7f7f7;
-      cursor: pointer;
+      cursor: pointer
     }
 
     .ask-card button.ok {
       background: #16a34a;
       color: #fff;
-      border-color: #16a34a;
+      border-color: #16a34a
     }
 
     .ask-card button.bad {
       background: #ef4444;
       color: #fff;
-      border-color: #ef4444;
+      border-color: #ef4444
     }
 
     /* Menús */
@@ -105,12 +104,12 @@
       place-items: center;
       z-index: 9500;
       color: #fff;
-      background: radial-gradient(80% 80% at 50% 50%, rgba(0, 0, 0, .2), rgba(0, 0, 0, .85)),
+      background:radial-gradient(80% 80% at 50% 50%, rgba(0, 0, 0, .2), rgba(0, 0, 0, .85)),
       url("{% static 'LevelUp/img/misiones/menu_bg.jpg' %}") center/cover no-repeat;
     }
 
     .menu.show {
-      display: grid;
+      display: grid
     }
 
     .menu-card {
@@ -128,12 +127,12 @@
     .menu-card h1 {
       margin: 0 0 10px;
       font-size: 42px;
-      letter-spacing: .5px;
+      letter-spacing: .5px
     }
 
     .menu-card p {
       margin: 0 0 14px;
-      opacity: .9;
+      opacity: .9
     }
 
     .menu-card .btns {
@@ -141,7 +140,7 @@
       gap: 10px;
       justify-content: center;
       flex-wrap: wrap;
-      margin-top: 6px;
+      margin-top: 6px
     }
 
     .menu-card button {
@@ -151,20 +150,20 @@
       background: #ffd54a;
       color: #111;
       padding: 10px 14px;
-      font-weight: 600;
+      font-weight: 600
     }
 
     .menu-card button.ghost {
       background: transparent;
-      color: #ffd54a;
+      color: #ffd54a
     }
 
-    /* Confeti: canvas fijo encima de todo */
+    /* Confeti */
     #fx {
       position: fixed;
       inset: 0;
       pointer-events: none;
-      z-index: 12000;
+      z-index: 12000
     }
   </style>
 </head>
@@ -206,12 +205,9 @@
   <script src="{% static 'LevelUp/js/misiones/play.js' %}"></script>
 
   <script>
-    // ================== CONFIG ==================
+    /* ================== CONFIG & UTILS ================== */
     const MAP_URL = "{% static 'LevelUp/maps/escenario1.json' %}";
     const MAP_ABS = new URL(MAP_URL, location.href).href;
-    const DEBUG_ENTITIES = false;
-
-    // ================== UTILS ===================
     const FLIP_H = 0x80000000, FLIP_V = 0x40000000, FLIP_D = 0x20000000, GID_MASK = 0x1fffffff;
     const absUrl = (rel, base) => new URL(rel, base).href;
     const decodeGid = raw => ({ gid: raw & GID_MASK, flipH: !!(raw & FLIP_H), flipV: !!(raw & FLIP_V), flipD: !!(raw & FLIP_D) });
@@ -224,138 +220,91 @@
     const fetchText = async u => { const r = await fetch(u); if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + u); return r.text(); };
     const fetchJSON = async u => { const r = await fetch(u); if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + u); return r.json(); };
 
-    // ================== CANVAS / ESCALADO ===================
+    /* ================== CANVAS / ESCALADO =================== */
     const stageEl = document.getElementById('stage');
     const bg = document.getElementById('bg'); const bgCtx = bg.getContext('2d'); bgCtx.imageSmoothingEnabled = false;
     const game = document.getElementById('game');
-
     function fitStage(pxW, pxH) {
-      stageEl.style.width = pxW + 'px';
-      stageEl.style.height = pxH + 'px';
+      stageEl.style.width = pxW + 'px'; stageEl.style.height = pxH + 'px';
       const s = Math.min(window.innerWidth / pxW, window.innerHeight / pxH);
       stageEl.style.transform = `scale(${s})`;
       const left = Math.max(0, Math.floor((window.innerWidth - pxW * s) / 2));
       const top = Math.max(0, Math.floor((window.innerHeight - pxH * s) / 2));
-      stageEl.style.left = left + 'px';
-      stageEl.style.top = top + 'px';
+      stageEl.style.left = left + 'px'; stageEl.style.top = top + 'px';
     }
     addEventListener('resize', () => { if (window.LEVEL) fitStage(window.LEVEL.size.pxW, window.LEVEL.size.pxH); });
 
-    // ================== UI AUDIO (start / win) ===================
+    /* ================== AUDIO UI (start/win) =================== */
     const UIAudio = (() => {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      let ctx = null;
-      function get() { if (!Ctx) return null; if (!ctx) ctx = new Ctx(); if (ctx.state === 'suspended') ctx.resume(); return ctx; }
+      const Ctx = window.AudioContext || window.webkitAudioContext; let ctx = null;
+      const get = () => { if (!Ctx) return null; if (!ctx) ctx = new Ctx(); if (ctx.state === 'suspended') ctx.resume(); return ctx; };
       function play(type = 'start') {
         const ac = get(); if (!ac) return;
         if (type === 'start') {
-          const o = ac.createOscillator(), g = ac.createGain();
-          o.type = 'square'; o.frequency.value = 520;
-          o.connect(g); g.connect(ac.destination);
-          g.gain.setValueAtTime(0.0001, ac.currentTime);
-          g.gain.exponentialRampToValueAtTime(0.18, ac.currentTime + 0.02);
-          g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.22);
-          o.start(); o.stop(ac.currentTime + 0.24);
+          const o = ac.createOscillator(), g = ac.createGain(); o.type = 'square'; o.frequency.value = 520; o.connect(g); g.connect(ac.destination);
+          g.gain.setValueAtTime(0.0001, ac.currentTime); g.gain.exponentialRampToValueAtTime(0.18, ac.currentTime + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.22); o.start(); o.stop(ac.currentTime + 0.24);
         } else if (type === 'win') {
-          // pequeño arpegio 3 notas
           [660, 880, 1320].forEach((f, i) => {
-            const t = ac.currentTime + i * 0.08;
-            const o = ac.createOscillator(), g = ac.createGain();
-            o.type = 'triangle'; o.frequency.value = f;
-            o.connect(g); g.connect(ac.destination);
-            g.gain.setValueAtTime(0.0001, t);
-            g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
-            g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
-            o.start(t); o.stop(t + 0.24);
+            const t = ac.currentTime + i * 0.08; const o = ac.createOscillator(), g = ac.createGain();
+            o.type = 'triangle'; o.frequency.value = f; o.connect(g); g.connect(ac.destination);
+            g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22); o.start(t); o.stop(t + 0.24);
           });
         }
       }
       return { play };
     })();
 
-    // ================== CONFETI ===================
+    /* ================== CONFETI =================== */
     const FX = (() => {
-      const c = document.getElementById('fx');
-      const ctx = c.getContext('2d');
-      let parts = [], raf = null;
-
-      function resize() { c.width = innerWidth; c.height = innerHeight; }
-      addEventListener('resize', resize); resize();
-
+      const c = document.getElementById('fx'); const ctx = c.getContext('2d'); let parts = [], raf = null;
+      function resize() { c.width = innerWidth; c.height = innerHeight; } addEventListener('resize', resize); resize();
       function spawn(n = 160) {
         for (let i = 0; i < n; i++) {
           parts.push({
-            x: Math.random() * innerWidth, y: -20 * Math.random(),
-            vx: (Math.random() * 2 - 1) * 4, vy: 2 + Math.random() * 2,
-            ay: 0.12, s: 3 + Math.random() * 7,
-            r: Math.random() * Math.PI, rv: (Math.random() * 2 - 1) * 0.25,
-            col: `hsl(${Math.random() * 360},90%,60%)`,
-            life: 0, ttl: 220 + Math.random() * 120
+            x: Math.random() * innerWidth, y: -20 * Math.random(), vx: (Math.random() * 2 - 1) * 4, vy: 2 + Math.random() * 2, ay: .12, s: 3 + Math.random() * 7,
+            r: Math.random() * Math.PI, rv: (Math.random() * 2 - 1) * .25, col: `hsl(${Math.random() * 360},90%,60%)`, life: 0, ttl: 220 + Math.random() * 120
           });
         }
       }
-
       function tick() {
         ctx.clearRect(0, 0, c.width, c.height);
         for (const p of parts) {
-          p.vx *= 0.995; p.vy += p.ay;
-          p.x += p.vx; p.y += p.vy;
-          p.r += p.rv; p.life++;
-          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
-          ctx.fillStyle = p.col; ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s);
-          ctx.restore();
+          p.vx *= .995; p.vy += p.ay; p.x += p.vx; p.y += p.vy; p.r += p.rv; p.life++;
+          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.col; ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s); ctx.restore();
         }
         parts = parts.filter(p => p.y < c.height + 40 && p.life < p.ttl);
         if (parts.length > 0) { raf = requestAnimationFrame(tick); } else { raf = null; ctx.clearRect(0, 0, c.width, c.height); }
       }
-
-      function burst(durationMs = 2000) {
-        spawn(200);
-        if (!raf) tick();
-        const start = performance.now();
-        (function drip() {
-          if (performance.now() - start < durationMs) {
-            spawn(25);
-            setTimeout(drip, 100);
-          }
-        })();
-      }
+      function burst(ms = 2000) { spawn(200); if (!raf) tick(); const t0 = performance.now(); (function drip() { if (performance.now() - t0 < ms) { spawn(25); setTimeout(drip, 100); } })(); }
       return { burst };
     })();
 
-    // ================== TILESETS =================
+    /* ================== TILESETS + MAPA =================== */
     async function loadTileset(tsRef, baseForJSON) {
       if (!tsRef.source) return null;
       const tsxUrl = absUrl(tsRef.source, baseForJSON);
       const xml = new DOMParser().parseFromString(await fetchText(tsxUrl), 'text/xml');
       const root = xml.querySelector('tileset');
-
       const tilewidth = +(root.getAttribute('tilewidth') || tsRef.tilewidth || 0);
       const tileheight = +(root.getAttribute('tileheight') || tsRef.tileheight || 0);
       const spacing = +(root.getAttribute('spacing') || 0);
       const margin = +(root.getAttribute('margin') || 0);
-      const to = root.querySelector('tileoffset');
-      const tileOffsetX = +(to?.getAttribute('x') || 0);
-      const tileOffsetY = +(to?.getAttribute('y') || 0);
+      const to = root.querySelector('tileoffset'); const tileOffsetX = +(to?.getAttribute('x') || 0); const tileOffsetY = +(to?.getAttribute('y') || 0);
       const tileRenderSize = (root.getAttribute('tilerendersize') || 'tile').toLowerCase();
-
-      const srcName = (tsRef.source || '').toLowerCase();
-      const isPlatform = /plataform|plataforma/.test(srcName);
+      const srcName = (tsRef.source || '').toLowerCase(); const isPlatform = /plataform|plataforma/.test(srcName);
 
       const solidIds = new Set(); const solidTop = new Map(); const solidBottom = new Map();
       if (isPlatform) {
         root.querySelectorAll(':scope > tile').forEach(t => {
-          const id = +(t.getAttribute('id') || 0);
-          const og = t.querySelector('objectgroup'); if (!og) return;
+          const id = +(t.getAttribute('id') || 0); const og = t.querySelector('objectgroup'); if (!og) return;
           let minY = Infinity, maxY = -Infinity;
           og.querySelectorAll('object').forEach(o => {
             const oy = +o.getAttribute('y') || 0, w = +o.getAttribute('width') || 0, h = +o.getAttribute('height') || 0;
             const poly = o.querySelector('polygon');
-            if (poly) {
-              (poly.getAttribute('points') || '').trim().split(/\s+/).forEach(p => {
-                const [px, py] = p.split(',').map(Number); const yy = oy + py; minY = Math.min(minY, yy); maxY = Math.max(maxY, yy);
-              });
-            } else if (w && h) { minY = Math.min(minY, oy); maxY = Math.max(maxY, oy + h); }
+            if (poly) { (poly.getAttribute('points') || '').trim().split(/\s+/).forEach(p => { const [px, py] = p.split(',').map(Number); const yy = oy + py; minY = Math.min(minY, yy); maxY = Math.max(maxY, yy); }); }
+            else if (w && h) { minY = Math.min(minY, oy); maxY = Math.max(maxY, oy + h); }
             else { minY = Math.min(minY, oy); maxY = Math.max(maxY, oy); }
           });
           if (isFinite(minY) && isFinite(maxY)) { solidIds.add(id); solidTop.set(id, Math.round(minY)); solidBottom.set(id, Math.round(maxY)); }
@@ -369,19 +318,14 @@
         const imagewidth = +(imageEl.getAttribute('width') || 0);
         const cols = columns || Math.floor((imagewidth - 2 * margin + spacing) / (tilewidth + spacing)) || 1;
         return {
-          kind: 'spritesheet', firstgid: tsRef.firstgid, tilewidth, tileheight, spacing, margin,
-          imageUrl, columns: cols, tileOffsetX, tileOffsetY, tileRenderSize,
-          isPlatform, solidIds, solidTop, solidBottom
+          kind: 'spritesheet', firstgid: tsRef.firstgid, tilewidth, tileheight, spacing, margin, imageUrl, columns: cols,
+          tileOffsetX, tileOffsetY, tileRenderSize, isPlatform, solidIds, solidTop, solidBottom
         };
       } else {
         const tiles = new Map();
         root.querySelectorAll(':scope > tile').forEach(t => {
           const id = +(t.getAttribute('id') || 0), img = t.querySelector('image'); if (!img) return;
-          tiles.set(id, {
-            url: absUrl(img.getAttribute('source'), tsxUrl),
-            w: +(img.getAttribute('width') || tilewidth || 0),
-            h: +(img.getAttribute('height') || tileheight || 0)
-          });
+          tiles.set(id, { url: absUrl(img.getAttribute('source'), tsxUrl), w: +(img.getAttribute('width') || tilewidth || 0), h: +(img.getAttribute('height') || tileheight || 0) });
         });
         return {
           kind: 'collection', firstgid: tsRef.firstgid, tilewidth, tileheight, tiles,
@@ -389,7 +333,7 @@
         };
       }
     }
-    function getTilesetForGid(tilesets, gid) { let f = null; for (const ts of tilesets) { if (gid >= ts.firstgid) f = ts; else break; } return f; }
+    const getTilesetForGid = (tilesets, gid) => { let f = null; for (const ts of tilesets) { if (gid >= ts.firstgid) f = ts; else break; } return f; };
 
     async function drawTileFromTileset(ctx, ts, localId, dx, dy, flipH, flipV, flipD, cellW, cellH) {
       if (!ts) return;
@@ -399,8 +343,7 @@
         const sx = (ts.margin || 0) + sxI * (ts.tilewidth + (ts.spacing || 0));
         const sy = (ts.margin || 0) + syI * (ts.tileheight + (ts.spacing || 0));
         const ox = dx + (ts.tileOffsetX || 0), oy = dy + (ts.tileOffsetY || 0);
-        ctx.save();
-        ctx.translate(ox + (flipH ? ts.tilewidth : 0), oy + (flipV ? ts.tileheight : 0));
+        ctx.save(); ctx.translate(ox + (flipH ? ts.tilewidth : 0), oy + (flipV ? ts.tileheight : 0));
         if (flipD) { ctx.translate(ts.tilewidth, 0); ctx.rotate(Math.PI / 2);[flipH, flipV] = [flipV, flipH]; }
         ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
         ctx.drawImage(img, sx, sy, ts.tilewidth, ts.tileheight, 0, 0, ts.tilewidth, ts.tileheight);
@@ -408,49 +351,25 @@
       } else {
         const t = ts.tiles.get(localId); if (!t) return;
         const img = await loadImage(t.url);
-        const useGrid = (ts.tileRenderSize === 'grid');
-        const destW = useGrid ? ts.tilewidth : img.width;
-        const destH = useGrid ? ts.tileheight : img.height;
-        const ox = dx + (ts.tileOffsetX || 0);
-        const oy = dy + (cellH - destH) + (ts.tileOffsetY || 0);
-        ctx.save();
-        let w = destW, h = destH;
-        ctx.translate(ox, oy);
+        const useGrid = (ts.tileRenderSize === 'grid'); const destW = useGrid ? ts.tilewidth : img.width; const destH = useGrid ? ts.tileheight : img.height;
+        const ox = dx + (ts.tileOffsetX || 0); const oy = dy + (cellH - destH) + (ts.tileOffsetY || 0);
+        ctx.save(); let w = destW, h = destH; ctx.translate(ox, oy);
         if (flipD) { ctx.translate(h, 0); ctx.rotate(Math.PI / 2);[w, h] = [h, w];[flipH, flipV] = [flipV, flipH]; }
-        ctx.translate(flipH ? w : 0, flipV ? h : 0);
-        ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+        ctx.translate(flipH ? w : 0, flipV ? h : 0); ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
         ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, destW, destH);
         ctx.restore();
       }
     }
 
-    // ===== Objetos de Tiled =====
-    function objRect(obj, map) {
-      if (obj.gid) {
-        const w = obj.width || map.tilewidth, h = obj.height || map.tileheight;
-        return { x: Math.round(obj.x - w / 2), y: Math.round(obj.y - h), w: Math.round(w), h: Math.round(h), kind: 'tile' };
-      }
-      if (obj.point || (!obj.width && !obj.height)) return { x: Math.round(obj.x), y: Math.round(obj.y), w: 0, h: 0, kind: 'point' };
-      return { x: Math.round(obj.x), y: Math.round(obj.y), w: Math.round(obj.width || 0), h: Math.round(obj.height || 0), kind: 'rect' };
-    }
-    const readProps = obj => { const d = {}; (obj.properties || []).forEach(p => d[p.name] = p.value); return d; };
-    const typeOf = (obj, layer) => (obj.type || obj.name || layer?.name || '').trim().toLowerCase();
-
     (async () => {
       const map = await fetchJSON(MAP_ABS);
       const cellW = map.tilewidth, cellH = map.tileheight;
-
-      // Tamaño real de los canvas
       const pxW = map.width * cellW, pxH = map.height * cellH;
-      bg.width = game.width = pxW; bg.height = game.height = pxH;
-      fitStage(pxW, pxH);
+      bg.width = game.width = pxW; bg.height = game.height = pxH; fitStage(pxW, pxH);
 
-      // Cargar tilesets
-      const tilesets = [];
-      for (const tsRef of map.tilesets) tilesets.push(await loadTileset(tsRef, MAP_ABS));
+      const tilesets = []; for (const tsRef of map.tilesets) tilesets.push(await loadTileset(tsRef, MAP_ABS));
       tilesets.sort((a, b) => a.firstgid - b.firstgid);
 
-      // Grillas
       const solids = Array.from({ length: map.height }, () => Array(map.width).fill(false));
       const fullBlocks = Array.from({ length: map.height }, () => Array(map.width).fill(false));
       const solidTopGrid = Array.from({ length: map.height }, () => Array(map.width).fill(0));
@@ -460,97 +379,72 @@
         if (layer.type !== 'tilelayer' || !layer.visible) continue;
         const w = layer.width, data = layer.data;
         const layerIsSolid = (layer.properties || []).some(p => p.name === 'collision' && p.value === true);
-
         for (let i = 0; i < data.length; i++) {
           const raw = data[i]; if (!raw) continue;
           const x = i % w, y = Math.floor(i / w);
-
           if (layerIsSolid) { solids[y][x] = true; fullBlocks[y][x] = true; solidTopGrid[y][x] = 0; solidBottomGrid[y][x] = cellH; continue; }
-
-          const { gid } = decodeGid(raw);
-          const ts = getTilesetForGid(tilesets, gid); if (!ts || !ts.isPlatform) continue;
+          const { gid } = decodeGid(raw); const ts = getTilesetForGid(tilesets, gid); if (!ts || !ts.isPlatform) continue;
           const localId = gid - ts.firstgid;
           if (ts.solidIds && ts.solidIds.has(localId)) {
-            const sy = (ts.tileheight ? cellH / ts.tileheight : 1);
-            const off = ts.tileOffsetY || 0;
+            const sy = (ts.tileheight ? cellH / ts.tileheight : 1), off = ts.tileOffsetY || 0;
             const top = Math.max(0, Math.min(cellH, Math.round((ts.solidTop.get(localId) + off) * sy)));
             const bottom = Math.max(0, Math.min(cellH, Math.round((ts.solidBottom.get(localId) + off) * sy)));
-            solids[y][x] = true; fullBlocks[y][x] = false;
-            solidTopGrid[y][x] = top; solidBottomGrid[y][x] = bottom;
+            solids[y][x] = true; fullBlocks[y][x] = false; solidTopGrid[y][x] = top; solidBottomGrid[y][x] = bottom;
           }
         }
       }
 
-      // ===== Entidades =====
-let spawn = null;
-const coins = [];
-const enemies = [];
+      // Entidades + preguntas
+      let spawn = null; const coins = []; const enemies = [];
+      let questions = Array.isArray(map.questions) ? map.questions.map((q, i) => ({
+        id: (q && q.id != null) ? q.id : (10000 + i),
+        q: q.q || q.question || '¿Pregunta?',
+        options: Array.isArray(q.options) && q.options.length >= 2 ? q.options : [q.a1, q.a2, q.a3, q.a4].filter(Boolean),
+        correct: Number.isInteger(q.correct) ? q.correct : Math.max(0, (q.correct || 1) - 1)
+      })) : [];
 
-// 1) Empieza con las preguntas que vienen inyectadas por la vista (map.questions)
-let questions = Array.isArray(map.questions)
-  ? map.questions.map((q, i) => ({
-      // asegura que tengan id (por si la vista no lo puso)
-      id: (q && q.id != null) ? q.id : (10000 + i),
-      q: q.q || q.question || '¿Pregunta?',
-      // formato nuevo: options[] + correct (índice 0..n-1)
-      options: Array.isArray(q.options) && q.options.length >= 2
-        ? q.options
-        : [q.a1, q.a2, q.a3, q.a4].filter(Boolean), // fallback a formato viejo
-      correct: Number.isInteger(q.correct) ? q.correct : Math.max(0, (q.correct || 1) - 1)
-    }))
-  : [];
+      for (const layer of map.layers) {
+        if (layer.type !== 'objectgroup') continue;
+        for (const obj of (layer.objects || [])) {
+          const t = (obj.type || obj.name || layer?.name || '').trim().toLowerCase();
+          const R = obj.gid
+            ? {
+              x: Math.round(obj.x - (obj.width || map.tilewidth) / 2), y: Math.round(obj.y - (obj.height || map.tileheight)),
+              w: Math.round(obj.width || map.tilewidth), h: Math.round(obj.height || map.tileheight), kind: 'tile'
+            }
+            : (obj.point || (!obj.width && !obj.height))
+              ? { x: Math.round(obj.x), y: Math.round(obj.y), w: 0, h: 0, kind: 'point' }
+              : { x: Math.round(obj.x), y: Math.round(obj.y), w: Math.round(obj.width || 0), h: Math.round(obj.height || 0), kind: 'rect' };
+          const P = {}; (obj.properties || []).forEach(p => P[p.name] = p.value);
+          const cx = (R.kind === 'point') ? R.x : (R.x + R.w / 2); const cy = (R.kind === 'point') ? R.y : (R.y + R.h / 2);
 
-// 2) Recorre object layers para sumar monedas, enemigos y (si hubiera) preguntas sueltas
-for (const layer of map.layers) {
-  if (layer.type !== 'objectgroup') continue;
-
-  for (const obj of (layer.objects || [])) {
-    const t  = typeOf(obj, layer);
-    const R  = objRect(obj, map);
-    const P  = readProps(obj);
-    const cx = (R.kind === 'point') ? R.x : (R.x + R.w / 2);
-    const cy = (R.kind === 'point') ? R.y : (R.y + R.h / 2);
-
-    if (t === 'spawn' || t === 'player') {
-      spawn = { x: cx, y: cy };
-    } else if (t === 'coin' || t === 'coins') {
-      coins.push({ id: obj.id, x: cx, y: cy });
-    } else if (t === 'enemy') {
-      if (R.kind === 'rect' && R.w > cellW * 0.8 && R.h < cellH * 0.6) {
-        enemies.push({
-          id: obj.id,
-          x: R.x + R.w / 2, y: R.y + R.h,
-          patrolMinX: R.x, patrolMaxX: R.x + R.w,
-          speed: +(P.speed ?? 60),
-          dir: (P.dir || 'right'),
-          // MUY IMPORTANTE: qid debe coincidir con el id de una pregunta en `questions`
-          qid: (P.qid != null ? String(P.qid) : null)
-        });
-      } else {
-        const range = +(P.range ?? 2 * cellW);
-        enemies.push({
-          id: obj.id, x: cx, y: cy,
-          patrolMinX: cx - range * 0.5, patrolMaxX: cx + range * 0.5,
-          speed: +(P.speed ?? 60),
-          dir: (P.dir || 'right'),
-          qid: (P.qid != null ? String(P.qid) : null)
-        });
+          if (t === 'spawn' || t === 'player') spawn = { x: cx, y: cy };
+          else if (t === 'coin' || t === 'coins') coins.push({ id: obj.id, x: cx, y: cy });
+          else if (t === 'enemy') {
+            if (R.kind === 'rect' && R.w > cellW * .8 && R.h < cellH * .6) {
+              enemies.push({
+                id: obj.id, x: R.x + R.w / 2, y: R.y + R.h, patrolMinX: R.x, patrolMaxX: R.x + R.w,
+                speed: +(P.speed ?? 60), dir: (P.dir || 'right'), qid: (P.qid != null ? String(P.qid) : null)
+              });
+            } else {
+              const range = +(P.range ?? 2 * cellW);
+              enemies.push({
+                id: obj.id, x: cx, y: cy, patrolMinX: cx - range * .5, patrolMaxX: cx + range * .5,
+                speed: +(P.speed ?? 60), dir: (P.dir || 'right'), qid: (P.qid != null ? String(P.qid) : null)
+              });
+            }
+          } else if (t === 'question' || t === 'quiz' || t === 'pregunta') {
+            const opts = [P.a1, P.a2, P.a3, P.a4].filter(Boolean);
+            const corr = Number.isInteger(P.correct) ? P.correct : Math.max(0, (P.correct || 1) - 1);
+            questions.push({
+              id: obj.id, q: P.q || '¿Pregunta?', options: (opts.length >= 2 ? opts : ['Opción 1', 'Opción 2']),
+              correct: Math.min(Math.max(0, corr), Math.max(0, (opts.length - 1)))
+            });
+          }
+        }
       }
-    } else if (t === 'question' || t === 'quiz' || t === 'pregunta') {
-      // Permite definir preguntas como objetos en Tiled (opcional)
-      const opts = [P.a1, P.a2, P.a3, P.a4].filter(Boolean);
-      const corr = Number.isInteger(P.correct) ? P.correct : Math.max(0, (P.correct || 1) - 1);
-      questions.push({
-        id: obj.id,
-        q: P.q || '¿Pregunta?',
-        options: (opts.length >= 2) ? opts : ['Opción 1', 'Opción 2'],
-        correct: Math.min(Math.max(0, corr), Math.max(0, (opts.length - 1)))
-      });
-    }
-  }
-}
 
-      // Pintar mapa en #bg
+      // Pintar fondo
       bgCtx.clearRect(0, 0, bg.width, bg.height);
       for (const layer of map.layers) {
         if (!layer.visible) continue;
@@ -565,24 +459,21 @@ for (const layer of map.layers) {
             const { gid, flipH, flipV, flipD } = decodeGid(raw);
             const ts = getTilesetForGid(tilesets, gid); if (!ts) continue;
             const localId = gid - ts.firstgid;
-            const x = lx + (i % w) * cellW;
-            const y = ly + Math.floor(i / w) * cellH;
+            const x = lx + (i % w) * cellW; const y = ly + Math.floor(i / w) * cellH;
             await drawTileFromTileset(bgCtx, ts, localId, x, y, flipH, flipV, flipD, cellW, cellH);
           }
         }
       }
 
-      // Sprites
       const ASSETS = {
         player: "{% static 'LevelUp/img/misiones/personaje.png' %}",
         coin: "{% static 'LevelUp/img/misiones/coin.png' %}",
         enemy1: "{% static 'LevelUp/img/misiones/enemigo1_math.png' %}"
       };
 
-      // Exportar nivel
       window.LEVEL = {
         mapUrl: MAP_ABS,
-        size: { tilesW: map.width, tilesH: map.height, pxW: pxW, pxH: pxH },
+        size: { tilesW: map.width, tilesH: map.height, pxW, pxH },
         tileSize: { w: cellW, h: cellH },
         spawn, coins, enemies, questions,
         solids, fullBlocks, solidTopGrid, solidBottomGrid,
@@ -590,30 +481,26 @@ for (const layer of map.layers) {
         settings: { gravity: 0.8, jump: -26, enemyGroundOffsetPx: 0 }
       };
 
-      // Menús y arranque
       const menuStart = document.getElementById('menuStart');
       const menuEnd = document.getElementById('menuEnd');
       const endStats = document.getElementById('endStats');
 
       document.getElementById('btnStart').onclick = () => {
-        UIAudio.play('start');          // << sonido al empezar
+        UIAudio.play('start');
         menuStart.classList.remove('show');
         if (window.Play && typeof window.Play.init === 'function') {
           window.Play.init(game, window.LEVEL, askQuestion, (stats) => {
-            // al finalizar:
-            UIAudio.play('win');        // << sonido de victoria
-            FX.burst(2200);             // << confeti
+            UIAudio.play('win'); FX.burst(2200);
             endStats.textContent = `Monedas: ${stats.coins} · Tiempo: ${Math.round(stats.time / 1000)} s`;
             menuEnd.classList.add('show');
           });
         }
       };
-
       document.getElementById('btnRetry').onclick = () => location.reload();
       document.getElementById('btnExit').onclick = () => location.assign("{% url 'estudiante_lista' %}");
     })().catch(e => console.error('Fallo general:', e));
 
-    // ===== Overlay de preguntas =====
+    /* ===== Overlay Preguntas ===== */
     const ASK = (() => {
       const wrap = document.createElement('div'); wrap.className = 'ask';
       wrap.innerHTML = '<div class="ask-card"><h3 id="askQ"></h3><div class="ops" id="askOps"></div></div>';
@@ -632,66 +519,182 @@ for (const layer of map.layers) {
       return { open, close };
     })();
 
+    function askQuestion(qid, onOk, onBad) {
+      const level = window.LEVEL || {}; const cfg = window.LEVEL?.config || {};
+      const list = Array.isArray(level.questions) ? level.questions : [];
+      const mapping = (cfg.mapping_mode || "id").toLowerCase();
+      let q = null;
+      if (mapping === "index") { const n = Number(qid); if (Number.isFinite(n) && n >= 1 && n <= list.length) q = list[n - 1]; }
+      else {
+        q = list.find(x => String(x?.id) === String(qid)) || null;
+        if (!q) { const n = Number(qid); if (Number.isFinite(n) && n >= 1 && n <= list.length) q = list[n - 1]; }
+      }
+      let prompt = (cfg.fallback_q && String(cfg.fallback_q).trim()) || "¿2 + 2 = ?";
+      let options = Array.isArray(cfg.fallback_opts) && cfg.fallback_opts.length >= 2 ? cfg.fallback_opts.slice(0, 6).map(String) : ["3", "4", "5"];
+      let correctIdx = Number.isInteger(cfg.fallback_correct) ? cfg.fallback_correct : 1;
 
-  function askQuestion(qid, onOk, onBad) {
-    const level = window.LEVEL || {};
-    const cfg = window.LEVEL?.config || {};
-    const list = Array.isArray(level.questions) ? level.questions : [];
-    const mapping = (cfg.mapping_mode || "id").toLowerCase();
-
-  // 1) Buscar pregunta por modo
-  let q = null;
-  if (mapping === "index") {
-    const n = Number(qid);
-    if (Number.isFinite(n) && n >= 1 && n <= list.length) q = list[n - 1];
-  } else {
-    q = list.find(x => String(x?.id) === String(qid)) || null;
-    // respaldo por índice si no hay match por id
-    if (!q) {
-      const n = Number(qid);
-      if (Number.isFinite(n) && n >= 1 && n <= list.length) q = list[n - 1];
+      if (q) {
+        const txt = q.q ?? q.question ?? q.pregunta; if (typeof txt === 'string' && txt.trim()) prompt = txt.trim();
+        if (Array.isArray(q.options)) options = q.options.slice();
+        else if (Array.isArray(q.opts)) options = q.opts.slice();
+        else if (Array.isArray(q.alternativas)) options = q.alternativas.slice();
+        else options = [q.a1, q.a2, q.a3, q.a4, q.a5, q.a6].filter(v => typeof v === 'string' && v.trim());
+        options = options.map(String).filter(Boolean).slice(0, 6); if (options.length < 2) options = ["Opción 1", "Opción 2"];
+        if (Number.isInteger(q.correct)) correctIdx = Number(q.correct);
+        else if (Number.isInteger(q.ans)) correctIdx = Number(q.ans) - 1;
+        else if (Number.isInteger(q.answer)) correctIdx = Number(q.answer) - 1;
+        else if (typeof q.correctText === "string") { const pos = options.findIndex(o => o === q.correctText); if (pos >= 0) correctIdx = pos; }
+        if (!(correctIdx >= 0 && correctIdx < options.length)) {
+          const maybe1 = Number(q.correct);
+          correctIdx = (Number.isFinite(maybe1) && maybe1 >= 1 && maybe1 <= options.length) ? (maybe1 - 1) : 0;
+        }
+      }
+      ASK.open(prompt, options, correctIdx, onOk, onBad);
     }
-  }
+  </script>
 
-  // 2) Defaults (Docente puede sobrescribirlos en game_config)
-  let prompt = (cfg.fallback_q && String(cfg.fallback_q).trim()) || "¿2 + 2 = ?";
-  let options = Array.isArray(cfg.fallback_opts) && cfg.fallback_opts.length >= 2
-    ? cfg.fallback_opts.slice(0, 6).map(String)
-    : ["3", "4", "5"];
-  let correctIdx = Number.isInteger(cfg.fallback_correct) ? cfg.fallback_correct : 1;
+  <!-- ================== CONTROLES MÓVILES ================== -->
+  <script>
+    (() => {
+      const isCoarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+      const force = new URLSearchParams(location.search).get('touch') === '1';
+      if (!(isCoarse || force)) return;
 
-  // 3) Si hay pregunta válida, normaliza
-  if (q) {
-    const txt = q.q ?? q.question ?? q.pregunta;
-    if (typeof txt === "string" && txt.trim()) prompt = txt.trim();
+      const pressed = new Set();
+      const fire = (type, code, key) => window.dispatchEvent(new KeyboardEvent(type, { code, key, bubbles: true, cancelable: true }));
+      const press = (code, key = code) => { if (pressed.has(code)) return; pressed.add(code); fire('keydown', code, key); };
+      const release = (code, key = code) => { if (!pressed.has(code)) return; pressed.delete(code); fire('keyup', code, key); };
+      const jumpDown = () => { press('Space', ' '); press('ArrowUp', 'ArrowUp'); };
+      const jumpUp = () => { release('Space', ' '); release('ArrowUp', 'ArrowUp'); };
 
-    if (Array.isArray(q.options)) options = q.options.slice();
-    else if (Array.isArray(q.opts)) options = q.opts.slice();
-    else if (Array.isArray(q.alternativas)) options = q.alternativas.slice();
-    else options = [q.a1, q.a2, q.a3, q.a4, q.a5, q.a6].filter(v => typeof v === "string" && v.trim());
+      /* ======= ESTILOS (incluye botón de salto “redondo negro + anillo dorado”) ======= */
+      const style = document.createElement('style');
+      style.textContent = `
+        .mc-wrap{position:fixed;inset:0;pointer-events:none;z-index:12000}
+        .mc-joy,.mc-jump{position:absolute;bottom:18px;pointer-events:auto;touch-action:none;user-select:none}
+        .mc-joy{left:18px;width:160px;height:160px}
+        .mc-joy-base{position:absolute;inset:0;border-radius:50%;
+          background:radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,.15), rgba(0,0,0,.25));
+          border:1px solid rgba(255,255,255,.25);backdrop-filter:blur(4px)}
+        .mc-joy-dead{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;
+          background:rgba(255,255,255,.08);border:1px dashed rgba(255,255,255,.18)}
+        .mc-joy-knob{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:80px;height:80px;border-radius:50%;
+          background:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.35);box-shadow:0 4px 18px rgba(0,0,0,.35)}
 
-    options = options.map(String).filter(Boolean).slice(0, 6);
-    if (options.length < 2) options = ["Opción 1", "Opción 2"];
+        /* --- Botón SALTAR estilo de la imagen --- */
+        .mc-jump{right:18px;width:clamp(60px,12.5vmin,90px);height:clamp(60px,12.5vmin,90px)}
+        .mc-jump-btn{
+          width:100%;height:100%;border:none;border-radius:50%;position:relative;cursor:pointer;outline:none;
+          background:
+            radial-gradient(65% 65% at 50% 45%, rgba(255,255,255,.05), rgba(255,255,255,0) 70%),
+            radial-gradient(100% 100% at 50% 50%, #0f0f12, #232428);
+          box-shadow: 0 8px 26px rgba(0,0,0,.6), inset 0 0 0 2px rgba(255,255,255,.05);
+        }
+        /* anillo negro interno */
+        .mc-jump-btn::before{
+          content:""; position:absolute; inset:9%; border-radius:50%;
+          box-shadow: inset 0 0 0 2px rgba(0,0,0,.65), inset 0 6px 12px rgba(0,0,0,.6);
+        }
+        /* anillo dorado */
+        .mc-jump-btn::after{
+          content:""; position:absolute; inset:-2px; border-radius:50%;
+          border:2px solid rgba(219,171,56,.65);
+          box-shadow: 0 0 10px rgba(219,171,56,.35), inset 0 0 10px rgba(219,171,56,.18);
+          pointer-events:none;
+        }
+        .mc-jump-btn:active{ transform:scale(.96) }
 
-    if (Number.isInteger(q.correct)) correctIdx = Number(q.correct);
-    else if (Number.isInteger(q.ans)) correctIdx = Number(q.ans) - 1;
-    else if (Number.isInteger(q.answer)) correctIdx = Number(q.answer) - 1;
-    else if (typeof q.correctText === "string") {
-      const pos = options.findIndex(o => o === q.correctText);
-      if (pos >= 0) correctIdx = pos;
-    }
+        /* flecha blanca centrada */
+        .mc-jump-ico{position:absolute;inset:0;display:grid;place-items:center;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6))}
+        .mc-jump-ico svg{ width:48%; height:48%; }
+        .mc-jump-ico path{ fill:#fff; }
 
-    if (!(correctIdx >= 0 && correctIdx < options.length)) {
-      const maybe1 = Number(q.correct);
-      if (Number.isFinite(maybe1) && maybe1 >= 1 && maybe1 <= options.length) correctIdx = maybe1 - 1;
-      else correctIdx = 0;
-    }
-  }
+        @media (orientation:landscape){
+          .mc-joy{bottom:14px;left:14px;width:150px;height:150px}
+          .mc-jump{bottom:14px;right:14px;width:clamp(56px,11vmin,84px);height:clamp(56px,11vmin,84px)}
+        }
+        .force-touch .mc-wrap{display:block}
+      `;
+      document.head.appendChild(style);
 
-  // 4) UI original
-  ASK.open(prompt, options, correctIdx, onOk, onBad);
-}
+      /* ======= DOM ======= */
+      const wrap = document.createElement('div');
+      wrap.className = 'mc-wrap';
+      wrap.innerHTML = `
+        <div class="mc-joy" aria-label="Joystick">
+          <div class="mc-joy-base"></div>
+          <div class="mc-joy-dead"></div>
+          <div class="mc-joy-knob"></div>
+        </div>
+        <div class="mc-jump">
+          <button class="mc-jump-btn" type="button" aria-label="Saltar" title="Saltar">
+            <span class="mc-jump-ico">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3l5.2 5.2-1.4 1.4L13 6.8V20h-2V6.8L8.2 9.6 6.8 8.2 12 3z"/>
+              </svg>
+            </span>
+          </button>
+        </div>`;
+      document.body.appendChild(wrap);
+      if (force) document.body.classList.add('force-touch');
 
-</script>
+      /* ======= Joystick ======= */
+      const joy = wrap.querySelector('.mc-joy'), knob = wrap.querySelector('.mc-joy-knob');
+      const R = 74, DEAD = 20, HYST = 6; let origin = null, active = false, lastDir = 0, lastTap = 0;
+
+      const setDir = (dir) => {
+        if (dir === lastDir) return;
+        if (lastDir === -1) release('ArrowLeft', 'ArrowLeft');
+        if (lastDir === +1) release('ArrowRight', 'ArrowRight');
+        if (dir === -1) press('ArrowLeft', 'ArrowLeft');
+        if (dir === +1) press('ArrowRight', 'ArrowRight');
+        lastDir = dir;
+      };
+      const updateKnob = (vx, vy) => {
+        const mag = Math.hypot(vx, vy); let dir = 0;
+        if (mag > DEAD + HYST) { if (vx < -DEAD) dir = -1; else if (vx > DEAD) dir = +1; }
+        else if (mag < DEAD - HYST) { dir = 0; } else { dir = lastDir; }
+        setDir(dir);
+        const clampMag = Math.min(R, mag);
+        const nx = (mag ? (vx / mag) : 0) * clampMag, ny = (mag ? (vy / mag) : 0) * clampMag;
+        knob.style.transform = `translate(calc(-50% + ${nx}px), calc(-50% + ${ny}px))`;
+      };
+      const joyStart = (x, y) => {
+        active = true; const rect = joy.getBoundingClientRect();
+        origin = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        updateKnob(0, 0);
+        const t = performance.now(); if (t - lastTap < 280) { jumpDown(); setTimeout(jumpUp, 120); } lastTap = t;
+      };
+      const joyMove = (x, y) => { if (!active) return; updateKnob(x - origin.x, y - origin.y); };
+      const joyEnd = () => { if (!active) return; active = false; setDir(0); knob.style.transform = 'translate(-50%,-50%)'; };
+      joy.addEventListener('pointerdown', e => { e.preventDefault(); joy.setPointerCapture(e.pointerId); joyStart(e.clientX, e.clientY); });
+      joy.addEventListener('pointermove', e => { if (!active) return; e.preventDefault(); joyMove(e.clientX, e.clientY); });
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => joy.addEventListener(ev, e => { e.preventDefault(); joyEnd(); }));
+
+      /* ======= Salto ======= */
+      const btnJump = wrap.querySelector('.mc-jump-btn');
+      btnJump.addEventListener('pointerdown', e => { e.preventDefault(); jumpDown(); });
+      const endJump = e => { e && e.preventDefault(); jumpUp(); };
+      btnJump.addEventListener('pointerup', endJump); btnJump.addEventListener('pointercancel', endJump); btnJump.addEventListener('pointerleave', endJump);
+
+      /* Swipe-up rápido = salto */
+      let swipeStart = null;
+      window.addEventListener('touchstart', e => { const t = e.changedTouches[0]; swipeStart = { x: t.clientX, y: t.clientY, time: performance.now() }; }, { passive: true });
+      window.addEventListener('touchend', e => {
+        if (!swipeStart) return; const t = e.changedTouches[0];
+        const dx = t.clientX - swipeStart.x, dy = t.clientY - swipeStart.y, dt = performance.now() - swipeStart.time;
+        if (dt < 280 && dy < -42 && Math.abs(dx) < 70) { jumpDown(); setTimeout(jumpUp, 120); }
+        swipeStart = null;
+      }, { passive: true });
+
+      /* Ocultar si aparece teclado físico */
+      let hidden = false; function hideUI() {
+        if (hidden) return; document.querySelector('.mc-wrap').style.display = 'none'; hidden = true;
+        window.addEventListener('touchstart', () => { document.querySelector('.mc-wrap').style.display = ''; hidden = false; }, { once: true, passive: true });
+      }
+      window.addEventListener('keydown', hideUI, { once: true });
+    })();
+  </script>
 </body>
+
 </html>
