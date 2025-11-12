@@ -1,0 +1,97 @@
+/* ===== Escena principal estilo “cabina espacial” ===== */
+.scene-wrap{
+  position:relative;
+  min-height: calc(100vh - var(--navbar-h, 64px));
+  overflow:hidden;
+  color:#fff;
+  font-weight:700;
+  -webkit-font-smoothing: antialiased;
+}
+.scene-bg{
+  position:absolute; inset:0;
+  background-image: var(--bg);   /* <-- usa la variable */
+  background-size: cover;
+  background-position: center;
+  z-index:0;
+}
+
+/* — HUD superior — */
+.hud-top{
+  position:absolute; left:50%; top:24px; transform:translateX(-50%);
+  display:flex; flex-direction:column; align-items:center; gap:20px;
+  z-index:2;
+  text-align:center;
+}
+.hud-name{
+    color:#000000;
+  margin:0; font-size:28px; line-height:1;
+  text-shadow:0 2px 0 rgba(0,0,0,.35);
+}
+.hud-level{
+  font-size:14px; opacity:.9; margin-top:-2px;
+}
+
+/* — Personaje centrado — */
+.hero-character{
+  position:absolute; left:50%; top:65%;
+  transform:translate(-50%,-50%);
+  width:min(480px, 60vw); z-index:1;
+  display:flex; justify-content:center;
+}
+.hero-egg{
+  width:80%; max-width:420px;
+  filter: drop-shadow(0 30px 20px rgba(0,0,0,.35));
+  animation: bob 4s ease-in-out infinite;
+}
+@keyframes bob{
+  0%,100%{ transform:translateY(0) }
+  50%{ transform:translateY(-8px) }
+}
+
+/* — Botones flotantes laterales — */
+.sidecard{
+  position:absolute; bottom: 400px;;
+  display:inline-flex; align-items:center; gap:10px;
+  background:#2a6ba7; color:#fff; text-decoration:none;
+  padding:14px 22px; border-radius:18px;
+  border:3px solid #cfd7f0;
+  box-shadow:0 10px 0 rgba(0,0,0,.18), 0 16px 24px rgba(0,0,0,.25);
+  z-index:2; font-weight:800;
+}
+.sidecard .emoji{ font-size:20px; margin-left:6px; }
+.sidecard--left{ left:24px; }
+.sidecard--right{ right:24px; }
+
+/* — CTAs inferiores — */
+.cta-bottom{
+  position:absolute; left:50%; bottom:24px; transform:translateX(-50%);
+  display:flex; gap:18px; z-index:2;
+}
+.cta-pill{
+  display:inline-flex; align-items:center; gap:10px;
+  padding:18px 28px;
+  background:#2a6ba7; color:#fff; text-decoration:none;
+  border-radius:22px; border:3px solid #cfeef0;
+  box-shadow:0 10px 0 rgba(0,0,0,.18), 0 16px 24px rgba(0,0,0,.25);
+  font-size:20px; font-weight:900;
+}
+.cta-pill:hover{ filter:brightness(1.07); transform:translateY(-1px); }
+.cta-pill .ico{ font-size:22px; }
+.cta-pill--lock{ position:relative; padding-right:52px; }
+.cta-pill--lock .lock{
+  position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  font-size:20px; opacity:.85;
+}
+
+/* — Responsivo — */
+@media (max-width: 992px){
+  .sidecard{ bottom:110px; padding:12px 18px; }
+  .cta-pill{ padding:16px 22px; font-size:18px; }
+  .hud-name{ font-size:22px; }
+}
+@media (max-width: 640px){
+  .sidecard--left{ left:12px; }
+  .sidecard--right{ right:12px; }
+  .hud-progress{ transform: scale(.9); }
+  .hero-character{ width: 80vw; top: 56%; }
+}

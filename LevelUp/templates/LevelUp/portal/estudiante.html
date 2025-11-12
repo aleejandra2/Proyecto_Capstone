@@ -1,187 +1,80 @@
 {% extends "LevelUp/base.html" %}
 {% load static %}
 {% block title %}Portal del Estudiante · LevelUp{% endblock %}
-
 {% block content %}
-<main class="min-h-screen">
-  <div class="container">
 
-<!-- Encabezado (hero) -->
-    <div class="card mb-3 card-hero">
-      <div class="card-body d-flex flex-wrap justify-content-between align-items-start gap-2">
-        <div>
-          <h1 class="h3 m-0">¡Bienvenido/a, {{ request.user.get_full_name|default:request.user.username }}! 👋</h1>
-          <p class="text-muted mb-0 mt-1">Continúa tu aventura educativa y sigue subiendo de nivel.</p>
-        </div>
-        <a href="{% url 'estudiante_lista' %}" class="btn btn-success">Ver actividades</a>
-      </div>
-    </div>
+<main class="scene-wrap">
+<div class="scene-bg"
+     data-bg="{% if fondo_portal %}{{ fondo_portal }}{% else %}{% static 'LevelUp/img/fondos/fondo_ciencias.jpg' %}{% endif %}">
+</div>
+  <!-- HUD superior -->
+  <header class="hud-top">
+    <h1 class="hud-name">{{ request.user.get_full_name|default:request.user.username }}</h1>
+    <div class="hud-level">Nivel {{ nivel|default:1 }}</div>
+  </header>
 
-
-    <!-- Stats -->
-    <div class="card mb-3">
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-6 col-md-3">
-            <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Nivel🔝</div>
-              <div class="fs-3 fw-bold">{{ nivel|default:1 }}</div>
-            </div>
-          </div>
-          <div class="col-6 col-md-3">
-            <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Puntos📍</div>
-              <div class="fs-3 fw-bold">{{ puntos|default:0 }}</div>
-            </div>
-          </div>
-          <div class="col-6 col-md-3">
-            <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Medallas🏅</div>
-              <div class="fs-3 fw-bold">{{ medallas|default:0 }}</div>
-            </div>
-          </div>
-          <div class="col-6 col-md-3">
-            <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Actividades🕹️</div>
-              <div class="fs-3 fw-bold">{{ actividades_count|default:0 }}</div>
-            </div>
-          </div>
-        </div>
-        <!-- Info de curso y docentes (estilo stats) -->
-        <div class="row g-3 mt-1">
-          <div class="col-12 col-md-6">
-            <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Curso</div>
-              <div class="fw-semibold">{{ curso|default:"Sin curso" }}</div>
-            </div>
-          </div>
-
-          <div class="col-12 col-md-6">
-            <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Docentes asignados👩‍🏫</div>
-              <div class="fw-semibold">
-                Matemáticas: {{ docente_matematicas|default:"—" }}<br>
-                Inglés: {{ docente_ingles|default:"—" }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Contenido principal -->
-    <div class="row g-3">
-      <!-- Actividades asignadas (linkea a la lista real) -->
-      <div class="col-lg-8">
-        <div class="card h-100">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h2 class="h5 m-0">Actividades asignadas</h2>
-              <a href="{% url 'estudiante_lista' %}" class="link-secondary">Ver todas →</a>
-            </div>
-
-            <!-- Placeholders con CTA real -->
-        <div class="activity p-3 mb-2">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <div class="fw-semibold">Fracciones básicas</div>
-              <div class="text-muted small">⏱️ 6–8 min · Dificultad: Fácil · 100 XP</div>
-              <div class="chips">
-                <span class="chip chip--new">Nuevo</span>
-              </div>
-            </div>
-            <a href="{% url 'estudiante_lista' %}" class="btn btn-outline-success btn-sm">Empezar</a>
-          </div>
-        </div>
-
-        <div class="activity p-3 mb-2">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <div class="fw-semibold">Comprensión lectora</div>
-              <div class="text-muted small">⏱️ 7–10 min · Dificultad: Media · 150 XP</div>
-              <div class="chips">
-                <span class="chip chip--cont">Continuar</span>
-              </div>
-            </div>
-            <a href="{% url 'estudiante_lista' %}" class="btn btn-outline-success btn-sm">Continuar</a>
-          </div>
-        </div>
-
-        <div class="activity p-3">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <div class="fw-semibold">Problemas lógicos</div>
-              <div class="text-muted small">⏱️ 10–12 min · Dificultad: Difícil · 200 XP</div>
-              <div class="chips">
-                <span class="chip chip--due">Vence hoy</span>
-              </div>
-            </div>
-            <a href="{% url 'estudiante_lista' %}" class="btn btn-outline-success btn-sm">Empezar</a>
-          </div>
-        </div>
-
-          </div>
-        </div>
-      </div>
-
-      <!-- Sidebar -->
-      <div class="col-lg-4">
-        <div class="card mb-3">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-              <h3 class="h6 m-0">🏆 Ranking semanal</h3>
-              <a href="{% url 'ranking' %}" class="link-secondary">Ver ranking</a>
-            </div>
-            <ul class="list-unstyled mt-3 mb-0">
-              <li class="d-flex align-items-center justify-content-between border rounded p-2 mb-2">
-                <div class="d-flex align-items-center gap-2">
-                  <span class="badge text-bg-dark">1</span>
-                  <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center"
-                    style="width:32px;height:32px;">AV</div>
-                  <div>
-                    <div class="fw-semibold">Ana Vargas</div>
-                    <div class="text-muted small">Nivel 6</div>
-                  </div>
-                </div>
-                <div class="fw-semibold">1580 pts</div>
-              </li>
-              <li class="d-flex align-items-center justify-content-between border rounded p-2">
-                <div class="d-flex align-items-center gap-2">
-                  <span class="badge text-bg-dark">2</span>
-                  <div class="rounded-circle d-flex align-items-center justify-content-center"
-                    style="width:32px;height:32px;background:#f59e0b;color:#111827;">LR</div>
-                  <div>
-                    <div class="fw-semibold">Luis Ramírez</div>
-                    <div class="text-muted small">Nivel 5</div>
-                  </div>
-                </div>
-                <div class="fw-semibold">1420 pts</div>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-body">
-            <h3 class="h6 mb-2">🎖️ Logros recientes</h3>
-            <div class="border rounded p-2 mb-2">
-              <div class="fw-semibold">Matemago</div>
-              <div class="text-muted small">Completaste 3 actividades de matemáticas</div>
-            </div>
-            <div class="border rounded p-2">
-              <div class="fw-semibold">Lector Estrella</div>
-              <div class="text-muted small">Lograste 90% en comprensión lectora</div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
+  <!-- Personaje centrado -->
+  <div class="hero-character">
+    {% with personaje_src=personaje_img|default:'LevelUp/img/avatars/Timo.png' %}
+    <img class="hero-egg" src="{% static personaje_src %}" alt="Personaje">
+    {% endwith %}
   </div>
 
+  <!-- Botones flotantes laterales -->
+  <a class="sidecard sidecard--left" href="{% url 'ranking' %}">
+    <span class="emoji">🏆</span> Ranking
+  </a>
+
+  <a class="sidecard sidecard--right" href="#">
+    <span class="emoji">🧑‍🏫</span> Tienda
+  </a>
+
+  <!-- Acciones inferiores -->
+  <div class="cta-bottom">
+    <a href="{% url 'estudiante_lista' %}" class="cta-pill">
+      <span class="ico">🎮</span> Jugar
+    </a>
+
+    <a href="#" class="cta-pill cta-pill--lock">
+      <span class="ico">⚔️</span> Retar
+      <span class="lock" aria-hidden="true">🔒</span>
+    </a>
+  </div>
 
 </main>
+
+{# ===== JS: Cambiar fondo según la asignatura clickeada en el NAVBAR ===== #}
+<script>
+(function(){
+  const bgEl = document.querySelector('.scene-bg');
+  if (!bgEl) return;
+  const initial = bgEl.getAttribute('data-bg');
+  if (initial) bgEl.style.backgroundImage = `url(${initial})`;
+
+  // Soporte para cambiar el fondo desde el navbar (botones con .js-subject + data-slug)
+  const STATIC_BASE = "{{ STATIC_URL|default:'/static/' }}";
+  const FOLDER = "LevelUp/img/fondos/";
+  const PREFIX = "fondo_";
+  const EXT = ".jpg";
+  const LS_KEY = "asignatura_slug";
+
+  // Restaurar preferencia
+  const saved = localStorage.getItem(LS_KEY);
+  if (saved) bgEl.style.backgroundImage = `url(${STATIC_BASE}${FOLDER}${PREFIX}${saved}${EXT})`;
+
+  // Delegación global (el navbar puede estar en otro parcial)
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest('.js-subject');
+    if (!btn) return;
+    e.preventDefault();
+    const slug = (btn.dataset.slug || "").trim();
+    if (!slug) return;
+    const url = `${STATIC_BASE}${FOLDER}${PREFIX}${slug}${EXT}`;
+    bgEl.style.backgroundImage = `url(${url})`;
+    localStorage.setItem(LS_KEY, slug);
+  });
+})();
+</script>
 
 
 {% endblock %}

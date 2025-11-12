@@ -209,3 +209,31 @@
 @keyframes nbMove{
   0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%}
 }
+
+
+
+.subject-hover-wrap{ position:relative; display:flex; align-items:center; gap:8px; }
+.subject-popover{
+  position:absolute; top:100%; left:0; z-index:2000;
+  background:#fff; border:1px solid #e6edf5; border-radius:14px;
+  box-shadow:0 12px 24px rgba(0,0,0,.08);
+  padding:10px; margin-top:6px; max-width:min(90vw,920px);
+}
+
+.gm-catselector{ list-style:none; padding:0; margin:0; overflow-x:auto; scrollbar-width:thin; }
+.gm-catbtn{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:6px; width:116px; padding:6px 8px;
+  border:1px solid #e6edf5; border-radius:14px; background:#fff; color:#1b1f24;
+  cursor:pointer; transition:transform .15s, background .2s, box-shadow .2s, border-color .2s;
+}
+.gm-catbtn:hover{ background:#f6f9fc; transform:translateY(-1px); }
+.gm-catbtn.is-selected{ background:#f0fff7; box-shadow:0 6px 18px rgba(17,163,106,.12); border-color:#11a36a; }
+.gm-thumb{
+  width:48px; height:48px; border-radius:50%; display:grid; place-items:center;
+  background:#fff; border:2px solid #e6edf5; overflow:hidden;
+}
+.gm-catbtn.is-selected .gm-thumb{ border-color:#11a36a; box-shadow:0 0 0 4px rgba(17,163,106,.12); }
+.gm-thumb i{ font-size:22px; }
+.gm-name{ font-size:.92rem; font-weight:600; text-align:center; max-width:100%; }
+@media (max-width:768px){ .gm-catbtn{ width:100px; } .gm-thumb{ width:44px; height:44px; } .gm-name{ font-size:.88rem; } }

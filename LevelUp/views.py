@@ -109,7 +109,6 @@ def login_view(request):
                 login(request, user)
                 if not remember:
                     request.session.set_expiry(0)
-                messages.success(request, f"¡Hola {user.first_name or user.username}!")
                 return redirect("dashboard")
             messages.error(request, "Credenciales inválidas. Verifica tu email y contraseña.")
     else:
@@ -119,7 +118,6 @@ def login_view(request):
 @login_required
 def logout_view(request):
     logout(request)
-    messages.info(request, "Sesión cerrada correctamente.")
     return redirect("login")
 
 # -------------------------------------------------------------------

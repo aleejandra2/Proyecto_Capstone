@@ -1,0 +1,67 @@
+/* ====== NAVBAR Seuss-like ====== */
+.seussbar { background:#fff; border-bottom:1px solid #e5e7eb; }
+.seussbar .container { padding-block:8px; }
+
+.seuss-rail { background:#fff; border-radius:16px; padding:6px 10px; }
+.seuss-tabs { 
+  list-style:none; margin:0; padding:0;
+  display:flex; align-items:center; gap:12px;
+}
+.seuss-tab { position:relative; }
+.seuss-right { margin-left:auto; display:flex; align-items:center; }
+
+.seuss-link{
+  display:flex; align-items:center; gap:8px;
+  padding:8px 14px; text-decoration:none;
+  background:#fff; border:1px solid #e5e7eb; border-radius:999px;
+  color:#1f2937; font-weight:700;
+}
+.seuss-link:hover{ background:#f8fafc; }
+
+.seuss-ico{ display:inline-grid; place-items:center; width:22px; height:22px; color:#0f766e; }
+.seuss-text{ white-space:nowrap; }
+
+/* Dropdown de materias */
+.subject-dropdown{
+  position:absolute; top:100%; left:0; transform:translateY(8px);
+  min-width:260px; background:#fff; border:1px solid #e5e7eb; border-radius:12px;
+  box-shadow:0 12px 24px rgba(0,0,0,.08);
+  display:none; z-index:50; padding:8px;
+}
+.has-dropdown:hover .subject-dropdown,
+.has-dropdown:focus-within .subject-dropdown{ display:block; }
+
+.subject-list{ list-style:none; margin:0; padding:0; }
+.subject-item{
+  display:flex; align-items:center; gap:10px;
+  padding:8px 10px; text-decoration:none; color:#111827; border-radius:10px;
+}
+.subject-item:hover{ background:#f3f4f6; }
+.subject-egg{ width:28px; height:28px; border-radius:50%; background:#e5f3f2; display:inline-grid; place-items:center; overflow:hidden; }
+.egg-img{ width:18px; height:18px; }
+
+/* Usuario derecha */
+.acad-user.btn{
+  display:flex; align-items:center; gap:8px; background:#fff;
+  border:1px solid #e5e7eb; border-radius:999px; padding:6px 10px; color:#111827;
+}
+.avatar{
+  width:28px; height:28px; border-radius:50%; background:#f3f4f6; display:inline-grid; place-items:center; font-weight:800; color:#111827;
+}
+
+/* Submenú rojo centrado */
+.seuss-subnav{
+  display:flex; justify-content:center; gap:10px; flex-wrap:wrap;
+  margin-top:8px;
+}
+.subbtn{
+  display:inline-block; padding:6px 12px; border-radius:12px;
+  background:#d72638; border:1px solid #8a0f1e; color:#fff; text-decoration:none; font-weight:700; font-size:13px;
+}
+.subbtn:hover{ filter:brightness(1.05); }
+
+/* Responsivo */
+@media (max-width:992px){
+  .seuss-text{ display:none; }
+  .seuss-subnav{ margin-top:6px; }
+}

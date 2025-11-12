@@ -64,6 +64,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'LevelUp.context_processors.user_home_url',
+                'LevelUp.context_processors.navbar_asignaturas'
             ],
         },
     },

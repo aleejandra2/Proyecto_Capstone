@@ -17,6 +17,8 @@
   <link rel="stylesheet" href="{% static 'LevelUp/css/global.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/login.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/home.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'LevelUp/css/navbar_estudiante.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'LevelUp/css/home_estudiante.css' %}?v=5">
 
   <!-- Fuentes / íconos -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,23 +42,41 @@
 
 <body>
   {% block navbar %}
-  {% include "LevelUp/partials/navbar.html" %}
-  {% endblock %}
-
-  <!-- Mensajes
-  <div class="messages">
-    {% if messages %}
-      {% for message in messages %}
-        <div class="msg {{ message.tags }}">{{ message }}</div>
-      {% endfor %}
-    {% endif %}
-  </div>-->
+  {% if request.user.is_authenticated %}
+    {% with rol=request.user.rol|default_if_none:''|default:''|lower es_est=request.user.es_estudiante|default:False %}
+      {% if rol == 'estudiante' or es_est %}
+        {# Navbar SOLO estudiantes #}
+        {% include "LevelUp/partials/navbar_estudiante.html" %}
+      {% else %}
+        {# Navbar general #}
+        {% include "LevelUp/partials/navbar.html" %}
+      {% endif %}
+    {% endwith %}
+  {% else %}
+    {# Usuario no autenticado: usa navbar general o uno público #}
+    {% include "LevelUp/partials/navbar.html" %}
+  {% endif %}
+{% endblock %}
   
   {% block content %}{% endblock %}
 
   {% block footer %}
-  {% include "LevelUp/partials/footer.html" %}
-  {% endblock %}
+  {% if request.user.is_authenticated %}
+    {% with rol=request.user.rol|default_if_none:''|lower es_est=request.user.es_estudiante|default:False %}
+      {% if rol == 'estudiante' or es_est %}
+        {# Estudiante: sin footer #}
+      {% else %}
+        {# Docente/Admin/Otros: footer general #}
+        {% include "LevelUp/partials/footer.html" %}
+        {# o, si tienes uno específico: "LevelUp/partials/footer_doc_admin.html" #}
+      {% endif %}
+    {% endwith %}
+  {% else %}
+    {# Público/no autenticado: footer público o el general #}
+    {% include "LevelUp/partials/footer.html" %}
+  {% endif %}
+{% endblock %}
+
 
 </body>
 

@@ -1,0 +1,90 @@
+{% load static %}
+
+<!-- === NAVBAR estilo Seussville-like (parcial) === -->
+<header class="acad-navbar seussbar">
+  <div class="container">
+
+    <!-- Riel + pestañas principales -->
+    <nav class="seuss-rail" aria-label="Navegación principal">
+      <ul class="seuss-tabs">
+        <!-- EXPLORAR (abre dropdown de materias) -->
+        <li class="seuss-tab has-dropdown">
+          <a href="{% url 'dashboard' %}" class="seuss-link" aria-haspopup="true" aria-expanded="false">
+            <span class="seuss-ico"><i class="bi bi-map" aria-hidden="true"></i></span>
+            <span class="seuss-text">Explorar</span>
+          </a>
+
+          <!-- SOLO baja el panel de MATERIAS -->
+          <div class="subject-dropdown" role="menu" aria-label="Seleccionar asignatura">
+            <ul class="subject-list">
+              {% for asig in asignaturas %}
+              <li>
+                <!-- ganchos para JS: js-subject + data-slug -->
+                <a href="#" class="subject-item js-subject"
+                   data-slug="{{ asig.slug|default:asig.nombre|slugify }}">
+                  <span class="subject-egg">
+                    <img src="{% static asig.icono %}" alt="" class="egg-img">
+                  </span>
+                  <span class="subject-label">{{ asig.nombre }}</span>
+                </a>
+              </li>
+              {% empty %}
+              <li class="subject-empty text-muted px-3 py-2">Sin asignaturas</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </li>
+
+        <!-- WATCH -->
+        <li class="seuss-tab">
+          <a href="#" class="seuss-link">
+            <span class="seuss-ico"><i class="bi bi-tv" aria-hidden="true"></i></span>
+            <span class="seuss-text">Ver</span>
+          </a>
+        </li>
+
+        <!-- PLAY -->
+        <li class="seuss-tab">
+          <a href="{% url 'estudiante_lista' %}" class="seuss-link">
+            <span class="seuss-ico"><i class="bi bi-controller" aria-hidden="true"></i></span>
+            <span class="seuss-text">Jugar</span>
+          </a>
+        </li>
+
+        <!-- SHOP -->
+        <li class="seuss-tab">
+          <a href="#" class="seuss-link">
+            <span class="seuss-ico"><i class="bi bi-gift" aria-hidden="true"></i></span>
+            <span class="seuss-text">Tienda</span>
+          </a>
+        </li>
+
+        <!-- a la derecha: usuario -->
+        <li class="seuss-right">
+          <div class="dropdown">
+            <button class="acad-user btn btn-sm" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menú de usuario">
+              <span class="avatar">{{ request.user.first_name|default:request.user.username|first|upper }}</span>
+              <span class="d-none d-md-inline fw-600 user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+              <i class="bi bi-caret-down-fill" aria-hidden="true"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="{% url 'perfil' %}"><i class="bi bi-person"></i> Mi perfil</a></li>
+              <li><a class="dropdown-item" href="#"><i class="bi bi-award"></i> Recompensas</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a></li>
+            </ul>
+          </div>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- Sub-menú rojo pequeño (chips de asignatura) -->
+    <div class="seuss-subnav d-flex justify-content-center flex-wrap gap-2" aria-label="Accesos rápidos por asignatura">
+      <!-- Agregamos js-subject + data-slug para que también funcionen -->
+      <a class="subbtn js-subject" data-slug="ciencias"    href="#">Ciencias</a>
+      <a class="subbtn js-subject" data-slug="historia"    href="#">Historia</a>
+      <a class="subbtn js-subject" data-slug="lenguaje"    href="#">Lenguaje</a>
+      <a class="subbtn js-subject" data-slug="matematicas" href="#">Matemáticas</a>
+    </div>
+  </div>
+</header>
