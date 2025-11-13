@@ -30,8 +30,10 @@ urlpatterns = [
     path("actividades/docente/nueva/", views.actividad_crear, name="actividad_crear"),
     path("actividades/docente/crear/", views.actividad_crear, name="crear"),  # alias opcional (ruta distinta)
     path("actividades/docente/<int:pk>/editar/", views.actividad_editar, name="actividad_editar"),
-    path("actividades/docente/<int:pk>/asignar/", views.actividad_asignar, name="actividad_asignar"),
     path("actividades/<int:pk>/eliminar/", views.actividad_eliminar, name="actividad_eliminar"),
+    
+    # AJAX: Eliminar ítem
+    path('actividades/item/<int:item_id>/eliminar/', views.item_eliminar_ajax, name='item_eliminar_ajax'),
 
     # “Crear misión/videojuego” para el docente
     path("misiones/crear/", views.actividad_crear_mision, name="actividad_crear_mision"),

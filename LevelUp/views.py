@@ -13,7 +13,7 @@ from django.utils import timezone
 import time
 from django.db import transaction, models, connection
 from django.core.cache import cache
-from django.db.models import Count, Q, Prefetch, ProtectedError
+from django.db.models import Count, Q, Prefetch, ProtectedError, Max
 from django.forms import inlineformset_factory, BaseInlineFormSet
 from django import get_version as django_get_version
 from django.views.decorators.http import require_POST
@@ -463,169 +463,504 @@ def actividades_docente_lista(request):
         "asignatura_prof": asignatura_prof,
     })
 
-# -----------------------
-# Formset para ítems GAME
-# -----------------------
+# =====================================================
+# Formset personalizado que pasa actividad_tipo al form
+# =====================================================
 class ItemInlineFormSet(BaseInlineFormSet):
+    def __init__(self, *args, **kwargs):
+        self.actividad_tipo = kwargs.pop('actividad_tipo', None)
+        super().__init__(*args, **kwargs)
+
+    def _construct_form(self, i, **kwargs):
+        # PÁSALO como kwarg para que ItemForm lo lea en __init__
+        kwargs.setdefault("actividad_tipo", self.actividad_tipo)
+        return super()._construct_form(i, **kwargs)
+
     def clean(self):
         super().clean()
         for form in self.forms:
             if form.cleaned_data.get("DELETE"):
-                # Evita que errores de forms marcados para borrar bloqueen el guardado
                 form._errors.clear()
 
+
+# Actualizar factory
 ItemFormSet = inlineformset_factory(
-    Actividad, ItemActividad,
+    Actividad,
+    ItemActividad,
     form=ItemForm,
     formset=ItemInlineFormSet,
-    fields=("tipo", "enunciado", "puntaje"),  # agrega "orden" si tu modelo lo tiene
-    extra=1,
+    fields=("enunciado", "puntaje"),  # quitar "tipo"
+    extra=0,
     can_delete=True,
 )
+# =====================================================
+# CREAR ACTIVIDAD 
+# =====================================================
+def normalize_tipo(raw):
+    """Normaliza 'juego' a 'game', mantiene 'quiz'"""
+    if not raw:
+        return "quiz"
+    v = str(raw).lower().strip()
+    return "game" if v in ("game", "juego") else "quiz"
 
 @login_required
 def actividad_crear(request):
+    """
+    VERSIÓN DEFINITIVA - Procesa ítems DIRECTAMENTE desde request.POST
+    """
     if not es_docente(request.user):
         raise Http404
-
+    
     docente = get_object_or_404(Docente, usuario=request.user)
-
+    
     if request.method == "POST":
         form = ActividadForm(request.POST, request.FILES)
-
-        # formset contra un objeto temporal para validar
-        temp_act = Actividad(docente=docente)
-        formset = ItemFormSet(request.POST, request.FILES, instance=temp_act, prefix="items")
-
-        if form.is_valid() and formset.is_valid():
+        
+        print("\n" + "="*60)
+        print(f"➕ CREAR ACTIVIDAD")
+        print(f"   request.POST.get('items-TOTAL_FORMS'): {request.POST.get('items-TOTAL_FORMS')}")
+        print("="*60)
+        
+        if form.is_valid():
             with transaction.atomic():
+                # 1) Crear actividad
                 act = form.save(commit=False)
                 act.docente = docente
                 if act.es_publicada and not act.fecha_publicacion:
                     act.fecha_publicacion = timezone.now()
                 act.save()
                 form.save_m2m()
+                
+                print(f"   ✅ Actividad creada (ID: {act.pk})")
 
-                # ahora sí, asociamos y guardamos los ítems
-                formset.instance = act
-                formset.save()
+                # 2) Procesar ítems DIRECTAMENTE desde request.POST
+                items_guardados = 0
+                
+                total_forms_raw = request.POST.get("items-TOTAL_FORMS", "0")
+                try:
+                    total_forms = int(total_forms_raw)
+                except:
+                    total_forms = 0
+                
+                print(f"\n🔄 PROCESAMIENTO DIRECTO:")
+                print(f"   TOTAL_FORMS: {total_forms}")
+                
+                for i in range(total_forms):
+                    delete_raw = request.POST.get(f"items-{i}-DELETE", "")
+                    enun = request.POST.get(f"items-{i}-enunciado", "").strip()
+                    punt_raw = request.POST.get(f"items-{i}-puntaje", "").strip()
+                    payload = request.POST.get(f"items-{i}-game_pairs", "").strip()
+                    item_kind = request.POST.get(f"items-{i}-item_kind", "trivia").strip()
+                    time_limit_raw = request.POST.get(f"items-{i}-game_time_limit", "")
+                    
+                    print(f"\n   📋 Form {i}:")
+                    print(f"      enunciado: '{enun[:30]}...'")
+                    print(f"      puntaje: '{punt_raw}'")
+                    print(f"      payload: {len(payload)} chars")
+                    
+                    if delete_raw in ("1", "true", "True", "on"):
+                        print(f"      ⏭️ Marcado DELETE, saltando")
+                        continue
+                    
+                    try:
+                        punt = int(punt_raw) if punt_raw else 0
+                    except:
+                        punt = 0
+                    
+                    try:
+                        time_limit = int(time_limit_raw) if time_limit_raw else None
+                    except:
+                        time_limit = None
+                    
+                    tiene_contenido = bool(payload or enun or punt)
+                    
+                    if not tiene_contenido:
+                        print(f"      ⏭️ Sin contenido, saltando")
+                        continue
+                    
+                    print(f"      ✅ Tiene contenido, creando ítem...")
+                    
+                    try:
+                        if payload:
+                            import json
+                            datos = json.loads(payload)
+                        else:
+                            datos = {"kind": item_kind, "questions": []}
+                    except Exception as e:
+                        print(f"         ⚠️ Error parseando JSON: {e}")
+                        datos = {"kind": item_kind, "questions": []}
+                    
+                    if time_limit:
+                        datos["timeLimit"] = time_limit
+                    
+                    max_orden = (ItemActividad.objects
+                               .filter(actividad=act)
+                               .aggregate(Max('orden'))['orden__max'] or 0)
+                    
+                    try:
+                        item = ItemActividad.objects.create(
+                            actividad=act,
+                            enunciado=enun,
+                            puntaje=punt,
+                            datos=datos,
+                            tipo="game",
+                            orden=max_orden + 1
+                        )
+                        items_guardados += 1
+                        print(f"         ✅ Ítem guardado (ID: {item.pk})")
+                    except Exception as e:
+                        print(f"         ❌ ERROR: {e}")
 
-            messages.success(request, "Actividad creada correctamente.")
-
-            if request.POST.get("accion") == "guardar_y_asignar":
-                return redirect(f"/actividades/docente/{act.pk}/editar/?open=asignar")
-
+                # Asignaciones
+                cursos_ids = [int(x) for x in request.POST.getlist("cursos") if str(x).strip()]
+                alumnos_usuario_ids = [int(x) for x in request.POST.getlist("alumnos") if str(x).strip()]
+                
+                estudiantes_pks = set()
+                
+                if cursos_ids:
+                    usuarios_de_cursos = Matricula.objects.filter(
+                        curso_id__in=cursos_ids
+                    ).values_list("estudiante_id", flat=True)
+                    
+                    est_from_cursos = Estudiante.objects.filter(
+                        usuario_id__in=usuarios_de_cursos
+                    ).values_list("pk", flat=True)
+                    
+                    estudiantes_pks.update(est_from_cursos)
+                
+                if alumnos_usuario_ids:
+                    est_from_alumnos = Estudiante.objects.filter(
+                        usuario_id__in=alumnos_usuario_ids
+                    ).values_list("pk", flat=True)
+                    
+                    estudiantes_pks.update(est_from_alumnos)
+                
+                creadas = 0
+                for est_pk in estudiantes_pks:
+                    _, created = AsignacionActividad.objects.get_or_create(
+                        actividad=act,
+                        estudiante_id=est_pk
+                    )
+                    if created:
+                        creadas += 1
+                
+                print(f"\n💾 RESUMEN:")
+                print(f"   Ítems creados: {items_guardados}")
+                print(f"   Asignaciones: {creadas}")
+                
+                if estudiantes_pks:
+                    if creadas > 0:
+                        messages.success(request, f"✅ Actividad '{act.titulo}' creada con {items_guardados} ítems y asignada a {creadas} estudiante(s).")
+                    else:
+                        messages.info(request, f"✅ Actividad '{act.titulo}' creada con {items_guardados} ítems.")
+                else:
+                    messages.success(request, f"✅ Actividad '{act.titulo}' creada con {items_guardados} ítems.")
+            
             return redirect("docente_lista")
-        messages.error(request, "Revisa los errores en el formulario y los ítems.")
+        else:
+            print(f"\n❌ Form inválido: {form.errors}")
+            messages.error(request, "Revisa los errores en el formulario.")
     else:
         form = ActividadForm()
         temp_act = Actividad(docente=docente)
-        formset = ItemFormSet(instance=temp_act, prefix="items")
-
+        formset = ItemFormSet(
+            instance=temp_act,
+            prefix="items",
+            actividad_tipo="quiz"
+        )
+    
     ctx = {
         "form": form,
         "formset": formset,
         "editar": False,
-        "abrir_asignar": request.GET.get("abrir_asignar") == "1",
         "cursos": Curso.objects.all().order_by("nivel", "letra"),
-        "estudiantes": Estudiante.objects.select_related("usuario").order_by(
-            "usuario__first_name", "usuario__last_name"
-        ),
+        "estudiantes": Estudiante.objects.select_related("usuario").order_by("usuario__first_name"),
+        "cursos_asignados": set(),
+        "asignados_usuarios": set(),
+        "abrir_asignar": False,
     }
     return render(request, "LevelUp/actividades/actividad_form.html", ctx)
 
+# =====================================================
+# EDITAR ACTIVIDAD 
+# =====================================================
 @login_required
 def actividad_editar(request, pk):
+    """
+    VERSIÓN DEFINITIVA - Procesa ítems DIRECTAMENTE desde request.POST
+    sin depender del sistema de validación de Django formsets
+    """
     if not es_docente(request.user):
         raise Http404
 
     docente = get_object_or_404(Docente, usuario=request.user)
     act = get_object_or_404(Actividad, pk=pk, docente=docente)
 
-    # SOLO ítems tipo 'game'
-    qs_items = ItemActividad.objects.filter(actividad=act, tipo__in=["game", "game_config"]).order_by("orden", "id") 
+    # Cargar TODOS los ítems existentes
+    qs_items = ItemActividad.objects.filter(actividad=act).order_by("orden", "id")
+    items_iniciales = qs_items.count()
 
     if request.method == "POST":
         form = ActividadForm(request.POST, request.FILES, instance=act)
-        formset = ItemFormSet(request.POST, request.FILES, instance=act, prefix="items", queryset=qs_items)
-        if form.is_valid() and formset.is_valid():
+        tipo_norm = normalize_tipo(request.POST.get("tipo", act.tipo))
+
+        formset = ItemFormSet(
+            request.POST,
+            request.FILES,
+            instance=act,
+            prefix="items",
+            queryset=qs_items,
+            actividad_tipo=tipo_norm,
+        )
+        
+        # 🔍 DEBUG INICIAL
+        print("\n" + "="*60)
+        print(f"✏️ EDITAR ACTIVIDAD #{pk}")
+        print(f"   Ítems iniciales en BD: {items_iniciales}")
+        print(f"   request.POST.get('items-TOTAL_FORMS'): {request.POST.get('items-TOTAL_FORMS')}")
+        print("="*60)
+
+        # Validar solo el form principal (actividad)
+        if form.is_valid():
+            # NO validamos el formset, lo procesamos manualmente
             with transaction.atomic():
+                # 1) Guardar actividad
                 obj = form.save(commit=False)
                 obj.docente = docente
                 if obj.es_publicada and not obj.fecha_publicacion:
                     obj.fecha_publicacion = timezone.now()
                 obj.save()
                 form.save_m2m()
-                formset.save()
-            messages.success(request, "Actividad actualizada.")
-            return redirect("docente_lista")
-        messages.error(request, "Revisa los errores en el formulario y los ítems.")
-    else:
-        form = ActividadForm(instance=act)
-        formset = ItemFormSet(instance=act, prefix="items", queryset=qs_items)
-        for f in formset.forms:
-            if not f.instance.pk:
-                f.fields["tipo"].initial = "game"
 
-    abrir_asignar = (request.GET.get("open") == "asignar") or (request.GET.get("abrir_asignar") == "1")
+                # 2) Procesar ítems DIRECTAMENTE desde request.POST
+                items_guardados = 0
+                items_actualizados = 0
+                items_nuevos = 0
+                items_eliminados = 0
+                
+                # Obtener TOTAL_FORMS del POST
+                total_forms_raw = request.POST.get("items-TOTAL_FORMS", "0")
+                try:
+                    total_forms = int(total_forms_raw)
+                except:
+                    total_forms = 0
+                
+                print(f"\n🔄 PROCESAMIENTO DIRECTO desde POST:")
+                print(f"   TOTAL_FORMS: {total_forms}")
+                print(f"   Ítems actuales en BD: {ItemActividad.objects.filter(actividad=obj).count()}")
+                
+                for i in range(total_forms):
+                    # Leer datos DIRECTOS del POST
+                    item_id_raw = request.POST.get(f"items-{i}-id", "").strip()
+                    delete_raw = request.POST.get(f"items-{i}-DELETE", "")
+                    enun = request.POST.get(f"items-{i}-enunciado", "").strip()
+                    punt_raw = request.POST.get(f"items-{i}-puntaje", "").strip()
+                    payload = request.POST.get(f"items-{i}-game_pairs", "").strip()
+                    item_kind = request.POST.get(f"items-{i}-item_kind", "trivia").strip()
+                    time_limit_raw = request.POST.get(f"items-{i}-game_time_limit", "")
+                    
+                    print(f"\n   📋 Form {i}:")
+                    print(f"      items-{i}-id: '{item_id_raw}'")
+                    print(f"      items-{i}-DELETE: '{delete_raw}'")
+                    print(f"      items-{i}-enunciado: '{enun[:30]}...'")
+                    print(f"      items-{i}-puntaje: '{punt_raw}'")
+                    print(f"      items-{i}-game_pairs: {len(payload)} chars")
+                    
+                    # Parsear valores
+                    try:
+                        item_id = int(item_id_raw) if item_id_raw and item_id_raw not in ("", "None", "none") else None
+                    except:
+                        item_id = None
+                    
+                    try:
+                        punt = int(punt_raw) if punt_raw else 0
+                    except:
+                        punt = 0
+                    
+                    try:
+                        time_limit = int(time_limit_raw) if time_limit_raw else None
+                    except:
+                        time_limit = None
+                    
+                    # Verificar DELETE
+                    if delete_raw in ("1", "true", "True", "on"):
+                        if item_id:
+                            try:
+                                ItemActividad.objects.filter(pk=item_id, actividad=obj).delete()
+                                items_eliminados += 1
+                                print(f"      🗑️ ELIMINADO (ID={item_id})")
+                            except Exception as e:
+                                print(f"      ⚠️ Error eliminando ID={item_id}: {e}")
+                        else:
+                            print(f"      ⏭️ DELETE sin ID, saltando")
+                        continue
+                    
+                    # Verificar contenido
+                    tiene_contenido = bool(payload or enun or punt)
+                    
+                    if not tiene_contenido:
+                        print(f"      ⏭️ Sin contenido, saltando")
+                        continue
+                    
+                    print(f"      ✅ Tiene contenido, procesando...")
+                    
+                    # Parsear datos JSON
+                    try:
+                        if payload:
+                            import json
+                            datos = json.loads(payload)
+                            print(f"         JSON parseado: kind={datos.get('kind')}")
+                        else:
+                            datos = {"kind": item_kind, "questions": []}
+                            print(f"         JSON default: kind={item_kind}")
+                    except Exception as e:
+                        print(f"         ⚠️ Error parseando JSON: {e}")
+                        datos = {"kind": item_kind, "questions": []}
+                    
+                    # Agregar time_limit si existe
+                    if time_limit:
+                        datos["timeLimit"] = time_limit
+                    
+                    # GUARDAR o ACTUALIZAR
+                    if item_id:
+                        # ACTUALIZAR existente
+                        try:
+                            item = ItemActividad.objects.get(pk=item_id, actividad=obj)
+                            item.enunciado = enun
+                            item.puntaje = punt
+                            item.datos = datos
+                            item.tipo = "game"
+                            item.save()
+                            items_actualizados += 1
+                            items_guardados += 1
+                            print(f"         ✅ ACTUALIZADO (ID: {item_id})")
+                        except ItemActividad.DoesNotExist:
+                            print(f"         ⚠️ ID {item_id} no encontrado en BD")
+                            item_id = None
+                    
+                    if not item_id:
+                        # CREAR nuevo
+                        max_orden = (ItemActividad.objects
+                                   .filter(actividad=obj)
+                                   .aggregate(Max('orden'))['orden__max'] or 0)
+                        
+                        print(f"         🆕 Creando nuevo ítem (orden={max_orden + 1})...")
+                        
+                        try:
+                            item = ItemActividad.objects.create(
+                                actividad=obj,
+                                enunciado=enun,
+                                puntaje=punt,
+                                datos=datos,
+                                tipo="game",
+                                orden=max_orden + 1
+                            )
+                            items_nuevos += 1
+                            items_guardados += 1
+                            print(f"         ✅ NUEVO guardado (ID: {item.pk}, orden: {item.orden})")
+                        except Exception as e:
+                            print(f"         ❌ ERROR creando ítem: {e}")
+                            import traceback
+                            traceback.print_exc()
+
+                # Mensaje de éxito
+                msg_parts = [f"Actividad '{obj.titulo}' actualizada"]
+                if items_nuevos > 0:
+                    msg_parts.append(f"{items_nuevos} ítem(s) nuevo(s)")
+                if items_actualizados > 0:
+                    msg_parts.append(f"{items_actualizados} actualizado(s)")
+                if items_eliminados > 0:
+                    msg_parts.append(f"{items_eliminados} eliminado(s)")
+                
+                messages.success(request, "✅ " + ", ".join(msg_parts) + ".")
+                
+                print(f"\n💾 RESUMEN FINAL:")
+                print(f"   Total guardados: {items_guardados}")
+                print(f"   Nuevos: {items_nuevos}")
+                print(f"   Actualizados: {items_actualizados}")
+                print(f"   Eliminados: {items_eliminados}")
+                print(f"   Ítems finales en BD: {ItemActividad.objects.filter(actividad=obj).count()}")
+            
+            return redirect("docente_lista")
+
+        else:
+            print(f"\n❌ Form de actividad inválido:")
+            print(f"   Errores: {form.errors}")
+            messages.error(request, "Revisa los errores en los datos de la actividad.")
+    else:
+        # GET request
+        form = ActividadForm(instance=act)
+        formset = ItemFormSet(
+            instance=act,
+            prefix="items",
+            queryset=qs_items,
+            actividad_tipo=act.tipo,
+        )
+
+    # Asignaciones actuales
+    est_ids_asignados = set(
+        AsignacionActividad.objects.filter(actividad=act).values_list("estudiante_id", flat=True)
+    )
+    asignados_usuarios = set(
+        Estudiante.objects.filter(pk__in=est_ids_asignados).values_list("usuario_id", flat=True)
+    )
+    cursos_asignados = set(
+        Matricula.objects.filter(estudiante_id__in=asignados_usuarios).values_list("curso_id", flat=True)
+    )
 
     ctx = {
         "form": form,
         "formset": formset,
         "editar": True,
         "act": act,
-        "abrir_asignar": abrir_asignar,
-        # clave: flag para la plantilla (ocultar todo lo que no sea del juego)
-        "only_game": request.GET.get("only_game") in ("1","true","True"),
+        "abrir_asignar": request.GET.get("open") == "asignar",
         "cursos": Curso.objects.all().order_by("nivel", "letra"),
-        "estudiantes": Estudiante.objects.select_related("usuario").order_by("usuario__first_name", "usuario__last_name"),
+        "estudiantes": Estudiante.objects.select_related("usuario").order_by("usuario__first_name"),
+        "cursos_asignados": cursos_asignados,
+        "asignados_usuarios": asignados_usuarios,
     }
     return render(request, "LevelUp/actividades/actividad_form.html", ctx)
 
-
+# =====================================================
+# ELIMINAR ÍTEM ACTIVIDAD
+# =====================================================
 
 @login_required
 @require_POST
-def actividad_asignar(request, pk):
+def item_eliminar_ajax(request, item_id):
+    """Elimina un ítem vía AJAX"""
     if not es_docente(request.user):
-        raise Http404
-
-    docente = get_object_or_404(Docente, usuario=request.user)
-    act = get_object_or_404(Actividad, pk=pk, docente=docente)
-
-    cursos_ids = [int(x) for x in request.POST.getlist("cursos") if str(x).strip()]
-    alumnos_usuario_ids = [int(x) for x in request.POST.getlist("alumnos") if str(x).strip()]
-
-    usuario_ids = set(alumnos_usuario_ids)
-
-    if cursos_ids:
-        usuario_ids.update(
-            Matricula.objects.filter(curso_id__in=cursos_ids).values_list("estudiante_id", flat=True)
-        )
-
-    if not usuario_ids:
-        messages.warning(request, "Selecciona al menos un curso o un alumno.")
-        return redirect(reverse("actividad_editar", args=[act.pk]) + "?open=asignar")
-
-    est_pks = set(
-        Estudiante.objects.filter(usuario_id__in=usuario_ids).values_list("usuario_id", flat=True)
-    )
-
-    if not est_pks:
-        messages.warning(request, "No se encontraron perfiles de estudiante para la selección.")
-        return redirect(reverse("actividad_editar", args=[act.pk]) + "?open=asignar")
-
-    creadas = existentes = 0
-    for est_pk in est_pks:
-        _, created = AsignacionActividad.objects.get_or_create(
-            actividad=act,
-            estudiante_id=est_pk,  # FK a Estudiante (pk == usuario_id en tu modelo)
-        )
-        creadas += 1 if created else 0
-        existentes += 0 if created else 1
-
-    messages.success(request, f"Actividad asignada: {creadas} nuevas, {existentes} ya existían.")
-    return redirect(reverse("actividad_editar", args=[act.pk]) + "?open=asignar")
+        return JsonResponse({"ok": False, "error": "No autorizado"}, status=403)
+    
+    try:
+        item = get_object_or_404(ItemActividad, pk=item_id)
+        actividad = item.actividad
+        actividad_id = actividad.pk
+        
+        # Verificar que el docente sea el dueño
+        if actividad.docente.usuario != request.user:
+            return JsonResponse({"ok": False, "error": "No autorizado"}, status=403)
+        
+        items_antes = ItemActividad.objects.filter(actividad=actividad).count()
+        item_pk = item.pk
+        item.delete()
+        items_despues = ItemActividad.objects.filter(actividad=actividad).count()
+        
+        print(f"✅ Ítem #{item_pk} eliminado vía AJAX")
+        print(f"   Actividad #{actividad_id}: {items_antes} → {items_despues} ítems")
+        
+        return JsonResponse({
+            "ok": True,
+            "message": "Ítem eliminado correctamente",
+            "item_id": item_pk,
+            "total_items": items_despues
+        })
+        
+    except Exception as e:
+        print(f"❌ Error eliminando ítem: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({"ok": False, "error": str(e)}, status=500)
 
 @login_required
 def actividad_eliminar(request, pk):
@@ -691,15 +1026,32 @@ def _grade_game(item, POST):
 def estudiante_mis_actividades(request):
     if not es_estudiante(request.user):
         raise Http404
+    
     estudiante = get_object_or_404(Estudiante, usuario=request.user)
+    
+    print(f"🔍 Buscando actividades para: {request.user.username}")
+    print(f"   Estudiante.pk: {estudiante.pk}")
+    print(f"   Usuario.id: {request.user.id}")
 
+    # ⚠️ CRÍTICO: Filtrar por estudiante.pk (no por usuario)
     act_qs = (
         Actividad.objects
-        .filter(es_publicada=True, asignacionactividad__estudiante=estudiante)
+        .filter(
+            es_publicada=True,
+            asignacionactividad__estudiante_id=estudiante.pk  # <-- Usar .pk directamente
+        )
         .distinct()
+        .select_related('docente', 'asignatura')
         .order_by("-fecha_publicacion", "-id")
     )
+    
+    total_actividades = act_qs.count()
+    print(f"   ✅ Actividades encontradas: {total_actividades}")
+    
+    for act in act_qs:
+        print(f"      - {act.titulo} (ID: {act.id})")
 
+    # Contar intentos por actividad
     subs_counts = (
         Submission.objects
         .filter(estudiante=estudiante, actividad__in=act_qs)
@@ -712,45 +1064,70 @@ def estudiante_mis_actividades(request):
     )
     counts_map = {row["actividad"]: row for row in subs_counts}
 
+    # Intentos personalizados
     overrides = (
         AsignacionActividad.objects
         .filter(estudiante=estudiante, actividad__in=act_qs)
         .values("actividad_id", "intentos_permitidos")
     )
-    ov_map = {r["actividad_id"]: r["intentos_permitidos"] for r in overrides if r["intentos_permitidos"]}
+    ov_map = {
+        r["actividad_id"]: r["intentos_permitidos"] 
+        for r in overrides 
+        if r["intentos_permitidos"]
+    }
 
     now = timezone.now()
     rows, grupos = [], {}
+    
     for a in act_qs:
         c = counts_map.get(a.id, {"total": 0, "abiertos": 0, "finalizados": 0})
-        usados, abiertos, finalizados = int(c["total"]), int(c["abiertos"]), int(c["finalizados"])
+        usados = int(c["total"])
+        abiertos = int(c["abiertos"])
+        finalizados = int(c["finalizados"])
+        
         cerrada = bool(a.fecha_cierre and now > a.fecha_cierre)
         max_for_student = ov_map.get(a.id) or (a.intentos_max or 1)
         puede_intentar = (not cerrada) and (usados < max_for_student)
         tiene_abierto = abiertos > 0
         tiene_resultados = finalizados > 0
 
+        # Obtener nombre de asignatura
         try:
-            asignatura_nombre = getattr(a.docente, "asignatura", None)
+            if a.asignatura:
+                asignatura_nombre = a.asignatura.nombre
+            elif a.docente and hasattr(a.docente, 'asignatura'):
+                asignatura_nombre = a.docente.asignatura
+            else:
+                asignatura_nombre = "Otras actividades"
         except Exception:
-            asignatura_nombre = None
-        if not asignatura_nombre:
-            asignatura_nombre = "Asignatura"
+            asignatura_nombre = "Otras actividades"
 
         row = {
-            "a": a, "usados": usados, "max": max_for_student,
-            "tiene_abierto": tiene_abierto, "puede_intentar": puede_intentar,
-            "tiene_resultados": tiene_resultados, "cerrada": cerrada,
+            "a": a, 
+            "usados": usados, 
+            "max": max_for_student,
+            "tiene_abierto": tiene_abierto, 
+            "puede_intentar": puede_intentar,
+            "tiene_resultados": tiene_resultados, 
+            "cerrada": cerrada,
             "asignatura": asignatura_nombre,
         }
+        
         rows.append(row)
         grupos.setdefault(asignatura_nombre, []).append(row)
+
+    print(f"\n📊 Resumen:")
+    print(f"   Total rows: {len(rows)}")
+    print(f"   Grupos: {list(grupos.keys())}")
 
     return render(
         request,
         "LevelUp/actividades/estudiante_lista.html",
-        {"rows": rows, "actividades": [r["a"] for r in rows],
-         "grupos": [{"asignatura": k, "rows": v} for k, v in grupos.items()]}
+        {
+            "rows": rows, 
+            "actividades": [r["a"] for r in rows],
+            "grupos": [{"asignatura": k, "rows": v} for k, v in grupos.items()]
+        }
     )
 
 @login_required
@@ -837,99 +1214,304 @@ def actividad_resultados(request, pk):
 # MODO GAMIFICADO (PLAY) + APIs AJAX
 # ===================================================================
 
+# =====================================================
+# ESTUDIANTE: Jugar actividad (corregido)
+# =====================================================
 @login_required
 def actividad_play(request, pk):
+    """Vista de juego con diagnóstico completo"""
     if not es_estudiante(request.user):
         raise Http404
+    
     estudiante = get_object_or_404(Estudiante, usuario=request.user)
     act = get_object_or_404(Actividad, pk=pk, es_publicada=True)
-
-    if not AsignacionActividad.objects.filter(estudiante=estudiante, actividad=act).exists():
-        raise Http404
-
-    if act.fecha_cierre and timezone.now() > act.fecha_cierre:
+    
+    print(f"\n{'='*60}")
+    print(f"🎮 ACTIVIDAD PLAY - ID: {pk}")
+    print(f"{'='*60}")
+    print(f"👤 Usuario: {request.user.username}")
+    print(f"🎯 Actividad: {act.titulo}")
+    print(f"📋 Tipo: {act.tipo}")
+    
+    # Verificar asignación
+    tiene_asignacion = AsignacionActividad.objects.filter(
+        estudiante=estudiante, 
+        actividad=act
+    ).exists()
+    
+    print(f"✅ Tiene asignación: {tiene_asignacion}")
+    
+    if not tiene_asignacion:
+        print(f"❌ No tiene asignación, redirigiendo")
+        messages.error(request, "No tienes acceso a esta actividad.")
+        return redirect("estudiante_lista")
+    
+    # Verificar cierre
+    now = timezone.now()
+    esta_cerrada = bool(act.fecha_cierre and now > act.fecha_cierre)
+    print(f"🔒 Fecha cierre: {act.fecha_cierre}")
+    print(f"🕐 Ahora: {now}")
+    print(f"❌ Cerrada: {esta_cerrada}")
+    
+    if esta_cerrada:
         messages.warning(request, "La actividad está cerrada.")
         return redirect("estudiante_lista")
-
-    intentos_usados = Submission.objects.filter(actividad=act, estudiante=estudiante).count()
+    
+    # Intentos
+    intentos_usados = Submission.objects.filter(
+        actividad=act, 
+        estudiante=estudiante
+    ).count()
     intentos_max = act.intentos_max or 1
+    
+    print(f"🔢 Intentos: {intentos_usados}/{intentos_max}")
+    
+    # Buscar submission abierto
     sub = (Submission.objects
            .filter(actividad=act, estudiante=estudiante, finalizado=False)
-           .order_by("-intento", "-id").first())
+           .order_by("-intento").first())
+    
+    print(f"📝 Submission existente: {sub is not None}")
+    
     if not sub:
         if intentos_usados >= intentos_max:
+            print(f"❌ Sin intentos disponibles")
             messages.info(request, "Ya no tienes intentos disponibles.")
             return redirect("resolver_resultado", pk=act.pk)
-        sub = Submission.objects.create(actividad=act, estudiante=estudiante, intento=intentos_usados + 1)
-
-    items = list(act.items.all().values("id", "tipo", "enunciado", "datos", "puntaje"))
-    respondidas_ids = set(Answer.objects.filter(submission=sub).values_list("item_id", flat=True))
-    total = len(items)
-    hechas = sum(1 for _ in respondidas_ids)
-
-    return render(request, "LevelUp/actividades/play.html", {
-        "actividad": act, "submission": sub, "items": items,
-        "total_items": total, "hechas": hechas,
-        "xp_total": act.xp_total or 0,
-        "intento_actual": sub.intento, "intentos_max": intentos_max,
-    })
-
-def _eval_item(item, payload: dict):
-    t = (item.tipo or "").lower()
-    if t == "game":
-        try:
-            ratio = float(payload.get("score", 1.0))
-        except Exception:
-            ratio = 1.0 if bool(payload.get("completado", True)) else 0.0
-        ratio = max(0.0, min(1.0, ratio))
-        pts = round(item.puntaje * ratio)
-        return (ratio >= 1.0), pts, {}
-    return False, 0, {}
-
+        
+        sub = Submission.objects.create(
+            actividad=act,
+            estudiante=estudiante,
+            intento=intentos_usados + 1
+        )
+        print(f"✅ Nuevo submission creado: ID {sub.pk}")
+    
+    print(f"\n📦 PROCESANDO ÍTEMS:")
+    print(f"{'='*60}")
+    
+    # === DECISIÓN DE TEMPLATE SEGÚN TIPO ===
+    if act.tipo == "game":
+        # MISIÓN: Redirigir al motor de videojuego
+        print(f"🎮 Tipo GAME (misión) - Redirigiendo al motor")
+        return redirect(f"{reverse('misiones_jugar', args=['bosque', 1])}?actividad={act.pk}")
+    
+    else:
+        # QUIZ: Cargar ítems de minijuegos y usar play.html con loader
+        items_qs = act.items.filter(tipo="game").order_by("orden", "id")
+        total_items = items_qs.count()
+        
+        print(f"📊 Total ítems tipo game: {total_items}")
+        
+        # Serializar items con sus datos JSON
+        items = []
+        for idx, item in enumerate(items_qs, 1):
+            print(f"\n  📋 Ítem {idx}/{total_items}:")
+            print(f"     • ID: {item.id}")
+            print(f"     • Orden: {item.orden}")
+            print(f"     • Tipo: {item.tipo}")
+            print(f"     • Enunciado: {item.enunciado[:50]}...")
+            print(f"     • Puntaje: {item.puntaje}")
+            
+            # Obtener datos del ítem
+            datos = item.datos or {}
+            kind = datos.get('kind', 'trivia')
+            
+            print(f"     • Kind: {kind}")
+            print(f"     • Keys en datos: {list(datos.keys())}")
+            
+            # Diagnóstico específico por tipo
+            if kind == 'trivia':
+                questions = datos.get('questions', [])
+                trivia = datos.get('trivia', [])
+                print(f"     • questions: {len(questions) if isinstance(questions, list) else 'NO ES LISTA'}")
+                print(f"     • trivia: {len(trivia) if isinstance(trivia, list) else 'NO ES LISTA'}")
+                
+                if questions:
+                    print(f"     • Primera question: {questions[0]}")
+                if trivia:
+                    print(f"     • Primera trivia: {trivia[0]}")
+                    
+            elif kind in ('memory', 'dragmatch'):
+                pairs = datos.get('pairs', [])
+                print(f"     • pairs: {len(pairs) if isinstance(pairs, list) else 'NO ES LISTA'}")
+                if pairs:
+                    print(f"     • Primer par: {pairs[0]}")
+                    
+            elif kind == 'ordering':
+                items_data = datos.get('items', [])
+                correct = datos.get('correct_order', [])
+                print(f"     • items: {len(items_data) if isinstance(items_data, list) else 'NO ES LISTA'}")
+                print(f"     • correct_order: {len(correct) if isinstance(correct, list) else 'NO ES LISTA'}")
+                
+            elif kind == 'classify':
+                bins = datos.get('bins', [])
+                items_data = datos.get('items', [])
+                answers = datos.get('answers', {})
+                print(f"     • bins: {len(bins) if isinstance(bins, list) else 'NO ES LISTA'}")
+                print(f"     • items: {len(items_data) if isinstance(items_data, list) else 'NO ES LISTA'}")
+                print(f"     • answers: {len(answers) if isinstance(answers, dict) else 'NO ES DICT'}")
+            
+            # Preparar JSON para el template
+            try:
+                datos_json = json.dumps(datos, ensure_ascii=False, indent=2)
+                print(f"     ✅ JSON serializado OK ({len(datos_json)} chars)")
+            except Exception as e:
+                print(f"     ❌ Error serializando JSON: {e}")
+                datos_json = json.dumps({"kind": kind, "error": str(e)})
+            
+            items.append({
+                "id": item.id,
+                "tipo": item.tipo,
+                "enunciado": item.enunciado,
+                "datos": datos,
+                "datos_json": datos_json,
+                "puntaje": item.puntaje
+            })
+        
+        print(f"\n{'='*60}")
+        print(f"✅ Procesamiento completo: {len(items)} ítems serializados")
+        print(f"{'='*60}\n")
+        
+        ctx = {
+            "actividad": act,
+            "submission": sub,
+            "items": items,
+            "total_items": len(items),
+            "xp_total": act.xp_total or 0,
+            "intento_actual": sub.intento,
+            "intentos_max": intentos_max,
+        }
+        
+        return render(request, "LevelUp/actividades/play.html", ctx)
+    
 @login_required
 @require_POST
 def api_item_answer(request, pk, item_id):
+    """
+    API para guardar respuesta de un ítem individual
+    """
+    print(f"\n{'='*60}")
+    print(f"📥 API ANSWER - Actividad: {pk}, Item: {item_id}")
+    print(f"{'='*60}")
+    
     try:
         body = json.loads(request.body.decode("utf-8"))
-    except Exception:
+        print(f"📦 Body recibido: {body}")
+    except Exception as e:
+        print(f"❌ Error parseando body: {e}")
         return HttpResponseBadRequest("JSON inválido")
 
     payload = body.get("payload") or {}
     meta = payload.get("meta") or {}
     completado = bool(payload.get("completado"))
     kind = (payload.get("kind") or "").lower()
+    
+    print(f"📋 Payload procesado:")
+    print(f"   • completado: {completado}")
+    print(f"   • kind: {kind}")
+    print(f"   • meta: {meta}")
 
     actividad = get_object_or_404(Actividad, pk=pk)
     estudiante = get_object_or_404(Estudiante, usuario=request.user)
+    
+    print(f"✅ Actividad: {actividad.titulo}")
+    print(f"✅ Estudiante: {estudiante.usuario.username}")
 
-    sub, _ = Submission.objects.get_or_create(
+    # Buscar o crear submission
+    sub = Submission.objects.filter(
         actividad=actividad,
-        estudiante=estudiante,  # <<< FIX importante (no request.user)
-        defaults={"started_at": timezone.now(), "detalle": {}}
+        estudiante=estudiante,
+        finalizado=False
+    ).order_by('-intento').first()
+    
+    if not sub:
+        # Crear nuevo submission
+        intentos_count = Submission.objects.filter(
+            actividad=actividad,
+            estudiante=estudiante
+        ).count()
+        
+        sub = Submission.objects.create(
+            actividad=actividad,
+            estudiante=estudiante,
+            intento=intentos_count + 1,
+            started_at=timezone.now()
+        )
+        print(f"✅ Nuevo submission creado: #{sub.pk}")
+    else:
+        print(f"✅ Submission existente: #{sub.pk}")
+
+    # Si item_id == 0, es señal de finalizar
+    if item_id == 0 or str(item_id) == "0":
+        print(f"🏁 Finalizando submission...")
+        sub.finalizado = True
+        sub.finished_at = timezone.now()
+        sub.save()
+        print(f"✅ Submission finalizado")
+        return JsonResponse({"ok": True, "message": "Intento finalizado"})
+
+    # Buscar el item
+    try:
+        item = ItemActividad.objects.get(pk=item_id, actividad=actividad)
+        print(f"✅ Item encontrado: {item.enunciado[:30]}...")
+    except ItemActividad.DoesNotExist:
+        print(f"❌ Item no encontrado")
+        return JsonResponse({"ok": False, "error": "Item no encontrado"}, status=404)
+
+    # Crear o actualizar Answer
+    answer, created = Answer.objects.get_or_create(
+        submission=sub,
+        item=item,
+        defaults={
+            'respuesta': payload,
+            'es_correcta': completado,
+            'puntaje_obtenido': meta.get('correctas', 0) * 10
+        }
     )
+    
+    if not created:
+        # Actualizar existente
+        answer.respuesta = payload
+        answer.es_correcta = completado
+        answer.puntaje_obtenido = meta.get('correctas', 0) * 10
+        answer.save()
+        print(f"✅ Answer actualizado: #{answer.pk}")
+    else:
+        print(f"✅ Answer creado: #{answer.pk}")
 
-    detalle = sub.detalle or {}
-    detalle[str(item_id)] = {
-        "completado": completado,
-        "kind": kind or "game",
-        "meta": meta,
-        "at": timezone.now().isoformat()
-    }
-    sub.detalle = detalle
-
-    sub.score = int(sub.score or 0) + int(meta.get("hits", meta.get("found", 0)) or 0) * 10
-    sub.correctas = int(sub.correctas or 0) + int(meta.get("hits", meta.get("found", 0)) or 0)
-    sub.incorrectas = int(sub.incorrectas or 0) + int(meta.get("misses", 0))
+    # Actualizar score del submission
+    total_correctas = meta.get('correctas', 0)
+    total_incorrectas = meta.get('misses', 0)
+    
+    if hasattr(sub, 'score'):
+        sub.score = (sub.score or 0) + (total_correctas * 10)
+    if hasattr(sub, 'correctas'):
+        sub.correctas = (sub.correctas or 0) + total_correctas
+    if hasattr(sub, 'incorrectas'):
+        sub.incorrectas = (sub.incorrectas or 0) + total_incorrectas
+    
     sub.finished_at = timezone.now()
     sub.save()
+    
+    print(f"✅ Submission actualizado: score={getattr(sub, 'score', 'N/A')}")
 
+    # Calcular recompensas
     outcome = compute_rewards(meta)
     res = apply_rewards(estudiante, outcome)
+
+    print(f"🎁 Recompensas aplicadas: XP={outcome.xp}, Coins={outcome.coins}")
+    print(f"{'='*60}\n")
 
     return JsonResponse({
         "ok": True,
         "submission_id": sub.id,
-        "reward": {"xp": outcome.xp, "coins": outcome.coins, "unlocks": outcome.unlocks, **res},
+        "answer_id": answer.id,
+        "reward": {
+            "xp": outcome.xp, 
+            "coins": outcome.coins, 
+            "unlocks": outcome.unlocks, 
+            **res
+        },
     })
 
 @require_POST
@@ -1023,14 +1605,9 @@ MAPS = {
 @login_required
 def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
     """
-    Devuelve el mapa Tiled enriquecido con:
-      - questions: preguntas normalizadas (id=1..N para calzar con qid)
-      - actividad_id: pk de la actividad
-      - config: configuración opcional (de un ítem tipo game_config)
-      - Auto-asigna qid secuenciales a enemigos sin esa propiedad
-    Soporta recibir la actividad por URL param o por querystring (?actividad=).
+    Devuelve el mapa Tiled enriquecido con preguntas de la actividad.
     """
-    # 0) Permitir ?actividad=ID si no vino por la URL
+    # Permitir ?actividad=ID si no vino por URL
     if not actividad_pk:
         qs_id = request.GET.get("actividad")
         if qs_id:
@@ -1039,120 +1616,93 @@ def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
             except (TypeError, ValueError):
                 actividad_pk = None
 
-    # 1) Cargar mapa base (estático) por slug/nivel o el primero por defecto
+    # Cargar mapa base
     default_map = MAPS.get((slug, int(nivel))) if slug and nivel else next(iter(MAPS.values()))
     base = _load_static_map(default_map)
 
-    # 2) Si viene una actividad, injerta las preguntas creadas por el docente
+    # Si viene actividad, inyectar preguntas
     if actividad_pk:
         try:
             act = Actividad.objects.get(pk=int(actividad_pk))
         except Actividad.DoesNotExist:
             return JsonResponse({"error": "Actividad no encontrada"}, status=404)
 
-        # Solo ítems de tipo GAME (preguntas del minijuego)
-        try:
-            items_qs = act.items.filter(tipo__iexact="game").order_by("orden", "id")
-        except Exception:
-            items_qs = act.items.filter(tipo__iexact="game").order_by("id")
-
-        # Ítem opcional de configuración del juego (fallbacks/mapeo)
-        try:
-            cfg_qs = act.items.filter(tipo__iexact="game_config")[:1]
-        except Exception:
-            cfg_qs = []
-
-        game_config = {}
-        if cfg_qs:
-            it_cfg = cfg_qs[0]
-            try:
-                # Esperado: {"fallback_q":"...", "fallback_opts":[...], "fallback_correct":1, "mapping_mode":"index|id"}
-                if isinstance(it_cfg.datos, dict):
-                    game_config = it_cfg.datos or {}
-            except Exception:
-                game_config = {}
+        # Solo ítems tipo GAME (preguntas del minijuego)
+        items_qs = act.items.filter(tipo__iexact="game").order_by("orden", "id")
 
         questions = []
-
-        def _coerce_to_trivia(it):
+        
+        def _to_trivia(it):
             """
-            Normaliza cualquier ItemActividad(tipo='game') a:
-              { id, q, options, correct }   # correct es 0-based
-
-            Soportado:
-            - Trivia (plano):    {question: str, options: [..], answer: int}
-            - Trivia (array):    {questions: [{q, opts, ans}, ...]}
-            - Drag/Memory:       {pairs: [[A,B], ...]} -> usa 1er par
-            - V/F:               {items: ["Afirmación|V", ...]}
-            - Fallback genérico: "¿2 + 2 = ?"
+            Normaliza ItemActividad(tipo='game') a formato trivia:
+            { id, q, options, correct }
             """
             datos = it.datos or {}
             kind = str(datos.get("kind") or "").lower()
 
-            # ---------- TRIVIA (array de preguntas) ----------
-            if kind == "trivia" and isinstance(datos.get("questions"), list) and datos["questions"]:
-                first = datos["questions"][0] or {}
-                qtxt = (first.get("q") or it.enunciado or "Pregunta").strip()
-                opts = list(first.get("opts") or first.get("options") or [])
-                ans = first.get("ans")
-                if not isinstance(opts, list) or len(opts) < 2:
-                    opts = ["Opción 1", "Opción 2"]
-                # ans 0-based seguro
-                if not isinstance(ans, int) or ans < 0 or ans >= len(opts):
-                    ans = 0
-                return {"id": it.pk, "q": qtxt, "options": opts, "correct": ans}
+            # === TRIVIA (formato array) ===
+            if kind == "trivia" and isinstance(datos.get("questions"), list):
+                qs_list = datos["questions"]
+                if qs_list:
+                    first = qs_list[0] or {}
+                    qtxt = (first.get("q") or it.enunciado or "Pregunta").strip()
+                    opts = list(first.get("opts") or first.get("options") or [])
+                    ans = first.get("ans", 0)
+                    
+                    if not opts or len(opts) < 2:
+                        opts = ["Opción 1", "Opción 2"]
+                    if not isinstance(ans, int) or ans < 0 or ans >= len(opts):
+                        ans = 0
+                    
+                    return {
+                        "id": it.pk,
+                        "q": qtxt,
+                        "options": opts,
+                        "correct": ans
+                    }
 
-            # ---------- TRIVIA (plano) ----------
+            # === TRIVIA (formato plano) ===
             if kind == "trivia":
                 qtxt = (datos.get("question") or it.enunciado or "Pregunta").strip()
                 opts = list(datos.get("options") or [])
-                ans = datos.get("answer")
-                if not isinstance(opts, list) or len(opts) < 2:
+                ans = datos.get("answer", 0)
+                
+                if not opts or len(opts) < 2:
                     opts = ["Opción 1", "Opción 2"]
                 if not isinstance(ans, int) or ans < 0 or ans >= len(opts):
                     ans = 0
-                return {"id": it.pk, "q": qtxt, "options": opts, "correct": ans}
+                
+                return {
+                    "id": it.pk,
+                    "q": qtxt,
+                    "options": opts,
+                    "correct": ans
+                }
 
-            # ---------- DRAGMATCH / MEMORY ----------
-            if kind in {"dragmatch", "memory"}:
-                pairs = datos.get("pairs") or []
-                if isinstance(pairs, list) and pairs:
-                    a, b = str(pairs[0][0]), str(pairs[0][1])
-                    qtxt = (it.enunciado or f"Empareja: {a} con…").strip()
-                    opts = [b, "Otra", "Otra 2"]
-                    return {"id": it.pk, "q": qtxt, "options": opts, "correct": 0}
+            # === FALLBACK GENÉRICO ===
+            return {
+                "id": it.pk,
+                "q": it.enunciado or "¿Pregunta?",
+                "options": ["Opción A", "Opción B", "Opción C"],
+                "correct": 1
+            }
 
-            # ---------- VERDADERO/FALSO ----------
-            if kind in {"vf", "tf"}:
-                its = datos.get("items") or []
-                if its:
-                    raw = str(its[0])
-                    txt, _, flag = (raw + "||").split("|", 2)
-                    qtxt = (it.enunciado or txt).strip() or "Verdadero o Falso"
-                    opts = ["Verdadero", "Falso"]
-                    ans = 0 if (flag or "").strip().upper().startswith("V") else 1
-                    return {"id": it.pk, "q": qtxt, "options": opts, "correct": ans}
-
-            # ---------- FALLBACK GENÉRICO ----------
-            return {"id": it.pk, "q": "¿2 + 2 = ?", "options": ["3", "4", "5"], "correct": 1}
-
-        # Construir preguntas desde los ítems de juego
+        # Construir lista de preguntas
         for it in items_qs:
-            questions.append(_coerce_to_trivia(it))
+            questions.append(_to_trivia(it))
 
-        # Renumerar 1..N para calzar con qid del mapa (conservar pk real en item_pk)
+        # Renumerar con id secuencial 1..N para mapear a qid
         questions = [
             {**q, "item_pk": q.get("id"), "id": i + 1}
             for i, q in enumerate(questions)
         ]
 
-        # Inyectar preguntas + actividad + configuración
+        # Inyectar en el mapa
         new_map = dict(base)
         new_map["questions"] = questions
         new_map["actividad_id"] = act.pk
-        new_map["config"] = game_config  # <-- disponible en cliente: window.LEVEL.config
 
-        # Auto-asignar qid secuencial a enemigos que no lo tengan
+        # Auto-asignar qid a enemigos sin ese property
         idx = 1
         for layer in new_map.get("layers", []) or []:
             if layer.get("type") != "objectgroup":
@@ -1170,7 +1720,7 @@ def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
 
         return JsonResponse(new_map, safe=False)
 
-    # Sin actividad: devolver mapa base tal cual
+    # Sin actividad: mapa base
     return JsonResponse(base, safe=False)
 
 

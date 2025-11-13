@@ -5,395 +5,468 @@
 {% block content %}
 <div class="container py-3">
 
-  {% if messages %}
-  {% for message in messages %}
-  <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
-  {% endfor %}
+  {# ======== ALERTA GENERAL DE ERRORES (server) ======== #}
+  {% if form.errors or formset.non_form_errors %}
+  <div class="alert alert-danger mb-3">
+    <strong>⚠️ Hay errores en el formulario:</strong>
+    <ul class="mb-0 mt-2">
+      {% for field in form %}
+        {% if field.errors %}
+          <li><strong>{{ field.label }}:</strong> {{ field.errors|striptags }}</li>
+        {% endif %}
+      {% endfor %}
+      {% if formset.non_form_errors %}
+        {% for e in formset.non_form_errors %}
+          <li>{{ e }}</li>
+        {% endfor %}
+      {% endif %}
+    </ul>
+  </div>
   {% endif %}
 
-  <h1 class="h4 mb-3">{% if editar %}Editar{% else %}Nueva{% endif %} actividad</h1>
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h4 mb-0">{% if editar %}✏️ Editar{% else %}➕ Nueva{% endif %} actividad</h1>
+    <a href="{% url 'docente_lista' %}" class="btn btn-outline-secondary btn-sm">← Volver</a>
+  </div>
 
-  <form method="post" enctype="multipart/form-data" class="card p-3" id="actividad-form">
+  {# NOVALIDATE: desactiva validación nativa del navegador para manejar tabs sin bloqueo #}
+  <form method="post" enctype="multipart/form-data" id="actividad-form" novalidate>
     {% csrf_token %}
+    {% if editar %}<input type="hidden" name="editar" value="1">{% endif %}
 
-    {% if form.non_field_errors %}
-    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
-    {% endif %}
+    <ul class="nav nav-tabs mb-3" id="actividadTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tab-info" data-bs-toggle="tab" data-bs-target="#panel-info" type="button">
+          📝 Información básica
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-contenido" data-bs-toggle="tab" data-bs-target="#panel-contenido" type="button">
+          🎮 Contenido
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-asignar" data-bs-toggle="tab" data-bs-target="#panel-asignar" type="button">
+          👥 Asignar estudiantes
+        </button>
+      </li>
+    </ul>
 
-    {# =================== Datos de la actividad =================== #}
-    <div class="row g-3">
-      <div class="col-lg-8">
-        <div class="mb-3">
-          <label class="form-label" for="{{ form.titulo.id_for_label }}">Título</label>
-          {{ form.titulo }} {{ form.titulo.errors }}
-        </div>
+    <div class="tab-content" id="actividadTabContent">
 
-        <div class="mb-3">
-          <label class="form-label" for="{{ form.descripcion.id_for_label }}">Descripción</label>
-          {{ form.descripcion }} {{ form.descripcion.errors }}
-        </div>
+      {# ================= TAB 1: INFORMACIÓN BÁSICA ================= #}
+      <div class="tab-pane fade show active" id="panel-info" role="tabpanel">
+        <div class="card p-4">
 
-        <div class="row g-3">
-          <div class="col-md-4">
-            <label class="form-label" for="{{ form.tipo.id_for_label }}">Tipo de actividad</label>
-            {{ form.tipo }} {{ form.tipo.errors }}
-            <div class="form-text">
-              Elige <strong>Quiz</strong> para crear preguntas (Drag &amp; Match, Trivia, V/F, etc.) o
-              <strong>Juego</strong> para minijuegos.
-            </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label" for="{{ form.dificultad.id_for_label }}">Dificultad</label>
-            {{ form.dificultad }} {{ form.dificultad.errors }}
-          </div>
-          <div class="col-md-4">
-            <label class="form-label" for="{{ form.xp_total.id_for_label }}">XP total</label>
-            {{ form.xp_total }} {{ form.xp_total.errors }}
-          </div>
-        </div>
-
-        <div class="row g-3 mt-1">
-          <div class="col-md-4">
-            <label class="form-label" for="{{ form.intentos_max.id_for_label }}">Intentos máx.</label>
-            {{ form.intentos_max }} {{ form.intentos_max.errors }}
-          </div>
-          <div class="col-md-4">
-            <div class="form-check mt-4">
-              {{ form.es_publicada }}
-              <label class="form-check-label" for="{{ form.es_publicada.id_for_label }}">Publicar</label>
-              {{ form.es_publicada.errors }}
-            </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label" for="{{ form.fecha_cierre.id_for_label }}">Fecha de cierre</label>
-            {{ form.fecha_cierre }} {{ form.fecha_cierre.errors }}
-          </div>
-        </div>
-      </div>
-
-      <div class="col-lg-4">
-        <div class="border rounded p-3 bg-light" id="ayuda-tipo-actividad">
-          <div class="d-flex align-items-center gap-2 mb-2">
-            <span class="badge text-bg-primary">Consejos</span>
-            <span class="text-muted small">se actualizan según el tipo</span>
-          </div>
-          <ul class="small m-0 ps-3" id="lista-ayuda-tipo">
-            <li>Selecciona <strong>Quiz</strong> para crear preguntas (Drag &amp; Match, V/F, Trivia, etc.).</li>
-            <li>Selecciona <strong>Juego</strong> para minijuegos o misiones.</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <hr class="my-4">
-
-    {# =================== Ítems =================== #}
-    <div class="d-flex align-items-center justify-content-between mb-2">
-      <h2 class="h6 m-0">Ítems de la actividad</h2>
-      <div><button type="button" id="btn-add-item" class="btn btn-sm btn-outline-primary">+ Agregar ítem</button></div>
-    </div>
-
-    {# <<< MUESTRA ERRORES DEL FORMSET>>> #}
-      {% if formset.non_form_errors %}
-      <div class="alert alert-danger">
-        {{ formset.non_form_errors }}
-      </div>
-      {% endif %}
-
-      {{ formset.management_form }}
-
-      <div id="items-container">
-        {% for f in formset %}
-        {% if f.non_field_errors %}
-        <div class="alert alert-danger">{{ f.non_field_errors }}</div>
-        {% endif %}
-
-        <div class="feature-card activity-card mb-3 item-form" data-item-form data-form-index="{{ forloop.counter0 }}">
-          <div class="card-body p-0 border-0">
-            {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
-
-            <div class="col-md-3">
-              <label class="form-label">Tipo de ítem</label>
-              {{ f.tipo }} {{ f.tipo.errors }}
-            </div>
-            <div class="col-md-3">
-              <label class="form-label" for="{{ f.puntaje.id_for_label }}">Puntaje</label>
-              {{ f.puntaje }} {{ f.puntaje.errors }}
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-8">
+              <label class="form-label fw-bold">Título de la actividad <span class="text-danger">*</span>
+                <span class="text-muted small">(obligatorio)</span></label>
+              {{ form.titulo }}
+              <div class="invalid-feedback d-block d-none" data-client-error-for="id_titulo"></div>
+              {% if form.titulo.errors %}<div class="invalid-feedback d-block">{{ form.titulo.errors|striptags }}</div>{% endif %}
+              <div class="form-text">Un nombre claro y descriptivo</div>
             </div>
 
-            <div class="small text-muted mb-2">
-              QID sugerido: <code>{{ forloop.counter }}</code>
-              {% if f.instance.pk %}<span class="ms-2">Item PK: {{ f.instance.pk }}</span>{% endif %}
-              <button type="button" class="btn btn-xs btn-outline-secondary ms-2 gb-copy-qid"
-                data-qid="{{ forloop.counter }}">Copiar QID</button>
+            <div class="col-6 col-md-2">
+              <label class="form-label fw-bold">Tipo <span class="text-danger">*</span>
+                <span class="text-muted small">(obligatorio)</span></label>
+              {{ form.tipo }}
+              <div class="invalid-feedback d-block d-none" data-client-error-for="id_tipo"></div>
+              {% if form.tipo.errors %}<div class="invalid-feedback d-block">{{ form.tipo.errors|striptags }}</div>{% endif %}
             </div>
 
-            <div class="row g-3 mt-1 align-items-end">
-              <div class="col-md-4">
-                <label class="form-label" for="{{ f.game_kind.id_for_label }}">Tipo de juego</label>
-                {{ f.game_kind }} {{ f.game_kind.errors }}
-              </div>
-              <div class="col-md-4">
-                <label class="form-label" for="{{ f.game_time_limit.id_for_label }}">Tiempo límite (s)</label>
-                {{ f.game_time_limit }} {{ f.game_time_limit.errors }}
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Plantillas rápidas</label>
-                <div class="d-flex flex-wrap gap-2">
-                  <button type="button" class="btn btn-sm btn-outline-primary gb-template"
-                    data-tpl="mates">Matemáticas</button>
-                  <button type="button" class="btn btn-sm btn-outline-primary gb-template"
-                    data-tpl="ciencias">Ciencias</button>
-                  <button type="button" class="btn btn-sm btn-outline-primary gb-template"
-                    data-tpl="geografia">Geografía</button>
+            <div class="col-6 col-md-2">
+              <label class="form-label fw-bold">Dificultad <span class="text-muted small">(opcional)</span></label>
+              {{ form.dificultad }}
+              {% if form.dificultad.errors %}<div class="invalid-feedback d-block">{{ form.dificultad.errors|striptags }}</div>{% endif %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">Descripción <span class="text-muted small">(opcional)</span></label>
+            {{ form.descripcion }}
+            {% if form.descripcion.errors %}<div class="invalid-feedback d-block">{{ form.descripcion.errors|striptags }}</div>{% endif %}
+            <div class="form-text">Instrucciones para el estudiante</div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6">
+              <div class="row g-2">
+                <div class="col-6">
+                  <label class="form-label fw-bold">💰 XP total <span class="text-muted small">(opcional)</span></label>
+                  {{ form.xp_total }}
+                  {% if form.xp_total.errors %}<div class="invalid-feedback d-block">{{ form.xp_total.errors|striptags }}</div>{% endif %}
+                </div>
+
+                <div class="col-6">
+                  <label class="form-label fw-bold d-block">🔄 Intentos
+                    <span class="text-muted small">(obligatorio si no es ilimitado)</span>
+                  </label>
+
+                  <!-- input primero -->
+                  <div class="input-group">
+                    {{ form.intentos_max }}
+                    <span class="input-group-text">máx.</span>
+                  </div>
+                  <div class="form-text">1–1000 si no es ilimitado</div>
+                  <div class="invalid-feedback d-block d-none" id="err_intentos_max"></div>
+                  {% if form.intentos_max.errors %}<div class="invalid-feedback d-block">{{ form.intentos_max.errors|striptags }}</div>{% endif %}
+
+                  <!-- checkbox DEBAJO -->
+                  <div class="form-check mt-2">
+                    {{ form.intentos_ilimitados }}
+                    <label class="form-check-label ms-1" for="id_intentos_ilimitados">Ilimitado</label>
+                  </div>
+                  {% if form.intentos_ilimitados.errors %}<div class="invalid-feedback d-block">{{ form.intentos_ilimitados.errors|striptags }}</div>{% endif %}
                 </div>
               </div>
             </div>
 
-            <div class="mt-3">
-              <label class="form-label" for="{{ f.enunciado.id_for_label }}">Enunciado / Consigna</label>
-              {{ f.enunciado }} {{ f.enunciado.errors }}
+            <div class="col-12 col-md-4">
+              <label class="form-label fw-bold">📅 Fecha cierre <span class="text-muted small">(opcional)</span></label>
+              {{ form.fecha_cierre }}
+              {% if form.fecha_cierre.errors %}<div class="invalid-feedback d-block">{{ form.fecha_cierre.errors|striptags }}</div>{% endif %}
             </div>
 
-            <div class="mt-3">
-              <div class="d-flex justify-content-end">
-                <button type="button" class="btn btn-link btn-sm p-0 gb-toggle-raw">Editar como texto</button>
+            <div class="col-12 col-md-2 d-flex align-items-end">
+              <div class="form-check mb-0">
+                {{ form.es_publicada }}
+                <label class="form-check-label fw-bold ms-1">✅ Publicada</label>
               </div>
-              <div class="gbuilder" data-prefix="{{ f.prefix }}"></div>
-              <div class="small text-muted mt-2"><span class="gb-counter">0 ítems</span></div>
-            </div>
-
-            <div class="mt-3 gb-raw d-none">
-              <label class="form-label" for="{{ f.game_pairs.id_for_label }}">(Avanzado) Texto del contenido</label>
-              {{ f.game_pairs }} {{ f.game_pairs.errors }}
-            </div>
-
-            <div class="d-flex align-items-center gap-2 mt-3">
-              <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item">Quitar</button>
-              {% if f.DELETE %}<label class="form-check small text-muted m-0">{{ f.DELETE }} Marcar para
-                eliminar</label>{% endif %}
-              {% if f.instance.pk %}<small class="text-muted ms-auto">ID ítem: {{ f.instance.pk }}</small>{% endif %}
             </div>
           </div>
+
+          <div class="d-flex justify-content-end gap-2 mt-4">
+            <button type="button" class="btn btn-primary btn-lg" onclick="nextTab()">Siguiente: Contenido →</button>
+          </div>
         </div>
-        {% endfor %}
       </div>
 
-      {# =================== Template del empty_form =================== #}
-      <template id="empty-form-template">
-        {% with ef=formset.empty_form %}
-        <div class="feature-card activity-card mb-3 item-form" data-item-form data-form-index="__prefix__">
-          <div class="card-body p-0 border-0">
-            {% for hidden in ef.hidden_fields %}{{ hidden }}{% endfor %}
+      {# ================= TAB 2: CONTENIDO (ÍTEMS) ================= #}
+      <div class="tab-pane fade" id="panel-contenido" role="tabpanel">
+        <div class="card p-4">
 
-            <div class="row g-3">
-              <div class="col-md-3">
-                <div class="col-md-3"><label class="form-label">Puntaje</label>{{ ef.puntaje }}</div>
+          {% with act_tipo=form.instance.tipo %}
+          <div id="items-formset" data-actividad-tipo="{{ act_tipo|default:'quiz' }}">
+
+            <div class="alert alert-info">
+              <strong>💡 Instrucciones:</strong>
+              {% if act_tipo == 'game' %}
+                Crea las preguntas que los estudiantes deberán responder en el videojuego.
+              {% else %}
+                Agrega los minijuegos que quieres incluir en esta actividad.
+              {% endif %}
+              <div class="small text-muted mt-1">
+                En cada ítem, <strong>Enunciado</strong> y <strong>Puntaje</strong> son
+                <span class="text-danger">obligatorios</span> si el ítem tiene contenido.
               </div>
             </div>
 
-            <div class="row g-3 mt-1 align-items-end">
-              <div class="col-md-4"><label class="form-label">Tipo de juego</label>{{ ef.game_kind }}</div>
-              <div class="col-md-4"><label class="form-label">Tiempo límite (s)</label>{{ ef.game_time_limit }}</div>
-              <div class="col-md-4">
-                <label class="form-label">Plantillas rápidas</label>
-                <div class="d-flex flex-wrap gap-2">
-                  <button type="button" class="btn btn-sm btn-outline-primary gb-template"
-                    data-tpl="mates">Matemáticas</button>
-                  <button type="button" class="btn btn-sm btn-outline-primary gb-template"
-                    data-tpl="ciencias">Ciencias</button>
-                  <button type="button" class="btn btn-sm btn-outline-primary gb-template"
-                    data-tpl="geografia">Geografía</button>
+            {{ formset.management_form }}
+
+            <div id="items-container">
+              {% for f in formset.forms %}
+              <div class="item-form card mb-4 shadow-sm" data-item-id="{% if f.instance.pk %}{{ f.instance.pk }}{% endif %}">
+                <div class="card-header bg-light">
+                  <div class="row g-2 align-items-center">
+                    <div class="col-12 col-lg-auto">
+                      <h6 class="mb-0">🎯 Ítem #{{ forloop.counter }}</h6>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                      <label class="form-label small mb-1">Tipo de actividad
+                        <span class="text-muted small">(obligatorio)</span></label>
+                      {{ f.item_kind }}
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                      <label class="form-label small mb-1">Puntaje <span class="text-danger">*</span>
+                        <span class="text-muted small">(obligatorio si el ítem tiene contenido)</span></label>
+                      {{ f.puntaje }}
+                      <div class="invalid-feedback d-block d-none" data-client-error></div>
+                      {% if f.puntaje.errors %}<div class="invalid-feedback d-block">{{ f.puntaje.errors|striptags }}</div>{% endif %}
+                    </div>
+
+                    <div class="col-6 col-md-auto ms-auto">
+                      <button type="button" class="btn btn-outline-danger btn-sm btn-remove-card">🗑 Eliminar</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card-body">
+                  <div style="display:none">
+                    {{ f.id }} {{ f.DELETE }}
+                  </div>
+
+                  {% if f.non_field_errors %}
+                    <div class="alert alert-danger small mb-2">{{ f.non_field_errors|striptags }}</div>
+                  {% endif %}
+
+                  <div class="mb-3">
+                    <label class="form-label fw-bold">Enunciado / Consigna <span class="text-danger">*</span>
+                      <span class="text-muted small">(obligatorio si el ítem tiene contenido)</span></label>
+                    {{ f.enunciado }}
+                    <div class="invalid-feedback d-block d-none" data-client-error></div>
+                    {% if f.enunciado.errors %}<div class="invalid-feedback d-block">{{ f.enunciado.errors|striptags }}</div>{% endif %}
+                    <div class="form-text">Instrucción que verá el estudiante</div>
+                  </div>
+
+                  <div class="row g-2 align-items-center mb-3">
+                    <div class="col-12 col-md-4">
+                      <label class="form-label">⏱ Tiempo límite (segundos)
+                        <span class="text-muted small">(opcional)</span></label>
+                      {{ f.game_time_limit }}
+                      {% if f.game_time_limit.errors %}<div class="invalid-feedback d-block">{{ f.game_time_limit.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="col-12 col-md-8 text-end">
+                      <span class="gb-counter badge bg-secondary">0 ítems</span>
+                    </div>
+                  </div>
+
+                  <div class="gbuilder"></div>
+
+                  <div style="display:none">
+                    {{ f.game_pairs }}
+                    {% if f.game_pairs.errors %}<div class="invalid-feedback d-block mt-2">{{ f.game_pairs.errors|striptags }}</div>{% endif %}
+                  </div>
                 </div>
               </div>
+              {% endfor %}
             </div>
 
-            <div class="mt-3"><label class="form-label">Enunciado / Consigna</label>{{ ef.enunciado }}</div>
+            <div class="text-center mt-4">
+              <button id="btn-add-item" type="button" class="btn btn-outline-primary btn-lg">➕ Agregar ítem</button>
+            </div>
 
-            <div class="mt-3">
-              <div class="d-flex justify-content-end">
-                <button type="button" class="btn btn-link btn-sm p-0 gb-toggle-raw">Editar como texto</button>
+            {# === plantilla de formulario vacío para nuevos ítems === #}
+            <template id="empty-form-template">
+              <div class="item-form card mb-4 shadow-sm" data-prefix="__prefix__">
+                <div class="card-header bg-light">
+                  <div class="row g-2 align-items-center">
+                    <div class="col-12 col-lg-auto"><h6 class="mb-0">🎯 Ítem #</h6></div>
+                    <div class="col-12 col-md-6">
+                      <label class="form-label small mb-1">Tipo de actividad
+                        <span class="text-muted small">(obligatorio)</span></label>
+                      <select name="items-__prefix__-item_kind" class="form-select">
+                        <option value="dragmatch" selected>Drag & Match</option>
+                        <option value="memory">Memoria (pares)</option>
+                        <option value="trivia">Trivia (opción múltiple)</option>
+                        <option value="vf">Verdadero / Falso</option>
+                        <option value="classify">Clasificar en categorías</option>
+                        <option value="cloze">Completar (cloze)</option>
+                        <option value="ordering">Ordenar pasos</option>
+                        <option value="labyrinth">Laberinto de puertas</option>
+                        <option value="shop">Tienda (precios)</option>
+                      </select>
+                    </div>
+                    <div class="col-6 col-md-3">
+                      <label class="form-label small mb-1">Puntaje <span class="text-danger">*</span>
+                        <span class="text-muted small">(obligatorio si el ítem tiene contenido)</span></label>
+                      <input type="number" name="items-__prefix__-puntaje" class="form-control" value="10" min="0">
+                      <div class="invalid-feedback d-block d-none" data-client-error></div>
+                    </div>
+                    <div class="col-6 col-md-auto ms-auto">
+                      <button type="button" class="btn btn-outline-danger btn-sm btn-remove-card">🗑 Eliminar</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="mb-3">
+                    <label class="form-label fw-bold">Enunciado / Consigna <span class="text-danger">*</span>
+                      <span class="text-muted small">(obligatorio si el ítem tiene contenido)</span></label>
+                    <textarea name="items-__prefix__-enunciado" rows="2" class="form-control" placeholder="Instrucción para el estudiante..."></textarea>
+                    <div class="invalid-feedback d-block d-none" data-client-error></div>
+                  </div>
+                  <div class="row g-2 align-items-center mb-3">
+                    <div class="col-12 col-md-4">
+                      <label class="form-label">⏱ Tiempo límite (segundos)
+                        <span class="text-muted small">(opcional)</span></label>
+                      <input type="number" name="items-__prefix__-game_time_limit" class="form-control" min="5">
+                    </div>
+                    <div class="col-12 col-md-8 text-end">
+                      <span class="gb-counter badge bg-secondary">0 ítems</span>
+                    </div>
+                  </div>
+                  <div class="gbuilder"></div>
+                  <textarea name="items-__prefix__-game_pairs" style="display:none"></textarea>
+                  <input type="hidden" name="items-__prefix__-id" value="">
+                  <input type="hidden" name="items-__prefix__-DELETE" value="0">
+                </div>
               </div>
-              <div class="gbuilder" data-prefix="{{ ef.prefix }}"></div>
-              <div class="small text-muted mt-2"><span class="gb-counter">0 ítems</span></div>
+            </template>
+
+          </div>
+          {% endwith %}
+
+          <div class="d-flex justify-content-between gap-2 mt-4">
+            <button type="button" class="btn btn-outline-secondary btn-lg" onclick="prevTab()">← Anterior</button>
+            <button type="button" class="btn btn-primary btn-lg" onclick="nextTab()">Siguiente: Asignar →</button>
+          </div>
+        </div>
+      </div>
+
+      {# ================= TAB 3: ASIGNACIÓN ================= #}
+      <div class="tab-pane fade" id="panel-asignar" role="tabpanel">
+        <div class="card p-4">
+          <div class="alert alert-info">
+            <strong>💡 Asignación de estudiantes</strong><br>
+            Selecciona los cursos o estudiantes individuales que podrán acceder a esta actividad.
+          </div>
+
+          <div class="mb-4">
+            <h6 class="fw-bold mb-3">👥 Asignar por curso completo</h6>
+            <div class="row g-2">
+              {% for curso in cursos %}
+              <div class="col-6 col-md-4 col-lg-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="cursos" value="{{ curso.id }}" id="curso_{{ curso.id }}" {% if curso.id in cursos_asignados %}checked{% endif %}>
+                  <label class="form-check-label" for="curso_{{ curso.id }}">{{ curso }}</label>
+                </div>
+              </div>
+              {% empty %}
+              <div class="col-12"><p class="text-muted">No hay cursos disponibles</p></div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="mb-4">
+            <h6 class="fw-bold mb-3">🎯 Asignar estudiantes individuales</h6>
+
+            <div class="mb-3">
+              <input type="text" id="search-estudiantes" class="form-control" placeholder="🔍 Buscar estudiante por nombre...">
             </div>
 
-            <div class="mt-3 gb-raw d-none">
-              <label class="form-label">(Avanzado) Texto del contenido</label>{{ ef.game_pairs }}
+            <div id="estudiantes-list" class="row g-2" style="max-height: 400px; overflow-y: auto;">
+              {% for est in estudiantes %}
+              <div class="col-6 col-md-4 col-lg-3 estudiante-item" data-nombre="{{ est.usuario.first_name }} {{ est.usuario.last_name }}">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="alumnos" value="{{ est.usuario.id }}" id="est_{{ est.usuario.id }}" {% if est.usuario.id in asignados_usuarios %}checked{% endif %}>
+                  <label class="form-check-label" for="est_{{ est.usuario.id }}">{{ est.usuario.get_full_name }}</label>
+                </div>
+              </div>
+              {% empty %}
+              <div class="col-12"><p class="text-muted">No hay estudiantes disponibles</p></div>
+              {% endfor %}
             </div>
+          </div>
 
-            <div class="d-flex align-items-center gap-2 mt-3">
-              <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item">Quitar</button>
-              {% if ef.DELETE %}<label class="form-check small text-muted m-0">{{ ef.DELETE }} Marcar para
-                eliminar</label>{% endif %}
+          <div class="d-flex justify-content-between gap-2 mt-4">
+            <button type="button" class="btn btn-outline-secondary btn-lg" onclick="prevTab()">← Anterior</button>
+            <div class="d-flex gap-2">
+              <button type="submit" name="accion" value="guardar" class="btn btn-success btn-lg">💾 Guardar actividad</button>
             </div>
           </div>
         </div>
-        {% endwith %}
-      </template>
-
-      <div class="d-flex gap-2 mt-2">
-        <button class="btn btn-success" type="submit" name="accion" value="guardar">Guardar</button>
-
-        {% if editar %}
-        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#asignarModal">Guardar y
-          asignar…</button>
-        {% else %}
-        <button class="btn btn-primary" type="submit" name="accion" value="guardar_y_asignar">Guardar y
-          asignar…</button>
-        {% endif %}
-        {% if editar and act %}
-        <a class="btn btn-dark" target="_blank" href="{% url 'misiones_jugar' 'bosque' 1 %}?actividad={{ act.pk }}">
-          Vista previa del juego
-        </a>
-        {% endif %}
-
-
-        <button class="btn btn-outline-secondary" type="button" id="btn-preview" data-bs-toggle="modal"
-          data-bs-target="#previewModal">Vista previa</button>
-        <a class="btn btn-outline-secondary" href="{% url 'docente_lista' %}">Volver</a>
       </div>
+
+    </div>
   </form>
+
 </div>
 
-{% if editar and act %}
-{# =================== MODAL DE ASIGNACIÓN =================== #}
-<div class="modal fade" id="asignarModal" tabindex="-1" aria-labelledby="asignarLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <form id="form-asignar" class="modal-content" method="post" action="{% url 'actividad_asignar' act.pk %}">
-      {% csrf_token %}
-      <div class="modal-header">
-        <h5 class="modal-title" id="asignarLabel">Asignar actividad: “{{ act.titulo }}”</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-      </div>
-
-      <div class="modal-body">
-        <p id="asignar-help" class="small text-muted">Selecciona al menos un curso o un alumno.</p>
-
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Cursos</label>
-            <select class="form-select" name="cursos" multiple size="8">
-              {% for c in cursos %}
-              <option value="{{ c.id }}">{{ c }}</option>
-              {% endfor %}
-            </select>
-            <div class="form-text">Mantén <kbd>Ctrl</kbd>/<kbd>⌘</kbd> para seleccionar varios.</div>
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Alumnos</label>
-            <select class="form-select" name="alumnos" multiple size="8">
-              {% for e in estudiantes %}
-              <option value="{{ e.usuario_id }}">{{ e.usuario.get_full_name|default:e.usuario.username }}</option>
-              {% endfor %}
-            </select>
-            <div class="form-text">Opcional: déjalo vacío si asignas solo por curso.</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-footer">
-        <button type="submit" class="btn btn-primary">Asignar</button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-      </div>
-    </form>
-  </div>
-</div>
-{% endif %}
-
-{# =================== MODAL DE VISTA PREVIA =================== #}
-<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="previewLabel">Vista previa</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-      </div>
-      <div class="modal-body">
-        <div id="preview-content"></div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cerrar</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-{# =================== ASSETS =================== #}
 <link rel="stylesheet" href="{% static 'LevelUp/css/game_builder.css' %}">
+<script src="{% static 'LevelUp/js/actividades/game_builder_helper.js' %}"></script>
 <script src="{% static 'LevelUp/js/actividades/actividad_formset.js' %}"></script>
-<script src="{% static 'LevelUp/js//actividades/game_builder_helper.js' %}"></script>
-<script src="{% static 'LevelUp/js/actividades/actividad_preview.js' %}"></script>
 
 <script>
-  // (a) Auto-abrir el modal "Asignar" si vienes con ?open=asignar o abrir_asignar=True
-  document.addEventListener("DOMContentLoaded", () => {
-    const params = new URLSearchParams(location.search);
-    const fromQuery = params.get("open") === "asignar";
-    const abrir = "{{ abrir_asignar|default_if_none:'' }}"; // "True" / "1" / ""
-    const fromCtx = (abrir === "True" || abrir === "1");
-    if (fromQuery || fromCtx) {
-      const m = document.getElementById("asignarModal");
-      if (m && window.bootstrap && typeof window.bootstrap.Modal === "function") {
-        new bootstrap.Modal(m).show();
-      }
-    }
-  });
-</script>
+  function nextTab(){const a=document.querySelector('.nav-link.active');const n=a.closest('li').nextElementSibling?.querySelector('.nav-link');if(n)n.click()}
+  function prevTab(){const a=document.querySelector('.nav-link.active');const p=a.closest('li').previousElementSibling?.querySelector('.nav-link');if(p)p.click()}
 
-{% if editar and act %}
-<script>
-  // (b) Fijar el "Tipo de actividad" en JUEGO cuando es misión (evita que lo cambien)
-  document.addEventListener("DOMContentLoaded", () => {
-    const tipoActual = "{{ act.tipo|default_if_none:'' }}".toLowerCase();
-    if (tipoActual === "game") {
-      let sel = document.getElementById("{{ form.tipo.id_for_label }}");
-      if (!sel) sel = document.querySelector('[name="{{ form.tipo.html_name }}"]');
-
-      if (sel) {
-        sel.setAttribute("disabled", "disabled");
-        const hidden = document.createElement("input");
-        hidden.type = "hidden";
-        hidden.name = "{{ form.tipo.html_name }}";
-        hidden.value = sel.value || "game";
-        sel.closest("form").appendChild(hidden);
-      }
-    }
-  });
-</script>
-
-<script>
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest(".gb-copy-qid");
-    if (!btn) return;
-    const qid = btn.getAttribute("data-qid") || "";
-    navigator.clipboard.writeText(qid).then(() => {
-      btn.textContent = "Copiado ✓";
-      setTimeout(() => btn.textContent = "Copiar QID", 1200);
+  // Filtro en asignación
+  document.getElementById('search-estudiantes')?.addEventListener('input', e=>{
+    const q=e.target.value.toLowerCase();
+    document.querySelectorAll('.estudiante-item').forEach(li=>{
+      li.style.display=(li.dataset.nombre.toLowerCase().includes(q)?'':'none');
     });
   });
-</script>
-<script>
-  document.addEventListener("change", (e) => {
-    if (!e.target.matches('select[name$="-tipo"]')) return;
-    const wrap = e.target.closest("[data-item-form]") || e.target.closest(".lv-item") || e.target.closest(".card");
-    if (!wrap) return;
-    const area = wrap.querySelector('textarea[name$="-game_pairs"]');
-    if (!area) return;
 
-    if (e.target.value === "game_config" && !area.value.trim()) {
-      area.value = JSON.stringify({
-        fallback_q: "Si falta alguna, usa esta pregunta",
-        fallback_opts: ["A", "B", "C"],
-        fallback_correct: 1,   // 0=A, 1=B, 2=C
-        mapping_mode: "index"  // "id" o "index"
-      }, null, 2);
+  // Abrir tab Asignar si viene flag desde la vista
+  if ('{{ abrir_asignar }}' === 'True') document.getElementById('tab-asignar')?.click();
+
+  // ======= VALIDACIÓN CLIENTE =======
+  (function(){
+    const form=document.getElementById('actividad-form');
+    if(!form) return;
+
+    const cbIlimitado=document.getElementById('id_intentos_ilimitados');
+    const inpMax=document.getElementById('id_intentos_max');
+    const errMax=document.getElementById('err_intentos_max');
+
+    function toggleIntentosUI(){
+      const ilimit=cbIlimitado?.checked;
+      if(!inpMax) return;
+      if(ilimit){
+        inpMax.disabled=true;
+        inpMax.required=false;
+        inpMax.classList.remove('is-invalid');
+        if(errMax){ errMax.textContent=''; errMax.classList.add('d-none'); }
+      }else{
+        inpMax.disabled=false;
+        inpMax.required=true;
+      }
     }
-  });
+    cbIlimitado?.addEventListener('change',toggleIntentosUI);
+    toggleIntentosUI();
+
+    function putError(input,msg){
+      input.classList.add('is-invalid');
+      if(errMax && input===inpMax){ errMax.textContent=msg; errMax.classList.remove('d-none'); }
+    }
+    function clearError(input){
+      input.classList.remove('is-invalid');
+      if(errMax && input===inpMax){ errMax.textContent=''; errMax.classList.add('d-none'); }
+    }
+
+    form.addEventListener('input',e=>{ if(e.target===inpMax) clearError(inpMax); });
+    form.addEventListener('change',e=>{ if(e.target===inpMax || e.target===cbIlimitado) clearError(inpMax); });
+
+    form.addEventListener('submit',e=>{
+      let hasErrors=false, firstError=null;
+
+      // Título/tipo mínimos
+      const titulo=document.getElementById('id_titulo');
+      const tipo=document.getElementById('id_tipo');
+      if(titulo && !titulo.value.trim()){ hasErrors=true; firstError=firstError||titulo; }
+      if(tipo && !tipo.value){ hasErrors=true; firstError=firstError||tipo; }
+
+      // Intentos: si NO es ilimitado, exigir 1..1000
+      if(!cbIlimitado?.checked && inpMax){
+        const v=String(inpMax.value||'').trim();
+        const n=Number(v);
+        if(!v || !Number.isInteger(n) || n<1 || n>1000){
+          hasErrors=true; firstError=firstError||inpMax;
+          putError(inpMax,'Debe ingresar un entero entre 1 y 1000 o marcar "Ilimitado".');
+        }
+      }
+
+      // Ítems con contenido: enunciado + puntaje
+      const contenidoTab=document.getElementById('tab-contenido');
+      const panelContenido=document.getElementById('panel-contenido');
+      const items=document.querySelectorAll('#items-container .item-form:not([data-deleted="1"])');
+      items.forEach(card=>{
+        const enun=card.querySelector('[name$="-enunciado"]');
+        const punt=card.querySelector('[name$="-puntaje"]');
+        const payload=card.querySelector('textarea[name$="-game_pairs"], textarea[name$="-datos"]');
+        const enunVal=enun?enun.value.trim():'';
+        const puntVal=punt?String(punt.value).trim():'';
+        const payVal=payload?payload.value.trim():'';
+        const hasContent=!!(payVal||enunVal||puntVal);
+        if(hasContent){
+          if(enun && !enunVal){ hasErrors=true; firstError=firstError||enun; }
+          if(punt && (puntVal==='' || isNaN(Number(puntVal)))){ hasErrors=true; firstError=firstError||punt; }
+        }
+      });
+
+      if(hasErrors){
+        e.preventDefault();
+        if(firstError && firstError.closest('#panel-contenido') && !panelContenido.classList.contains('show')) contenidoTab?.click();
+        setTimeout(()=>{ firstError?.scrollIntoView({behavior:'smooth',block:'center'}); firstError?.focus?.({preventScroll:true}); },80);
+      }
+    });
+  })();
 </script>
-
-
-{% endif %}
 
 {% endblock %}

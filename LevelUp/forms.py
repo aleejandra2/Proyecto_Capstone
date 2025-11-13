@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.forms import (
     UserCreationForm, PasswordChangeForm, PasswordResetForm
 )
+from django.forms import BaseInlineFormSet
 from django.contrib.auth import get_user_model
 
 from .models import Actividad, ItemActividad, Curso, Asignatura, AsignacionDocente, Matricula, Estudiante
@@ -210,35 +211,64 @@ class MatriculaForm(forms.ModelForm):
 # Actividad
 # ---------------------------------------------------------
 class ActividadForm(forms.ModelForm):
+    intentos_ilimitados = forms.BooleanField(
+        required=False,
+        label="Intentos ilimitados",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input", "id": "id_intentos_ilimitados"}),
+        help_text="Si está activo, se ignora 'Intentos máximos'."
+    )
+
+    # 👇 CLAVE: que NO sea requerido aquí
+    intentos_max = forms.IntegerField(
+        required=False,
+        min_value=1,
+        max_value=1000,
+        widget=forms.NumberInput(attrs={
+            "class": "form-control",
+            "min": "1",
+            "max": "1000",
+            "id": "id_intentos_max"
+        })
+    )
+
     class Meta:
         model = Actividad
         fields = [
             "titulo", "descripcion", "tipo", "dificultad",
-            "xp_total", "intentos_max", "es_publicada", "fecha_cierre"
+            "xp_total", "intentos_ilimitados", "intentos_max",
+            "es_publicada", "fecha_cierre"
         ]
         widgets = {
-            "titulo": forms.TextInput(attrs={"class": "form-control"}),
+            "titulo": forms.TextInput(attrs={"class": "form-control", "id": "id_titulo"}),
             "descripcion": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
-            "tipo": forms.Select(attrs={"class": "form-select"}),
+            "tipo": forms.Select(attrs={"class": "form-select", "id": "id_tipo"}),
             "dificultad": forms.Select(attrs={"class": "form-select"}),
             "xp_total": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
-            "intentos_max": forms.NumberInput(attrs={"class": "form-control", "min": "1", "max": "20"}),
             "es_publicada": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "fecha_cierre": forms.DateTimeInput(attrs={"class": "form-control", "type": "datetime-local"}),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["tipo"].choices = [("quiz", "Quiz"), ("game", "Juego")]
+    def clean_intentos_max(self):
+        ilimitado = bool(self.cleaned_data.get("intentos_ilimitados"))
+        val = self.cleaned_data.get("intentos_max")
 
+        if ilimitado:
+            # Si es ilimitado, no exigimos valor y devolvemos un sentinel (p.ej. 1)
+            # para satisfacer el modelo sin molestar al usuario.
+            return val or 1
+
+        # Si NO es ilimitado, ahora sí es obligatorio y con rango 1..1000
+        if val is None:
+            raise forms.ValidationError("Este campo es obligatorio si no es ilimitado.")
+        if not (1 <= int(val) <= 1000):
+            raise forms.ValidationError("Debe estar entre 1 y 1000.")
+        return val
 
 # ---------------------------------------------------------
 # Ítems (Game Builder) — helpers y ItemForm (builder)
 # ---------------------------------------------------------
-# Mantén aquí tus helpers/constants usados por ItemForm (builder).
-ALLOWED_KINDS = {
-    "dragmatch", "memory", "trivia", "classify", "cloze", "ordering", "vf", "labyrinth", "shop",
-}
+
+# Tipos de minijuegos para QUIZ
 GAME_KIND_CHOICES = [
     ("dragmatch", "Drag & Match"),
     ("memory",    "Memoria (pares)"),
@@ -251,234 +281,495 @@ GAME_KIND_CHOICES = [
     ("shop",      "Tiendita (precios)"),
 ]
 
-def _norm_kind(s: str) -> str:
-    return (s or "").strip().lower()
+def _norm(s): return (s or "").strip().lower()
 
+def _parse_pairs_raw(raw: str):
+    pairs = []
+    for line in (raw or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = [p.strip() for p in line.split("|")]
+        if len(parts) >= 2 and parts[0] and parts[1]:
+            pairs.append([parts[0], parts[1]])
+    return pairs
 
-# forms.py — ItemForm (solo videojuego)
+def _parse_trivia_raw(raw: str):
+    """Formato: Pregunta | Opción1 | Opción2* | Opción3
+       El asterisco marca la correcta."""
+    items = []
+    for line in (raw or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = [p.strip() for p in line.split("|") if p.strip()]
+        if len(parts) < 3:
+            continue
+        q = parts[0]
+        ans = 0
+        opts = []
+        for i, opt in enumerate(parts[1:]):
+            if opt.endswith("*"):
+                ans = i
+                opt = opt[:-1].rstrip()
+            opts.append(opt)
+        if q and len(opts) >= 2:
+            items.append({"q": q, "opts": opts, "ans": ans})
+    return items
 
-from django import forms
-from django.core.exceptions import ValidationError
-from .models import ItemActividad
+class ItemInlineFormSet(BaseInlineFormSet):
+    """
+    Evita que Django trate como 'vacíos' los formularios nuevos
+    cuando el builder trae datos (game_pairs/datos).
+    Además, exige enunciado y puntaje cuando corresponda.
+    """
+    
+    def add_fields(self, form, index):
+        """Override para asegurar que los campos extra se agreguen correctamente"""
+        super().add_fields(form, index)
+        # Asegurar que el form tenga acceso al tipo de actividad
+        if hasattr(self, 'actividad_tipo'):
+            form.actividad_tipo = self.actividad_tipo
+    
+    def full_clean(self):
+        """
+        Override completo de full_clean para forzar validación de extra_forms con contenido
+        """
+        # Antes de la validación normal, marcar forms con contenido
+        if hasattr(self, 'data') and self.data:
+            for i, form in enumerate(self.forms):
+                if i >= self.initial_form_count():
+                    # Es extra_form
+                    prefix = form.prefix
+                    payload = self.data.get(f"{prefix}-game_pairs", "").strip()
+                    enun = self.data.get(f"{prefix}-enunciado", "").strip()
+                    punt = self.data.get(f"{prefix}-puntaje", "").strip()
+                    
+                    if payload or enun or punt:
+                        form.empty_permitted = False
+                        print(f"   🔧 full_clean: Form {i} tiene contenido, forzando validación")
+        
+        # Llamar al full_clean original
+        super().full_clean()
+    
+    def _construct_form(self, i, **kwargs):
+        """Override para configurar cada form antes de validación"""
+        form = super()._construct_form(i, **kwargs)
+        
+        # 🔑 CRÍTICO: Para extra_forms con contenido, desactivar empty_permitted
+        if i >= self.initial_form_count():
+            # Es un extra_form
+            if hasattr(self, 'data') and self.data:
+                # Verificar si tiene contenido en POST
+                prefix = form.prefix
+                payload = self.data.get(f"{prefix}-game_pairs", "").strip()
+                enun = self.data.get(f"{prefix}-enunciado", "").strip()
+                punt = self.data.get(f"{prefix}-puntaje", "").strip()
+                
+                if payload or enun or punt:
+                    form.empty_permitted = False
+                    print(f"   🔧 Form {i} ({prefix}): Desactivando empty_permitted")
+        
+        return form
+    
+    def clean(self):
+        super().clean()
+        
+        print(f"\n🔍 ItemInlineFormSet.clean() - Validando formset:")
+        print(f"   Total forms: {len(self.forms)}")
+        print(f"   Errores previos: {any(self.errors)}")
+        
+        if any(self.errors):
+            # Si ya hay errores de validación individual, no agregar más
+            print(f"   ⚠️ Hay errores previos, abortando clean()")
+            for i, form_errors in enumerate(self.errors):
+                if form_errors:
+                    print(f"      Form {i}: {form_errors}")
+            return
 
-# Se asume que ya tienes definidos:
-# - GAME_KIND_CHOICES
-# - ALLOWED_KINDS
-# - _norm_kind(s: str) -> str
+        for i, form in enumerate(self.forms):
+            # Si no hay cleaned_data (form ultra vacío) o está marcado para borrar, sáltalo
+            if not getattr(form, "cleaned_data", None):
+                print(f"   Form {i}: Sin cleaned_data, saltando")
+                continue
+            if form.cleaned_data.get("DELETE"):
+                print(f"   Form {i}: Marcado DELETE, saltando")
+                continue
 
+            # Campos del form
+            enun = (form.cleaned_data.get("enunciado") or "").strip()
+            punt = form.cleaned_data.get("puntaje")
+
+            # Payload del builder (tu CharField oculto)
+            payload = (form.cleaned_data.get("game_pairs") or "").strip()
+            # A veces lo guardas en otro nombre:
+            if not payload:
+                payload = (form.cleaned_data.get("datos") or "").strip() if "datos" in form.fields else ""
+
+            tiene_algo = bool(payload or enun or (punt not in (None, "")))
+            
+            print(f"   Form {i}: tiene_algo={tiene_algo}, enun={len(enun)}, punt={punt}, payload={len(payload)}")
+
+            # 🔑 CLAVE: Si HAY payload del builder, este form NO es vacío
+            if payload:
+                form.empty_permitted = False
+                # Forzar que Django lo considere válido aunque esté en extra_forms
+                form.has_changed = lambda: True
+                print(f"      → Forzando empty_permitted=False y has_changed=True")
+
+            if tiene_algo:
+                # Desactivar empty_permitted para forzar validación
+                form.empty_permitted = False
+                
+                if not enun:
+                    form.add_error("enunciado", "Este campo es obligatorio cuando el ítem tiene contenido.")
+                    print(f"      → ERROR: Falta enunciado")
+                if punt in (None, ""):
+                    form.add_error("puntaje", "Este campo es obligatorio cuando el ítem tiene contenido.")
+                    print(f"      → ERROR: Falta puntaje")
+                    
+    def save(self, commit=True):
+        """
+        Override save para asegurar que TODOS los forms con contenido se guarden,
+        incluso los que Django considera 'extra_forms'
+        """
+        # Primero guardamos normalmente (esto guarda initial forms y algunos extra)
+        instances = super().save(commit=False)
+        
+        # Ahora forzamos el guardado de TODOS los extra_forms que tienen contenido
+        saved_forms = []
+        
+        for form in self.forms:
+            if form.cleaned_data.get("DELETE"):
+                continue
+                
+            # Verificar si el form tiene contenido real
+            payload = (form.cleaned_data.get("game_pairs") or "").strip()
+            enun = (form.cleaned_data.get("enunciado") or "").strip()
+            punt = form.cleaned_data.get("puntaje")
+            
+            tiene_contenido = bool(payload or enun or (punt not in (None, "")))
+            
+            if tiene_contenido:
+                # Si no tiene instancia o no fue guardado por super().save()
+                if not form.instance.pk:
+                    instance = form.save(commit=False)
+                    if not instance.datos:
+                        instance.datos = {"kind": "trivia", "questions": []}
+                    instance.actividad = self.instance
+                    
+                    if commit:
+                        instance.save()
+                    
+                    saved_forms.append(instance)
+                    print(f"✅ Form extra guardado manualmente: {instance.pk or 'NUEVO'}")
+        
+        # Agregar las instancias guardadas manualmente a la lista
+        if saved_forms:
+            instances = list(instances) + saved_forms
+        
+        return instances
+    
 class ItemForm(forms.ModelForm):
-    """
-    Form único que permite crear/editar:
-      - Ítems de juego (tipo='game') usando tu builder (game_kind, game_pairs, etc.)
-      - Ítem de configuración del juego (tipo='game_config') pegando JSON en el mismo textarea (game_pairs)
-    """
-    # Controles del builder (ya existían)
-    game_kind = forms.ChoiceField(
-        label="Tipo de juego",
+    item_kind = forms.ChoiceField(
+        label="Tipo de ítem",
         choices=GAME_KIND_CHOICES,
-        required=False,  # <- ahora condicional según 'tipo'
+        required=False,
         widget=forms.Select(attrs={"class": "form-select"})
     )
+
     game_time_limit = forms.IntegerField(
         label="Tiempo límite (s)",
-        required=False, min_value=5, max_value=3600, initial=60,
-        widget=forms.NumberInput(attrs={"class": "form-control"})
-    )
-    # Este textarea seguirá siendo el "JSON pegado" del builder
-    # y también servirá para el JSON de game_config
-    game_pairs = forms.CharField(
-        label="Datos (JSON)",
         required=False,
-        widget=forms.Textarea(attrs={"rows": 6, "class": "form-control"})
+        min_value=5,
+        widget=forms.NumberInput(attrs={"class": "form-control", "min": 5})
+    )
+
+    game_pairs = forms.CharField(
+        label="Contenido",
+        required=False,
+        widget=forms.Textarea(attrs={
+            "rows": 4, 
+            "class": "form-control game-pairs-data",
+            "style": "display:none"
+        })
     )
 
     class Meta:
         model = ItemActividad
-        fields = ["tipo", "enunciado", "puntaje"]
+        fields = ["enunciado", "puntaje"]
         widgets = {
-            # AHORA visible: el profe podrá elegir 'game' o 'game_config'
-            "tipo": forms.Select(attrs={"class": "form-select"}),
             "enunciado": forms.Textarea(attrs={
-                "class": "form-control", "rows": 2,
-                "placeholder": "Describe qué debe hacer el alumno… (opcional)"
+                "class": "form-control",
+                "rows": 2,
+                "placeholder": "Instrucción para el alumno..."
             }),
-            "puntaje": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
+            "puntaje": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
         }
 
     def __init__(self, *args, **kwargs):
+        self.actividad_tipo = kwargs.pop("actividad_tipo", "quiz")
         super().__init__(*args, **kwargs)
 
-        # Limita choices visibles solo a lo que usamos en el builder del juego:
-        self.fields["tipo"].choices = [
-            (ItemActividad.ItemType.GAME, "Juego"),
-            ("game_config", "Juego • Configuración"),
-        ]
+        # Ajustar opciones según tipo
+        if _norm(self.actividad_tipo) == "game":
+            self.fields["item_kind"].choices = [("trivia", "Pregunta del videojuego")]
+            self.fields["item_kind"].initial = "trivia"
+        else:
+            self.fields["item_kind"].choices = GAME_KIND_CHOICES
 
-        inst = self.instance
-        tipo_inst = (inst.tipo or "").lower() if inst and inst.pk else None
-
-        # Precargar iniciales desde instancia existente
-        if inst and inst.pk:
-            data = inst.datos or {}
-            # Si es game -> pre-cargar builder
-            if tipo_inst == "game":
-                kind = (data.get("kind") or "dragmatch").lower()
-                self.fields["game_kind"].initial = kind if kind in ALLOWED_KINDS else "dragmatch"
-                self.fields["game_time_limit"].initial = data.get("timeLimit") or data.get("time_limit") or 60
+        # ⚠️ PRECARGA DESDE INSTANCIA EXISTENTE
+        if self.instance and self.instance.pk:
+            datos = getattr(self.instance, "datos", None) or {}
+            
+            if datos:
+                kind = _norm(datos.get("kind") or datos.get("tipo") or "trivia")
+                
+                # Establecer valores iniciales
+                self.fields["item_kind"].initial = kind
+                self.fields["game_time_limit"].initial = datos.get("timeLimit") or datos.get("tiempo")
+                
+                # ⚠️ CRÍTICO: Serializar como JSON
                 try:
-                    self.fields["game_pairs"].initial = json.dumps(data, ensure_ascii=False, indent=2)
-                except Exception:
-                    self.fields["game_pairs"].initial = "{}"
-
-            # Si es game_config -> volcar JSON a la misma caja
-            elif tipo_inst == "game_config":
-                try:
-                    self.fields["game_pairs"].initial = json.dumps(data, ensure_ascii=False, indent=2)
-                except Exception:
-                    self.fields["game_pairs"].initial = "{}"
-
-        # Si viene vacío (nuevo ítem), sugiere 'game' por defecto
-        if not tipo_inst and not self.initial.get("tipo"):
-            self.fields["tipo"].initial = ItemActividad.ItemType.GAME
-
-        # Si el form está marcado para eliminar en el formset, baja requisitos
-        if self.is_bound and self.data.get(self.add_prefix("DELETE")):
-            for f in self.fields.values():
-                f.required = False
+                    # Asegurarse de que datos es un dict válido
+                    if not isinstance(datos, dict):
+                        datos = {"kind": kind}
+                    
+                    # Agregar kind si no existe
+                    if "kind" not in datos:
+                        datos["kind"] = kind
+                    
+                    self.fields["game_pairs"].initial = json.dumps(datos, ensure_ascii=False, indent=2)
+                    
+                    print(f"✅ Ítem {self.instance.pk} precargado: {kind}, {len(str(datos))} chars")
+                except Exception as e:
+                    print(f"❌ Error serializando datos del ítem {self.instance.pk}: {e}")
+                    self.fields["game_pairs"].initial = json.dumps({"kind": kind}, ensure_ascii=False)
+            else:
+                # Sin datos: crear estructura base
+                self.fields["game_pairs"].initial = json.dumps({"kind": "trivia"}, ensure_ascii=False)
 
     def clean(self):
         cleaned = super().clean()
-        tipo = (cleaned.get("tipo") or "").lower()
-        raw_json = (cleaned.get("game_pairs") or "").strip()
+        kind = _norm(cleaned.get("item_kind") or "trivia")
+        raw = cleaned.get("game_pairs") or ""
 
-        # Si está marcado para borrar, no validamos y guardamos marca
-        if (self.data.get(self.add_prefix("DELETE")) or self.cleaned_data.get("DELETE")):
-            for f in self.fields.values():
-                f.required = False
-            # No tocamos datos; la vista/formset decidirá
-            return cleaned
-
-        # ---- Caso 1: ÍTEM DE JUEGO (game) ----
-        if tipo == "game":
-            # Validar y construir 'datos' desde el builder
-            try:
-                payload = json.loads(raw_json) if raw_json else {}
-            except Exception:
-                raise ValidationError("El contenido del juego no es un JSON válido.")
-
-            datos: Dict[str, Any] = {}
-            kind = _norm_kind(self.cleaned_data.get("game_kind") or payload.get("kind") or "")
-            if kind not in ALLOWED_KINDS:
-                raise ValidationError(f"Tipo de juego no soportado: {kind or '(vacío)'}")
+        # ⚠️ Si el textarea viene vacío pero la instancia tiene datos, preservarlos
+        if not raw.strip() and self.instance.pk and self.instance.datos:
+            print(f"⚠️ Textarea vacío, preservando datos existentes del ítem {self.instance.pk}")
+            datos = self.instance.datos
+            # Actualizar kind por si cambió
             datos["kind"] = kind
-
-            tl = self.cleaned_data.get("game_time_limit") or payload.get("timeLimit") or payload.get("time_limit")
-            if tl:
-                datos["timeLimit"] = int(tl)
-
-            def _require(cond: bool, msg: str):
-                if not cond:
-                    raise ValidationError(msg)
-
-            if kind in {"dragmatch", "memory"}:
-                pairs = payload.get("pairs")
-                ok_pairs = isinstance(pairs, list) and len(pairs) >= 1 and all(
-                    isinstance(pair, list) and len(pair) == 2 and str(pair[0]).strip() and str(pair[1]).strip()
-                    for pair in pairs
-                )
-                _require(ok_pairs, "Debes definir al menos 1 par válido (A y B).")
-                datos["pairs"] = pairs
-
-            elif kind == "trivia":
-                qs = payload.get("questions")
-                _require(isinstance(qs, list) and len(qs) >= 1, "Agrega al menos 1 pregunta.")
-                for q in qs:
-                    cond = (
-                        isinstance(q, dict)
-                        and isinstance(q.get("opts"), list) and len(q["opts"]) >= 2
-                        and str(q.get("q", "")).strip() != ""
-                        and all(str(o).strip() for o in q["opts"])
-                    )
-                    _require(cond, "Cada pregunta debe tener texto y ≥2 opciones.")
-                    if "ans" in q:
-                        _require(isinstance(q["ans"], int) and 0 <= q["ans"] < len(q["opts"]),
-                                 "Índice 'ans' fuera de rango.")
-                datos["questions"] = qs
-
-            elif kind == "classify":
-                cats = payload.get("categories") or []
-                items = payload.get("items") or []
-                _require(isinstance(cats, list) and len(cats) >= 2, "Define al menos 2 categorías.")
-                _require(isinstance(items, list) and len(items) > 0, "Agrega ítems para clasificar.")
-                datos["categories"] = cats
-                datos["items"] = items
-
-            elif kind == "cloze":
-                txt = str(payload.get("text") or "")
-                ans = payload.get("answers") or []
-                _require(txt != "", "Escribe el texto base para cloze.")
-                holes = txt.count("___")
-                if holes > 0:
-                    _require(isinstance(ans, list) and len(ans) == holes,
-                             "La cantidad de respuestas debe coincidir con los huecos ___.")
-                datos["text"] = txt
-                datos["answers"] = ans
-                if "bank" in payload:
-                    datos["bank"] = payload.get("bank") or []
-
+        elif not raw.strip():
+            # Nuevo ítem sin datos: crear estructura base
+            datos = {"kind": kind}
+            if kind == "trivia":
+                datos["questions"] = []
+            elif kind in ("memory", "dragmatch"):
+                datos["pairs"] = []
+            elif kind == "vf":
+                datos["items"] = []
             elif kind == "ordering":
-                steps = payload.get("steps") or []
-                _require(isinstance(steps, list) and len(steps) >= 2 and all(str(s).strip() for s in steps),
-                         "Agrega al menos 2 pasos.")
-                datos["steps"] = steps
+                datos["steps"] = []
+            elif kind == "classify":
+                datos["bins"] = []
+                datos["items"] = []
+            elif kind == "labyrinth":
+                datos["doors"] = []
+            elif kind == "shop":
+                datos["products"] = []
+                datos["budget"] = 1000
+        else:
+            # Parsear JSON del textarea
+            datos, err = self._normalize_payload(kind, raw)
+            if err:
+                raise ValidationError(f"Error en contenido del ítem: {err}")
 
-            elif kind in {"labyrinth", "shop"}:
-                # Passthrough controlado
-                datos.update(payload or {})
-
-            # Guardar en la instancia
-            self.instance.tipo = "game"
-            self.instance.datos = datos
-            # enunciado/puntaje vienen del form
-            return cleaned
-
-        # ---- Caso 2: CONFIGURACIÓN DEL JUEGO (game_config) ----
-        if tipo == "game_config":
-            # El Docente pega aquí el JSON de config (usamos el mismo textarea)
+        # Agregar tiempo límite
+        tl = cleaned.get("game_time_limit")
+        if tl:
             try:
-                cfg = json.loads(raw_json) if raw_json else {}
+                datos["timeLimit"] = int(tl)
             except Exception:
-                raise ValidationError("El JSON de configuración no es válido.")
+                pass
 
-            # Validaciones mínimas
-            mapping = (cfg.get("mapping_mode") or "id").lower()
-            if mapping not in ("id", "index"):
-                raise ValidationError('mapping_mode debe ser "id" o "index".')
+        # ⚠️ CRÍTICO: Guardar en la instancia
+        self.instance.datos = datos
+        self.instance.tipo = "game"
+        
+        # Log para debug
+        print(f"💾 Guardando ítem: kind={datos.get('kind')}, datos={len(str(datos))} chars")
+        
+        return cleaned
 
-            if "fallback_opts" in cfg:
-                if not isinstance(cfg["fallback_opts"], list) or len(cfg["fallback_opts"]) < 2:
-                    raise ValidationError("fallback_opts debe ser una lista con ≥ 2 opciones.")
-
-            if "fallback_correct" in cfg:
-                if not isinstance(cfg["fallback_correct"], int) or cfg["fallback_correct"] < 0:
-                    raise ValidationError("fallback_correct debe ser un entero ≥ 0 (0-based).")
-
-            # Si el enunciado está vacío, etiqueta por defecto
-            if not (cleaned.get("enunciado") or "").strip():
-                cleaned["enunciado"] = "Configuración del minijuego"
-
-            # Guardar en la instancia
-            self.instance.tipo = "game_config"
-            self.instance.datos = cfg
-            # puntaje puede ignorarse o mantenerse; lo dejamos tal cual
-            return cleaned
-
-        # ---- Otros tipos: no permitidos en este builder ----
-        raise ValidationError("Este editor solo soporta ítems de tipo 'game' o 'game_config'.")
-
-    def save(self, commit: bool = True):
+    def save(self, commit=True):
         inst = super().save(commit=False)
-        # 'tipo' y 'datos' se establecen en clean() según el caso
+        
+        # Los datos ya están en inst.datos por clean()
+        # Verificar que no se perdieron
+        if not inst.datos or not isinstance(inst.datos, dict):
+            print(f"⚠️ WARNING: Ítem {inst.pk or 'NUEVO'} sin datos válidos al guardar")
+            inst.datos = {"kind": "trivia", "questions": []}
+        
         if commit:
             inst.save()
+            print(f"✅ Ítem guardado: ID={inst.pk}, kind={inst.datos.get('kind')}")
+        
         return inst
+
+    def _normalize_payload(self, kind: str, raw: str):
+        """Devuelve (datos_normalizados, error_msg|None)"""
+        kind = _norm(kind or "trivia")
+        raw = (raw or "").strip()
+
+        # Intentar parsear como JSON
+        payload = None
+        if raw.startswith("{") or raw.startswith("["):
+            try:
+                payload = json.loads(raw)
+            except Exception as e:
+                return None, f"JSON inválido: {str(e)}"
+
+        datos = {"kind": kind}
+
+        # MEMORY / DRAGMATCH
+        if kind in ("memory", "dragmatch", "dragandmatch"):
+            pairs = []
+            if payload is not None:
+                pairs = payload.get("pairs") or payload.get("items") or []
+            else:
+                pairs = _parse_pairs_raw(raw)
+
+            if not isinstance(pairs, list):
+                return None, "El formato de pares no es válido."
+            
+            datos["pairs"] = pairs
+            return datos, None
+
+        # TRIVIA
+        if kind == "trivia":
+            questions = []
+            if payload is not None:
+                questions = payload.get("questions") or []
+            else:
+                questions = _parse_trivia_raw(raw)
+
+            if not isinstance(questions, list):
+                return None, "El formato de preguntas no es válido."
+            
+            # Normalizar preguntas
+            norm_qs = []
+            for q in questions:
+                if not isinstance(q, dict):
+                    continue
+                qtext = (q.get("q") or "").strip()
+                opts = q.get("opts") or q.get("options") or []
+                ans = q.get("ans", 0)
+                
+                if qtext and isinstance(opts, list) and len(opts) >= 2:
+                    if not isinstance(ans, int) or ans < 0 or ans >= len(opts):
+                        ans = 0
+                    norm_qs.append({
+                        "q": qtext,
+                        "opts": [str(o) for o in opts],
+                        "ans": int(ans)
+                    })
+            
+            datos["questions"] = norm_qs
+            return datos, None
+
+        # VF
+        if kind == "vf":
+            items = []
+            if payload is not None:
+                items = payload.get("items") or []
+            
+            if not isinstance(items, list):
+                return None, "Formato de verdadero/falso no válido."
+            
+            norm = []
+            for it in items:
+                if not isinstance(it, dict):
+                    continue
+                txt = (it.get("text") or "").strip()
+                truth = bool(it.get("is_true") if "is_true" in it else it.get("answer"))
+                if txt:
+                    norm.append({"text": txt, "is_true": truth})
+            
+            datos["items"] = norm
+            return datos, None
+
+        # ORDERING
+        if kind in ("ordering", "ordening"):
+            steps = []
+            if payload is not None:
+                steps = payload.get("steps") or payload.get("items") or []
+                if isinstance(steps, list) and steps:
+                    if isinstance(steps[0], dict):
+                        steps = [s.get("texto") or s.get("text") for s in steps]
+            else:
+                steps = [ln.strip() for ln in raw.splitlines() if ln.strip()]
+
+            if not steps or len(steps) < 2:
+                return None, "Ordenar requiere al menos 2 pasos."
+            
+            datos["kind"] = "ordering"
+            datos["steps"] = [str(s) for s in steps if s]
+            return datos, None
+
+        # CLASSIFY
+        if kind == "classify":
+            if payload is None:
+                return None, "Clasificar requiere formato JSON."
+            cats = payload.get("bins") or payload.get("categories") or []
+            items = payload.get("items") or []
+            
+            if not isinstance(cats, list):
+                cats = []
+            if not isinstance(items, list):
+                items = []
+            
+            datos["bins"] = list(cats)
+            datos["items"] = list(items)
+            return datos, None
+
+        # CLOZE
+        if kind == "cloze":
+            if payload is None:
+                return None, "Completar requiere formato JSON."
+            text = (payload.get("text") or "").strip()
+            answers = payload.get("answers") or payload.get("blanks") or []
+            if not text or not answers:
+                return None, "Completar requiere texto y respuestas."
+            datos["text"] = text
+            datos["answers"] = answers
+            datos["bank"] = payload.get("bank") or []
+            return datos, None
+
+        # LABYRINTH
+        if kind == "labyrinth":
+            if payload is None:
+                return None, "Laberinto requiere formato JSON."
+            doors = payload.get("doors") or []
+            if not isinstance(doors, list):
+                doors = []
+            datos["doors"] = doors
+            return datos, None
+
+        # SHOP
+        if kind == "shop":
+            if payload is None:
+                return None, "Tienda requiere formato JSON."
+            products = payload.get("products") or []
+            budget = payload.get("budget") or 1000
+            if not isinstance(products, list):
+                products = []
+            datos["products"] = products
+            datos["budget"] = budget
+            return datos, None
+
+        # Otros: pasar tal cual si es JSON
+        if payload is None:
+            return None, "Este tipo requiere formato JSON."
+        datos.update(payload)
+        return datos, None

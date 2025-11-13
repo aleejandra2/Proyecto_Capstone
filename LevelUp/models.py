@@ -217,6 +217,12 @@ class Actividad(models.Model):
         default=100,
         help_text="XP base proporcional al puntaje obtenido"
     )
+    
+    # Intentos Ilimitados
+    intentos_ilimitados = models.BooleanField(
+        default=False,
+        help_text="Si está activo, el estudiante puede intentarlo sin límite."
+    )
 
     # N° de Intentos
     intentos_max = models.PositiveSmallIntegerField(
@@ -224,6 +230,10 @@ class Actividad(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(1000)],
         help_text="Número máximo de intentos por estudiante (1–1000).",
     )
+
+    def intentos_permitidos(self):
+        """None = ilimitado; si no, entero 1 - 1000"""
+        return None if self.intentos_ilimitados else int(self.intentos_max or 1)
 
     # Asignaciones a estudiantes (vía tabla intermedia)
     estudiantes = models.ManyToManyField(
