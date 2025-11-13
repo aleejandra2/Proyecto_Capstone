@@ -17,7 +17,7 @@ urlpatterns = [
 
     # Catálogo / Ranking / Reportes
     path("actividades/", views.actividades_view, name="actividades"),
-    path("ranking/", views.ranking_view, name="ranking"),
+    path("gamificacion/ranking/", views.ranking_view, name="ranking"),
     path("reportes/docente/", views.reportes_docente_view, name="reportes_docente"),
 
     # PERFIL

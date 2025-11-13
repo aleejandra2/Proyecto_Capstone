@@ -62,7 +62,7 @@ def actividades_view(request):
 @login_required
 def ranking_view(request):
     estudiantes_top = Estudiante.objects.order_by("-puntos").select_related("usuario")[:20]
-    return render(request, "LevelUp/ranking.html", {"estudiantes_top": estudiantes_top})
+    return render(request, "LevelUp/gamificacion/ranking.html", {"estudiantes_top": estudiantes_top})
 
 @login_required
 def reportes_docente_view(request):
