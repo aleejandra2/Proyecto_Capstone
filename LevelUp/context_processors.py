@@ -1,5 +1,6 @@
 from django.urls import reverse
 from .models import Asignatura
+from .models import Estudiante
 
 def user_home_url(request):
     user = request.user
@@ -29,3 +30,12 @@ def navbar_asignaturas(request):
         "asignatura_actual": getattr(actual, "nombre", None),
         "asignatura_icono": icono,
     }
+
+def estudiante_actual(request):
+    if not request.user.is_authenticated:
+        return {}
+    try:
+        est = Estudiante.objects.select_related("usuario").get(usuario=request.user)
+    except Estudiante.DoesNotExist:
+        return {}
+    return {"estudiante_actual": est}

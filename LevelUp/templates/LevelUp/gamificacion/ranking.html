@@ -1,0 +1,97 @@
+{% extends "LevelUp/base.html" %}
+{% block title %}Ranking · LevelUp{% endblock %}
+
+{% block content %}
+<main class="min-h-screen">
+  <div class="container py-3">
+
+    <div class="league-card">
+      <!-- Pestañas superiores -->
+      <div class="league-tabs">
+        <button class="league-tab is-active">
+          🌍 Liga General
+        </button>
+      </div>
+
+      <div class="league-inner">
+        {% if estudiantes_top %}
+          <!-- Cabecera de columnas -->
+          <div class="league-head-row">
+            <div class="league-col league-col--pos">Posición:</div>
+            <div class="league-col league-col--trainer">Nombre del estudiante:</div>
+            <div class="league-col league-col--score">Puntuación:</div>
+          </div>
+
+          <!-- Lista de posiciones -->
+          <ul class="league-list">
+            {% for e in estudiantes_top %}
+            <li class="league-row
+                       {% if forloop.first %} is-leader{% endif %}
+                       {% if e.usuario == request.user %} is-me{% endif %}">
+              
+              <!-- Columna posición -->
+              <div class="league-col league-col--pos">
+                {% if forloop.first %}
+                  <i class="bi bi-trophy-fill league-trophy"></i>
+                {% else %}
+                  <span class="league-rank">{{ forloop.counter }}º</span>
+                {% endif %}
+              </div>
+
+              <!-- Columna entrenador (foto + nombre) -->
+              <div class="league-col league-col--trainer">
+                <div class="league-player">
+                  <div class="league-avatar">
+                    {% if e.foto_perfil %}
+                      {# CAMBIA 'foto_perfil' si tu campo se llama distinto #}
+                      <img src="{{ e.foto_perfil.url }}" alt="Avatar" class="league-avatar-img">
+                    {% else %}
+                      <span class="league-avatar-fallback">
+                        {{ e.usuario.first_name|default:e.usuario.username|slice:":2"|upper }}
+                      </span>
+                    {% endif %}
+                  </div>
+                  <span class="league-name">
+                    {{ e.usuario.get_full_name|default:e.usuario.username }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Columna puntuación -->
+              <div class="league-col league-col--score">
+                <span class="league-score">
+                  {{ e.puntos|default:0 }} pts
+                </span>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+
+          <!-- Pie: resumen del jugador actual (opcional) -->
+          <div class="league-footer">
+            <div class="league-footer-pill">
+              <span class="league-footer-pos">
+                {% if mi_posicion %}
+                  {{ mi_posicion }}º
+                {% else %}
+                  —
+                {% endif %}
+              </span>
+              <span class="league-footer-text">
+                Tu puntuación:
+                <strong>{{ estudiante_actual.puntos|default:0 }} pts</strong>
+              </span>
+            </div>
+          </div>
+
+        {% else %}
+          <div class="py-4 text-center text-muted">
+            Aún no hay estudiantes con puntaje. ¡Sé el primero en sumar puntos! ✨
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</main>
+{% endblock %}

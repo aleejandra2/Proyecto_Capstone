@@ -14,8 +14,8 @@
           <p class="text-edu-ink-700 mb-0">Sigue tus misiones por asignatura y progresa de nivel.</p>
         </div>
         <div class="d-none d-md-block">
-          <div class="stat-card" data-count="{{ total_xp|default:'0' }}">
-            <span class="stat-value">0</span>
+          <div class="stat-card" data-count="{{ estudiante_actual.puntos|default:0 }}">
+            <span class="stat-value"></span>
             <small class="stat-label">XP acumulado</small>
           </div>
         </div>
@@ -199,6 +199,6 @@
 </main>
 
 <link rel="stylesheet" href="{% static 'LevelUp/css/home-kids.css' %}">
-<script defer src="{% static 'LevelUp/js/home-kids.js' %}"></script>
+<script defer src="{% static 'LevelUp/js/partials/home-kids.js %}"></script>
 <script defer src="{% static 'LevelUp/js/script.js' %}"></script>
 {% endblock %}

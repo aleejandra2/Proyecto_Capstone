@@ -160,7 +160,7 @@ class CursoForm(forms.ModelForm):
 class AsignaturaForm(forms.ModelForm):
     class Meta:
         model = Asignatura
-        fields = ("nombre", "codigo")
+        fields = ("nombre", "slug", "icono")
         widgets = {
             "nombre": forms.TextInput(attrs={"class":"form-control"}),
             "codigo": forms.TextInput(attrs={"class":"form-control"}),

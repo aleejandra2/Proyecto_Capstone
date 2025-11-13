@@ -58,7 +58,10 @@
   box-shadow:0 10px 0 rgba(0,0,0,.18), 0 16px 24px rgba(0,0,0,.25);
   z-index:2; font-weight:800;
 }
-.sidecard .emoji{ font-size:20px; margin-left:6px; }
+.sidecard .emoji i {
+  font-size: 1.3rem; /* ajusta a gusto */
+}
+
 .sidecard--left{ left:24px; }
 .sidecard--right{ right:24px; }
 

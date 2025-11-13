@@ -1,90 +1,153 @@
 {% load static %}
 
-<!-- === NAVBAR estilo Seussville-like (parcial) === -->
-<header class="acad-navbar seussbar">
-  <div class="container">
+<!-- === NAVBAR === -->
+<header class="acad-navbar seussbar topbar">
+  <div class="container topbar-inner">
 
-    <!-- Riel + pestañas principales -->
-    <nav class="seuss-rail" aria-label="Navegación principal">
-      <ul class="seuss-tabs">
-        <!-- EXPLORAR (abre dropdown de materias) -->
-        <li class="seuss-tab has-dropdown">
-          <a href="{% url 'dashboard' %}" class="seuss-link" aria-haspopup="true" aria-expanded="false">
-            <span class="seuss-ico"><i class="bi bi-map" aria-hidden="true"></i></span>
-            <span class="seuss-text">Explorar</span>
-          </a>
+    <!-- IZQUIERDA: selector de asignatura -->
+    <div class="topbar-left">
+      <div class="subject-selector has-dropdown">
 
-          <!-- SOLO baja el panel de MATERIAS -->
-          <div class="subject-dropdown" role="menu" aria-label="Seleccionar asignatura">
-            <ul class="subject-list">
-              {% for asig in asignaturas %}
-              <li>
-                <!-- ganchos para JS: js-subject + data-slug -->
-                <a href="#" class="subject-item js-subject"
-                   data-slug="{{ asig.slug|default:asig.nombre|slugify }}">
-                  <span class="subject-egg">
-                    <img src="{% static asig.icono %}" alt="" class="egg-img">
-                  </span>
-                  <span class="subject-label">{{ asig.nombre }}</span>
-                </a>
-              </li>
-              {% empty %}
-              <li class="subject-empty text-muted px-3 py-2">Sin asignaturas</li>
-              {% endfor %}
-            </ul>
-          </div>
-        </li>
+        <!-- Botón principal (asignatura actual) -->
+        {% if asignaturas %}
+        {% with asignaturas.0 as current_asig %}
+        <button type="button" class="subject-main">
+          <span class="subject-icon">
+            <!-- icono actual (inicialmente la primera asignatura) -->
+            <img src="{% static current_asig.icono %}" alt="" class="subject-main-img">
+          </span>
+          <span class="subject-name">
+            {{ current_asig.nombre }}
+          </span>
+          <i class="bi bi-caret-down-fill subject-caret"></i>
+        </button>
+        {% endwith %}
+        {% else %}
+        <!-- Si no hay asignaturas, dejamos el texto por defecto -->
+        <button type="button" class="subject-main">
+          <span class="subject-icon">
+            <i class="bi bi-calculator"></i>
+          </span>
+          <span class="subject-name">
+            Selecciona una asignatura
+          </span>
+          <i class="bi bi-caret-down-fill subject-caret"></i>
+        </button>
+        {% endif %}
 
-        <!-- WATCH -->
-        <li class="seuss-tab">
-          <a href="#" class="seuss-link">
-            <span class="seuss-ico"><i class="bi bi-tv" aria-hidden="true"></i></span>
-            <span class="seuss-text">Ver</span>
-          </a>
-        </li>
+        <!-- Dropdown con todas las asignaturas -->
+        <div class="subject-dropdown" role="menu" aria-label="Seleccionar asignatura">
+          <ul class="subject-list">
+            {% for asig in asignaturas %}
+            <li>
+              <a href="#" class="subject-item js-subject" data-slug="{{ asig.slug|default:asig.nombre|slugify }}"
+                data-name="{{ asig.nombre }}" data-icon="{% static asig.icono %}">
+                <span class="subject-egg">
+                  <img src="{% static asig.icono %}" alt="" class="egg-img">
+                </span>
+                <span class="subject-label">{{ asig.nombre }}</span>
+              </a>
+            </li>
+            {% empty %}
+            <li class="subject-empty text-muted px-3 py-2">Sin asignaturas</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
 
-        <!-- PLAY -->
-        <li class="seuss-tab">
-          <a href="{% url 'estudiante_lista' %}" class="seuss-link">
-            <span class="seuss-ico"><i class="bi bi-controller" aria-hidden="true"></i></span>
-            <span class="seuss-text">Jugar</span>
-          </a>
-        </li>
+    <!-- CENTRO:  nivel / puntos -->
+<div class="topbar-center">
+  <div class="status-pill">
+    <div class="status-block">
+      <div class="hud-level">
+        Nivel {{ estudiante_actual.nivel|default:1 }}
+      </div>
+    </div>
 
-        <!-- SHOP -->
-        <li class="seuss-tab">
-          <a href="#" class="seuss-link">
-            <span class="seuss-ico"><i class="bi bi-gift" aria-hidden="true"></i></span>
-            <span class="seuss-text">Tienda</span>
-          </a>
-        </li>
+    <span class="status-divider"></span>
 
-        <!-- a la derecha: usuario -->
-        <li class="seuss-right">
-          <div class="dropdown">
-            <button class="acad-user btn btn-sm" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menú de usuario">
-              <span class="avatar">{{ request.user.first_name|default:request.user.username|first|upper }}</span>
-              <span class="d-none d-md-inline fw-600 user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
-              <i class="bi bi-caret-down-fill" aria-hidden="true"></i>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end">
-              <li><a class="dropdown-item" href="{% url 'perfil' %}"><i class="bi bi-person"></i> Mi perfil</a></li>
-              <li><a class="dropdown-item" href="#"><i class="bi bi-award"></i> Recompensas</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a></li>
-            </ul>
-          </div>
-        </li>
-      </ul>
-    </nav>
+    <div class="status-block">
+      <span class="status-text">
+        {{ estudiante_actual.puntos|default:0 }} pts
+      </span>
+    </div>
 
-    <!-- Sub-menú rojo pequeño (chips de asignatura) -->
-    <div class="seuss-subnav d-flex justify-content-center flex-wrap gap-2" aria-label="Accesos rápidos por asignatura">
-      <!-- Agregamos js-subject + data-slug para que también funcionen -->
-      <a class="subbtn js-subject" data-slug="ciencias"    href="#">Ciencias</a>
-      <a class="subbtn js-subject" data-slug="historia"    href="#">Historia</a>
-      <a class="subbtn js-subject" data-slug="lenguaje"    href="#">Lenguaje</a>
-      <a class="subbtn js-subject" data-slug="matematicas" href="#">Matemáticas</a>
+    <span class="status-divider"></span>
+
+    <div class="status-block coins-block">
+      <span class="coin-icon">🪙</span>
+      <span class="status-value">
+        {{ estudiante_actual.monedas|default:0 }}
+      </span>
+    </div>
+  </div>
+</div>
+
+    <!-- DERECHA: iconos, usuario y botón -->
+    <div class="topbar-right">
+
+      <!-- Icono medalla -->
+      <button type="button" class="circle-badge">
+        <i class="bi bi-award-fill"></i>
+      </button>
+
+      <!-- Separador -->
+      <span class="topbar-divider"></span>
+
+      <!-- Usuario -->
+      <div class="dropdown user-dropdown">
+        <button class="user-pill" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menú de usuario">
+          <span class="user-avatar">
+            {{ request.user.first_name|default:request.user.username|first|upper }}
+          </span>
+          <span class="user-name d-none d-md-inline">
+            {{ request.user.get_full_name|default:request.user.username }}
+          </span>
+          <i class="bi bi-caret-down-fill ms-1"></i>
+        </button>
+
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="{% url 'perfil' %}"><i class="bi bi-person"></i> Mi perfil</a></li>
+          <li><a class="dropdown-item" href="#"><i class="bi bi-award"></i> Recompensas</a></li>
+          <li>
+            <hr class="dropdown-divider">
+          </li>
+          <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
+          </li>
+        </ul>
+      </div>
     </div>
   </div>
 </header>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const subjectMain = document.querySelector(".subject-main");
+  if (!subjectMain) return;
+
+  const mainImg  = subjectMain.querySelector(".subject-icon img.subject-main-img");
+  const mainName = subjectMain.querySelector(".subject-name");
+
+  document.querySelectorAll(".subject-item.js-subject").forEach(function (item) {
+    item.addEventListener("click", function (e) {
+      e.preventDefault(); // que no haga salto a "#"
+
+      const name = item.dataset.name;
+      const icon = item.dataset.icon;
+
+      if (mainName && name) {
+        mainName.textContent = name;
+      }
+      if (mainImg && icon) {
+        mainImg.src = icon;
+      }
+
+      // opcional: marcar seleccionado en el dropdown
+      document.querySelectorAll(".subject-item.js-subject.is-active")
+              .forEach(el => el.classList.remove("is-active"));
+      item.classList.add("is-active");
+    });
+  });
+});
+</script>

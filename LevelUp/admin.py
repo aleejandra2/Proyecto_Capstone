@@ -108,7 +108,7 @@ admin.site.register([Administrador, Docente, Ranking, Recurso, Recompensa, Repor
 
 @admin.register(Asignatura)
 class AsignaturaAdmin(admin.ModelAdmin):
-    list_display = ("nombre", "codigo")
+    list_display = ("nombre", "slug", "icono")
     search_fields = ("nombre", "codigo")
 
 # ✅ Estudiante con search_fields (requisito para varios autocompletes)

@@ -5,7 +5,7 @@
 
 <main class="scene-wrap">
 <div class="scene-bg"
-     data-bg="{% if fondo_portal %}{{ fondo_portal }}{% else %}{% static 'LevelUp/img/fondos/fondo_ciencias.jpg' %}{% endif %}">
+     data-bg="{% if fondo_portal %}{{ fondo_portal }}{% else %}{% static 'LevelUp/img/fondos/fondo_ciencias-naturales.jpg' %}{% endif %}">
 </div>
   <!-- HUD superior -->
   <header class="hud-top">
@@ -26,8 +26,12 @@
   </a>
 
   <a class="sidecard sidecard--right" href="#">
-    <span class="emoji">🧑‍🏫</span> Tienda
+  <span class="emoji">
+    <i class="bi bi-graph-up-arrow"></i>
+  </span>
+  Estadísticas
   </a>
+
 
   <!-- Acciones inferiores -->
   <div class="cta-bottom">
@@ -75,6 +79,4 @@
   });
 })();
 </script>
-
-
 {% endblock %}

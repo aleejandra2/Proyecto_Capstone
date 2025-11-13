@@ -517,11 +517,20 @@ class Answer(models.Model):
 # Cursos y Asignaturas
 # ---------------------------------------------------------
 class Asignatura(models.Model):
-    nombre = models.CharField(max_length=60, unique=True)   # "Matemáticas", "Inglés", "Lenguaje", "Historia", "Ciencias Naturales"
-    codigo = models.SlugField(max_length=30, unique=True)   # "matematicas", "ingles", "lenguaje", "historia", "ciencias"
+    nombre = models.CharField(max_length=100)
 
-    class Meta:
-        ordering = ["nombre"]
+    slug = models.SlugField(
+        max_length=100,
+        blank=True,
+        null=True,      # 👈 importante para que no pida default
+    )
+
+    icono = models.CharField(
+        "Icono (ruta static)",
+        max_length=200,
+        blank=True,
+        help_text="Ej: 'LevelUp/img/asignaturas/matematicas.png'",
+    )
 
     def __str__(self):
         return self.nombre
