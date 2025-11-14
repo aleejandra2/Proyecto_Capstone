@@ -1,0 +1,111 @@
+/* ==== SIDEBAR DOCENTE ==== */
+
+.navbar-docente {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 230px;
+  background: #111829;   
+  color: #f9fafb;
+  z-index: 1030;
+  display: flex;
+  flex-direction: column;
+}
+
+.navbar-docente-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0.75rem 0;
+}
+
+/* Brand */
+.navbar-docente-brand {
+  padding: 0 1rem;
+  text-decoration: none;
+}
+.navbar-docente-brand-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #f9fafb;
+}
+
+/* Menú principal */
+.navbar-docente-menu {
+  padding: 0;
+  margin: 0;
+}
+.navbar-docente-link {
+  padding: 0.55rem 1.1rem;
+  font-size: 0.95rem;
+  text-decoration: none;
+  color: #e5e7eb;
+  display: flex;
+  align-items: center;
+  border-radius: 0;
+  transition: background-color 0.15s, color 0.15s;
+}
+.navbar-docente-link i {
+  font-size: 1.1rem;
+}
+.navbar-docente-link:hover {
+  background: #374151;
+  color: #ffffff;
+}
+.navbar-docente-link.is-active {
+  background: #4b5563;
+  color: #ffffff;
+}
+
+/* Zona inferior (usuario) */
+.navbar-docente-bottom {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #1f2933;
+  font-size: 0.8rem;
+}
+.navbar-docente-user .avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #4b5563;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.navbar-docente-user .avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.navbar-docente-user .avatar-initial {
+  color: #f9fafb;
+  font-weight: 700;
+}
+
+/* Que el contenido no quede debajo del sidebar */
+body.with-docente-navbar {
+  padding-left: 230px; /* igual al width del sidebar */
+}
+
+/* Responsive: en pantallas chicas se vuelve barra superior */
+@media (max-width: 991.98px) {
+  .navbar-docente {
+    position: relative;
+    width: 100%;
+    height: auto;
+  }
+
+  body.with-docente-navbar {
+    padding-left: 0;
+  }
+
+  .navbar-docente-inner {
+    height: auto;
+  }
+
+  .navbar-docente-link {
+    padding: 0.5rem 0.75rem;
+  }
+}

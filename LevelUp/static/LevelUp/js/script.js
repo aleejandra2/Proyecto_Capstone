@@ -1,4 +1,3 @@
-// Script principal para LevelUp
 class LevelUpApp {
     constructor() {
         this.currentUser = null;

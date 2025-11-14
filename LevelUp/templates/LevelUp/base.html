@@ -13,11 +13,12 @@
   <!-- Tus estilos -->
   <link rel="stylesheet" href="{% static 'LevelUp/css/style.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/navbar/navbar.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'LevelUp/css/navbar/navbar_docente.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'LevelUp/css/navbar/navbar_estudiante.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/footer.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/global.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/login.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/home.css' %}?v=5">
-  <link rel="stylesheet" href="{% static 'LevelUp/css/navbar/navbar_estudiante.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/home_estudiante.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/Ranking/ranking.css' %}?v=5">
 
@@ -29,56 +30,62 @@
   <link href="https://fonts.googleapis.com/css2?family=Merienda:wght@300..900&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Henny+Penny&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  
+
   {% block extra_head %}{% endblock %}
 </head>
 
-  {% block extra_js %}
-    <!-- Bootstrap JS bundle (con Popper) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}
+<!-- Bootstrap JS bundle (con Popper) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- Tus scripts, después del bundle -->
-    <script src="{% static 'LevelUp/js/script.js' %}?v=5"></script>
-    <script src="{% static 'LevelUp/js/partials/navbar.js' %}?v=5"></script>
-  {% endblock %}
+<!-- Tus scripts, después del bundle -->
+<script src="{% static 'LevelUp/js/script.js' %}?v=5"></script>
+<script src="{% static 'LevelUp/js/partials/navbar.js' %}?v=5"></script>
+{% endblock %}
 
 
 <body>
   {% block navbar %}
   {% if request.user.is_authenticated %}
-    {% with rol=request.user.rol|default_if_none:''|default:''|lower es_est=request.user.es_estudiante|default:False %}
-      {% if rol == 'estudiante' or es_est %}
-        {# Navbar SOLO estudiantes #}
-        {% include "LevelUp/partials/navbar_estudiante.html" %}
-      {% else %}
-        {# Navbar general #}
-        {% include "LevelUp/partials/navbar.html" %}
-      {% endif %}
-    {% endwith %}
+
+  {# === ESTUDIANTE === #}
+  {% if request.user.rol|default_if_none:''|lower == 'estudiante' or request.user.es_estudiante %}
+  {% include "LevelUp/partials/navbar_estudiante.html" %}
+
+  {# === DOCENTE === #}
+  {% elif request.user.rol|default_if_none:''|lower == 'docente' or request.user.es_docente %}
+  {% include "LevelUp/partials/navbar_docente.html" %}
+
+  {# === ADMIN / OTROS ROLES -> NAVBAR GENERAL === #}
   {% else %}
-    {# Usuario no autenticado: usa navbar general o uno público #}
-    {% include "LevelUp/partials/navbar.html" %}
+  {% include "LevelUp/partials/navbar.html" %}
   {% endif %}
-{% endblock %}
-  
+
+  {% else %}
+  {# Usuario no autenticado: navbar general #}
+  {% include "LevelUp/partials/navbar.html" %}
+  {% endif %}
+  {% endblock %}
+
+
   {% block content %}{% endblock %}
 
   {% block footer %}
   {% if request.user.is_authenticated %}
-    {% with rol=request.user.rol|default_if_none:''|lower es_est=request.user.es_estudiante|default:False %}
-      {% if rol == 'estudiante' or es_est %}
-        {# Estudiante: sin footer #}
-      {% else %}
-        {# Docente/Admin/Otros: footer general #}
-        {% include "LevelUp/partials/footer.html" %}
-        {# o, si tienes uno específico: "LevelUp/partials/footer_doc_admin.html" #}
-      {% endif %}
-    {% endwith %}
+  {% with rol=request.user.rol|default_if_none:''|lower es_est=request.user.es_estudiante|default:False %}
+  {% if rol == 'estudiante' or es_est %}
+  {# Estudiante: sin footer #}
   {% else %}
-    {# Público/no autenticado: footer público o el general #}
-    {% include "LevelUp/partials/footer.html" %}
+  {# Docente/Admin/Otros: footer general #}
+  {% include "LevelUp/partials/footer.html" %}
+  {# o, si tienes uno específico: "LevelUp/partials/footer_doc_admin.html" #}
   {% endif %}
-{% endblock %}
+  {% endwith %}
+  {% else %}
+  {# Público/no autenticado: footer público o el general #}
+  {% include "LevelUp/partials/footer.html" %}
+  {% endif %}
+  {% endblock %}
 
 
 </body>

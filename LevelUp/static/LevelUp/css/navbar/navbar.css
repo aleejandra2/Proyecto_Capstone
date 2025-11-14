@@ -237,3 +237,4 @@
 .gm-thumb i{ font-size:22px; }
 .gm-name{ font-size:.92rem; font-weight:600; text-align:center; max-width:100%; }
 @media (max-width:768px){ .gm-catbtn{ width:100px; } .gm-thumb{ width:44px; height:44px; } .gm-name{ font-size:.88rem; } }
+
