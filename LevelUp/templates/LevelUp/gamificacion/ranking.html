@@ -1,4 +1,5 @@
 {% extends "LevelUp/base.html" %}
+{% load static %}
 {% block title %}Ranking · LevelUp{% endblock %}
 
 {% block content %}
@@ -43,7 +44,6 @@
                 <div class="league-player">
                   <div class="league-avatar">
                     {% if e.foto_perfil %}
-                      {# CAMBIA 'foto_perfil' si tu campo se llama distinto #}
                       <img src="{{ e.foto_perfil.url }}" alt="Avatar" class="league-avatar-img">
                     {% else %}
                       <span class="league-avatar-fallback">
@@ -93,5 +93,10 @@
     </div>
 
   </div>
+
+  {# Botón flotante Timo #}
+  <a href="{% url 'dashboard' %}" class="timo-home-btn" aria-label="Volver al inicio">
+    <img src="{% static 'LevelUp/img//icons/timo_bolita.png' %}" alt="Volver al inicio">
+  </a>
 </main>
 {% endblock %}

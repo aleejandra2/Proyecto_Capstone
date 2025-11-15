@@ -1,14 +1,4 @@
-/* ===== Navbar LevelUp (scopeado, no interfiere con .collapse global) ===== */
-
-.navbar {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
-  padding: 1rem 0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
+/* ===== Navbar LevelUp ===== */
 
 /* Contenedor */
 .navbar-container {
@@ -18,7 +8,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color:#764ba2;
+  background-color:#eedcff;
 }
 
 /* Marca */

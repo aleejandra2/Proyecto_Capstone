@@ -62,10 +62,6 @@ body{
 .msg.error{ background:#fee2e2; }
 
 /* ====== Navbar ====== */
-.navbar:not(.navbar-kids){
-  background-color:#a05da5;
-  border-bottom:1px solid var(--border);
-}
 .navbar-container{ max-width:1100px; margin:0 auto; padding:.75rem 1rem; display:flex; align-items:center; justify-content:space-between; }
 .navbar-brand{ display:flex; gap:.5rem; align-items:center; font-weight:700; color:var(--text); text-decoration:none; }
 .navbar-nav{ display:flex; gap:1rem; list-style:none; padding:0; margin:0; }
@@ -103,48 +99,6 @@ body{
 
 .text-muted{ color:var(--muted); }
 
-/* ====== Helpers (auth/portales) ====== */
-.center-page{
-  min-height: calc(100vh - 140px);
-  display:flex; align-items:center; justify-content:center;
-  padding: 2rem 1rem;
-}
-.auth-card{ width:100%; max-width:460px; }
-.text-center{ text-align:center; }
-.title-xl{ font-size:1.75rem; font-weight:800; margin:0; }
-.subtitle{ color: var(--muted); margin-top:.25rem; }
-.grid-2{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:1rem; }
-@media (max-width: 700px){ .grid-2{ grid-template-columns: 1fr; } }
-
-/* ====== Fondo para páginas de autenticación ====== */
-/* contenedor de auth: ocupa toda la pantalla y centra la card */
-.auth-bg--indigo,
-.auth-bg--teal,
-.auth-bg--blue{
-  min-height: 100svh;
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 2rem 1rem;
-
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-}
-
-/* degradados */
-.auth-bg--indigo { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-.auth-bg--teal   { background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%); }
-.auth-bg--blue   { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); }
-
-/* cuando combine con .center-page, fuerza altura completa */
-.center-page.auth-bg--indigo,
-.center-page.auth-bg--teal,
-.center-page.auth-bg--blue{
-  min-height: 100svh !important;
-  min-height: 100vh !important;
-}
 
 /* ====== Página principal (blueprint) ====== */
 :root{
@@ -207,152 +161,6 @@ body{
 /* Utilidades */
 .text-secondary{ color:#6b6b88 !important; }
 .btn-bp-link{ color: var(--bp-primary); }
-
-/* ====== Paleta educativa / landing ====== */
-:root{
-  --edu-ink:#0b2545;
-  --edu-ink-700:#314766;
-  --edu-primary:#2563eb;
-  --edu-secondary:#10b981;
-  --edu-accent:#f59e0b;
-  --edu-bg:#f7fafc;
-  --edu-card:#ffffff;
-}
-
-/* Utils de landing educativa */
-.fw-800{font-weight:800;}
-.text-edu-ink-700{color:var(--edu-ink-700);}
-.btn-edu-primary{
-  background:linear-gradient(180deg,#2a5db0,#1e3a8a);
-  color:#fff;border:0;border-radius:14px;padding:.85rem 1.2rem;font-weight:700;
-  box-shadow:0 12px 22px rgba(15,42,85,.25);
-}
-.btn-edu-primary:hover{filter:brightness(1.05);}
-.btn-edu-ghost{
-  background:#eef2ff;color:#1e3a8a;border:0;border-radius:14px;padding:.85rem 1.2rem;font-weight:700;
-}
-.grad-ink{background:linear-gradient(90deg,#803e94,#6d089c);-webkit-background-clip:text;background-clip:text;color:transparent;}
-.section-pad{padding:72px 0;}
-.mini-bullets{list-style:none;padding:0;margin:0;display:flex;gap:1rem;flex-wrap:wrap}
-.mini-bullets li{position:relative;padding-left:1.25rem}
-.mini-bullets li::before{content:"✓";position:absolute;left:0;color:#10b981;font-weight:900}
-
-/* ====== HERO landing ====== */
-.landing-hero{
-  position:relative;
-  padding:96px 0 120px;
-  background:
-    radial-gradient(1200px 500px at -10% -20%, rgba(37,99,235,.25), transparent 70%),
-    radial-gradient(1000px 400px at 110% -30%, rgba(16,185,129,.25), transparent 70%),
-    linear-gradient(180deg,#f2f7ff,#eef7f5 70%, #ffffff);
-}
-.hero-illustration{ position:relative; min-height:280px; display:grid; place-items:center; }
-.hero-illustration img{ max-width:100%; height:auto; }
-.hero-fallback{ font-size:4rem; opacity:.25; position:absolute; }
-
-.wave{ position:absolute; left:0; right:0; height:120px; pointer-events:none; }
-.wave-1{ bottom:0; background:
-  radial-gradient(50% 100% at 50% 0, rgba(37,99,235,.12), transparent 70%),
-  url("data:image/svg+xml,%3Csvg viewBox='0 0 1440 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23ffffff' d='M0,64L48,58.7C96,53,192,43,288,69.3C384,96,480,160,576,170.7C672,181,768,139,864,112C960,85,1056,75,1152,74.7C1248,75,1344,85,1392,90.7L1440,96L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z'/%3E%3C/svg%3E") center/cover no-repeat; }
-.wave-2{ bottom:-1px; background:#fff; height:40px; }
-
-/* ====== FEATURES ====== */
-.landing-features{ background:#fff; }
-.feature-card{
-  height:100%; background:var(--edu-card); border-radius:18px; padding:1.25rem;
-  box-shadow:0 12px 24px rgba(13,38,76,.06), inset 0 0 0 1px rgba(13,38,76,.06);
-}
-.feature-card .icon{
-  width:3rem; height:3rem; border-radius:12px; display:grid; place-items:center;
-  background:linear-gradient(180deg,#e8f0ff,#e6fff6); font-size:1.6rem; margin-bottom:.5rem;
-}
-.feature-card h3{ font-weight:800; font-size:1.15rem; margin:.25rem 0 .25rem; }
-
-/* ====== HOW ====== */
-.landing-how{ background:linear-gradient(180deg,#ffffff,#f7fbff); }
-.steps{ display:grid; gap:14px; }
-.step{
-  display:grid; grid-template-columns:auto 1fr; align-items:start; gap:.9rem;
-  background:#fff; border-radius:16px; padding:.9rem 1rem;
-  box-shadow:0 10px 20px rgba(13,38,76,.06), inset 0 0 0 1px rgba(13,38,76,.06);
-}
-.step span{
-  width:36px;height:36px;border-radius:12px;display:grid;place-items:center;font-weight:800;
-  background:linear-gradient(180deg,#dbeafe,#dcfce7); color:#0b2545;
-}
-.step b{ display:block; font-weight:800; }
-.step small{ display:block; color:#53627e; }
-
-/* ====== SPLIT ====== */
-.landing-split{ background:#fff; }
-.split-card{
-  background:var(--edu-card); border-radius:18px; padding:1.25rem 1.25rem 1.4rem;
-  box-shadow:0 12px 24px rgba(13,38,76,.06), inset 0 0 0 1px rgba(13,38,76,.06);
-}
-.split-card .tag{
-  display:inline-block; background:#e6f7f1; color:#0b6b53; border-radius:10px;
-  padding:.25rem .6rem; font-weight:700; margin-bottom:.5rem;
-}
-.split-card .tag.alt{ background:#eef2ff; color:#1e3a8a; }
-.split-card h3{ font-weight:800; }
-
-/* ====== CTA FINAL ====== */
-.landing-cta{
-  padding:84px 0;
-  background:
-    radial-gradient(1200px 500px at 0% 10%, rgba(37,99,235,.18), transparent 70%),
-    radial-gradient(1000px 400px at 100% 0%, rgba(16,185,129,.18), transparent 70%),
-    linear-gradient(180deg,#f7fbff,#ffffff);
-}
-
-/* ====== Responsivo ====== */
-@media (max-width: 768px){
-  .section-pad{ padding:56px 0; }
-  .landing-hero{ padding:72px 0 96px; }
-}
-
-
-.font-merienda{
-  font-family: "Merienda", cursive;
-  font-optical-sizing: auto;
-  font-weight: 900;
-  letter-spacing: .1px;
-  line-height: 1.65;
-  text-wrap: balance; 
-}
-
-/* ======== Navbar Home ======== */
-.navbar-home{
-  background:#867cc4;
-  --bs-navbar-color:#8c0c0c;
-  --bs-navbar-brand-color:#fff;
-  --bs-navbar-hover-color:#f2f2f7;
-  --bs-navbar-active-color:#fff;
-}
-.navbar-home .navbar-brand,
-.navbar-home .nav-link{ color:#000000 !important; }
-.navbar-home .nav-link:hover{ color:#000000 !important; }
-
-/* Buscador pequeño en navbar */
-.home-nav-search{
-  width: 240px;
-  border-radius: 999px;
-  padding: .35rem .75rem;
-  border: none;
-}
-
-/* Botones reutilizando tu esquema */
-.btn-edu{
-  background:#867cc4; color:#fff; border:1px solid #867cc4;
-  border-radius: 999px; padding:.45rem .9rem; font-weight:600;
-}
-.btn-edu:hover{ background:#6f64a3; border-color:#6f64a3; color:#fff; }
-
-.btn-edu-ghost{
-  background:#fff; color:#867cc4; border:1px solid #867cc4;
-  border-radius: 999px; padding:.45rem .9rem; font-weight:600;
-}
-.btn-edu-ghost:hover{ background:#f5f3ff; color:#6f64a3; border-color:#6f64a3; }
 
 
 /* ==== Admin Portal ==== */
@@ -553,3 +361,40 @@ body{
   font-size: .92rem;
 }
 
+/* ===== Botón Timo ===== */
+.timo-home-btn {
+  position: fixed;
+  left: 1.5rem;
+  bottom: 1.5rem;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  z-index: 999;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.timo-home-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.timo-home-btn:hover {
+  transform: scale(1.05) translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 768px) {
+  .timo-home-btn {
+    width: 60px;
+    height: 60px;
+    right: 1rem;
+    bottom: 1rem;
+  }
+}

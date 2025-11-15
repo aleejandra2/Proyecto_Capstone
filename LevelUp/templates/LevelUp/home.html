@@ -6,8 +6,11 @@
 <nav class="navbar navbar-expand-lg navbar-home navbar-home--kids">
   <div class="container">
     <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
-      <img src="{% static 'LevelUp/img/logo.png' %}" height="40" alt="LevelUp">
-      <span class="ms-2 font-merienda">LevelUp</span>
+      <!-- Logo principal -->
+      <img src="{% static 'LevelUp/img/logo.png' %}" alt="Mascota LevelUp" class="navbar-logo-icon">
+
+      <!-- Segunda imagen -->
+      <img src="{% static 'LevelUp/img/Logos.png' %}" alt="LevelUp" class="navbar-logo-wordmark ms-2">
     </a>
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#homeNav"
@@ -28,122 +31,122 @@
 <main class="landing">
 
   <!-- HERO con emojis flotantes y botón de confetti -->
- <section class="landing-hero position-relative overflow-hidden hero-photo-full"
-         style="--hero-photo: url('{% static 'LevelUp/img/fondo.jpg' %}');">
-  <div class="container">
-    <div class="row align-items-center g-4">
-      <div class="col-lg-6">
-        <div class="hero-copy">
-          <h1 class="display-5 fw-800 font-merienda">
-            Aprender es una <span class="grad-ink">aventura</span>
-          </h1>
-          <p class="lead text-edu-ink-700">
-            LevelUp te motiva con puntos, niveles, misiones interactivas y celebra tus logros.
-          </p>
-
-          <a href="{% url 'login' %}" class="btn btn-edu btn-lg pill">Solicita más información</a>
-          <button class="btn btn-edu-ghost btn-lg pill" id="btn-celebrar" type="button" aria-label="Celebrar logros">
-            ¡Celebrar! 🎉
-          </button>
-
+  <section class="landing-hero position-relative overflow-hidden hero-photo-full"
+    style="--hero-photo: url('{% static 'LevelUp/img/fondo.jpg' %}');">
+    <div class="container">
+      <div class="row align-items-center g-4">
         <div class="col-lg-6">
-          <div class="hero-illustration tilt-on-move">
-            <img src="" alt="Aprender jugando"
-              onerror="this.style.display='none'">
-            <div class="hero-fallback"></div>
+          <div class="hero-copy">
+            <h1 class="display-5 fw-800 font-merienda">
+              Aprender es una <span class="grad-ink">aventura</span>
+            </h1>
+            <p class="lead text-edu-ink-700">
+              LevelUp te motiva con puntos, niveles, misiones interactivas y celebra tus logros.
+            </p>
+
+            <a href="#" class="btn btn-edu btn-lg pill">Solicita más información</a>
+            <button class="btn btn-edu-ghost btn-lg pill" id="btn-celebrar" type="button" aria-label="Celebrar logros">
+              ¡Celebrar! 🎉
+            </button>
+
+            <div class="col-lg-6">
+              <div class="hero-illustration tilt-on-move">
+                <img src="" alt="Aprender jugando" onerror="this.style.display='none'">
+                <div class="hero-fallback"></div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
   </section>
-  
+
   <!-- SECCIÓN CON LINEAS DE COLORES-->
   <section class="kak-section section-pad">
-  <div class="container text-center">
+    <div class="container text-center">
 
-    <h2 class="kak-title">Motiva <span class="hl hl-teal">mide y</span> 
-      <span class="hl hl-pink">mejora en</span> <span class="hl hl-yellow">cada clase</span>
-    </h2>
+      <h2 class="kak-title">Motiva <span class="hl hl-teal">mide y</span>
+        <span class="hl hl-pink">mejora en</span> <span class="hl hl-yellow">cada clase</span>
+      </h2>
 
-    
-    <p class="kak-sublead">
-      <strong>LevelUp combina minijuegos</strong>
-      LevelUp combina minijuegos y evaluaciones para que los estudiantes aprendan mientras tú ves su avance, dominen contenidos y ganen recompensas.
-    </p>
 
-    <figure class="kak-shot mx-auto">
-      <img
-        src="{% static 'LevelUp/img/fondo.jpg' %}" alt="" class="img-fluid">
-    </figure>
-  </div>
-</section>
+      <p class="kak-sublead">
+        <strong>LevelUp combina minijuegos</strong>
+        LevelUp combina minijuegos y evaluaciones para que los estudiantes aprendan mientras tú ves su avance, dominen
+        contenidos y ganen recompensas.
+      </p>
+
+      <figure class="kak-shot mx-auto">
+        <img src="{% static 'LevelUp/img/fondos/foto_home.png' %}" alt="" class="img-fluid">
+      </figure>
+    </div>
+  </section>
 
 
   <!-- CÓMO FUNCIONA con animación al hacer scroll -->
   <section class="features-kids section-pad">
-  <div class="container">
+    <div class="container">
 
-    <h2 class="kak-title mb-1">Todas las <span class="hl hl-teal">funciones</span> para <span class="hl hl-blue">aprender</span>.</h2>
-    <p class="kak-sublead">Herramientas simples para enseñar, motivar y medir sin fricción.</p>
+      <h2 class="kak-title mb-1">Todas las <span class="hl hl-teal">funciones</span> para <span
+          class="hl hl-blue">aprender</span>.</h2>
+      <p class="kak-sublead">Herramientas simples para enseñar, motivar y medir sin fricción.</p>
 
-    <div class="feat-grid">
-      <!-- 1 -->
-      <article class="feat-card">
-        <header class="feat-head">
-          <h3 class="hl-teal feat-title">Cuestionarios</h3>
-          <span class="feat-badge" aria-hidden="true">
-            <img src="{% static 'LevelUp/img/icons/estrella.webp' %}" alt="">
-          </span>
-        </header>
-        <p class="feat-text">Evalúa y respalda el aprendizaje con preguntas autocorregibles.</p>
-      </article>
+      <div class="feat-grid">
+        <!-- 1 -->
+        <article class="feat-card">
+          <header class="feat-head">
+            <h3 class="hl-teal feat-title">Cuestionarios</h3>
+            <span class="feat-badge" aria-hidden="true">
+              <img src="{% static 'LevelUp/img/icons/estrella.webp' %}" alt="">
+            </span>
+          </header>
+          <p class="feat-text">Evalúa y respalda el aprendizaje con preguntas autocorregibles.</p>
+        </article>
 
-      <!-- 2 -->
-      <article class="feat-card">
-        <header class="feat-head">
-          <h3 class="feat-title">Misiones & minijuegos</h3>
-          <span class="feat-badge" aria-hidden="true">
-            <img src="{% static 'LevelUp/img/icons/estrella.webp' %}" alt="">
-          </span>
-        </header>
-        <p class="feat-text">Aprender jugando: niveles, monedas y preguntas dentro del juego.</p>
-      </article>
+        <!-- 2 -->
+        <article class="feat-card">
+          <header class="feat-head">
+            <h3 class="feat-title">Misiones & minijuegos</h3>
+            <span class="feat-badge" aria-hidden="true">
+              <img src="{% static 'LevelUp/img/icons/estrella.webp' %}" alt="">
+            </span>
+          </header>
+          <p class="feat-text">Aprender jugando: niveles, monedas y preguntas dentro del juego.</p>
+        </article>
 
-      <!-- 4 -->
-      <article class="feat-card">
-        <header class="feat-head">
-          <h3 class="feat-title">Grupos de refuerzo</h3>
-          <span class="feat-badge" aria-hidden="true">
-            <img src="{% static 'LevelUp/img/icons/estrella.webp' %}" alt="">
-          </span>
-        </header>
-        <p class="feat-text">Detecta brechas y asigna prácticas enfocadas por nivel.</p>
-      </article>
+        <!-- 4 -->
+        <article class="feat-card">
+          <header class="feat-head">
+            <h3 class="feat-title">Grupos de refuerzo</h3>
+            <span class="feat-badge" aria-hidden="true">
+              <img src="{% static 'LevelUp/img/icons/estrella.webp' %}" alt="">
+            </span>
+          </header>
+          <p class="feat-text">Detecta brechas y asigna prácticas enfocadas por nivel.</p>
+        </article>
 
-      <!-- 5 -->
-      <article class="feat-card">
-        <header class="feat-head">
-          <h3 class="feat-title">Ranking y recompensas</h3>
-          <span class="feat-badge" aria-hidden="true">
-            <img src="{% static 'LevelUp/img/icons/estrella.webp' %}" alt="">
-          </span>
-        </header>
-        <p class="feat-text">Puntos, medallas y tablero para celebrar el progreso.</p>
-      </article>
+        <!-- 5 -->
+        <article class="feat-card">
+          <header class="feat-head">
+            <h3 class="feat-title">Ranking y recompensas</h3>
+            <span class="feat-badge" aria-hidden="true">
+              <img src="{% static 'LevelUp/img/icons/estrella.webp' %}" alt="">
+            </span>
+          </header>
+          <p class="feat-text">Puntos, medallas y tablero para celebrar el progreso.</p>
+        </article>
 
-      <!-- 6 -->
-      <article class="feat-card">
-        <header class="feat-head">
-          <h3 class="feat-title">Rúbricas y reportes</h3>
-          <span class="feat-badge" aria-hidden="true">
-            <img src="{% static 'LevelUp/img/icons/estrella.webp' %}" alt="">
-          </span>
-        </header>
-        <p class="feat-text">Mide objetivos por estudiante, curso y asignatura en 1 clic.</p>
-      </article>
+        <!-- 6 -->
+        <article class="feat-card">
+          <header class="feat-head">
+            <h3 class="feat-title">Rúbricas y reportes</h3>
+            <span class="feat-badge" aria-hidden="true">
+              <img src="{% static 'LevelUp/img/icons/estrella.webp' %}" alt="">
+            </span>
+          </header>
+          <p class="feat-text">Mide objetivos por estudiante, curso y asignatura en 1 clic.</p>
+        </article>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
   <!-- ZONA DE PRUEBA: Mini-reto matemático -->
   <section class="kids-playground section-pad">
@@ -207,5 +210,10 @@
 <link rel="stylesheet" href="{% static 'LevelUp/css/home-kids.css' %}">
 <script defer src="{% static 'LevelUp/js/partials/home-kids.js' %}"></script>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap" rel="stylesheet">
-<style>.kak-title{ font-family: "Caveat", system-ui, sans-serif; font-weight:700; }</style>
+<style>
+  .kak-title {
+    font-family: "Caveat", system-ui, sans-serif;
+    font-weight: 700;
+  }
+</style>
 {% endblock %}

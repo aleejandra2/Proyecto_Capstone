@@ -1,159 +1,163 @@
-/* ======== Fondo ======== */
-body {
-  margin: 0;
-  font-family: 'Poppins', sans-serif;
-  background-color: #0d2040;
-  color: white;
+/* login */
+.center-page {
+  width: 100%;
 }
 
-/* ======== Estructura ======== */
-.login-wrapper {
-  position: relative;
+/* Fondo y centrado del login */
+.auth-bg--indigo {
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  z-index: 1;
+  padding: 2rem 1rem;
+
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
 }
 
-.login-container {
+/* Tarjeta login  */
+.auth-card.card {
   width: 100%;
   max-width: 500px;
-  padding: 2rem;
-  z-index: 2;
+  border-radius: 1.25rem;
+  background: #ffffff;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.22);
+  border: none;
 }
 
-.login-card {
-  position: relative;
-  background: #1e4a7a;
-  border-radius: 1.5rem;
-  padding: 2.5rem;
-  border: 4px solid #2d5a8a;
-  box-shadow: 0 0 25px rgba(0, 0, 0, 0.4);
+/* Contenido interno */
+.auth-card .card-content {
+  padding: 2.5rem 3rem;
 }
 
-/* ======== Título ======== */
-.title-frame {
-  position: relative;
-  background: #2d5a8a;
-  border: 4px solid #3d6a9a;
-  border-radius: 1rem;
-  padding: 1rem;
-  margin-bottom: 2rem;
+/* Título LevelUp */
+.title-xl {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0;
+  color: #0f172a;
+}
+
+/* Utilidad de centrado */
+.text-center {
   text-align: center;
 }
 
-.title {
-  font-size: 2.5rem;
-  letter-spacing: 2px;
-  color: #fff;
+/* Grupos de formulario */
+.form-group {
+  margin-bottom: 1rem;
 }
 
-.title span {
-  color: #ea62f7;
+/* Etiquetas */
+.form-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: #374151;
 }
 
-/* ======== Subtítulo ======== */
-.subtitle {
-  text-align: center;
-  letter-spacing: 3px;
-  margin-bottom: 1.5rem;
-}
-
-/* ======== Inputs ======== */
+/* Inputs */
 .form-input {
   width: 100%;
-  background: #ffffff;
-  color: #000000;
-  border: 2px solid rgb(50, 50, 50);
+  padding: 0.7rem 0.9rem;
   border-radius: 0.75rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  font-size: 1rem;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  font-size: 0.95rem;
+  outline: 0;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
   box-sizing: border-box;
 }
 
-.form-input::placeholder {
-  color: #666;
-}
-
 .form-input:focus {
-  outline: 3px solid #3b82f6;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
 }
 
-/* ======== Botón principal ======== */
-.btn-primary {
-  background: #1a3d5f;
-  color: white;
+/* Botón principal */
+.btn.btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
   border: none;
-  border-radius: 0.75rem;
-  padding: 1rem;
-  width: 100%;
-  font-weight: bold;
-  letter-spacing: 2px;
+  border-radius: 0.9rem;
+  padding: 0.85rem 1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 0.9rem;
   cursor: pointer;
-  transition: background 0.3s;
+  color: #ffffff;
+  box-shadow: 0 12px 25px rgba(37, 99, 235, 0.35);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
 }
 
-.btn-primary:hover {
-  background: #0f2d4a;
+.btn.btn-primary:hover {
+  filter: brightness(1.03);
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(37, 99, 235, 0.45);
 }
 
-/* ======== Botones sociales ======== */
-.social-buttons {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-}
-
-.btn-social {
-  flex: 1;
-  background: #fff;
-  color: #333;
-  border-radius: 0.75rem;
-  padding: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-  border: none;
-}
-
-.btn-social:hover {
-  background: #e5e5e5;
-}
-
-.btn-social img {
-  width: 20px;
-  height: 20px;
-}
-
-/* ======== Texto registro ======== */
-.register-text {
-  text-align: center;
-  margin-top: 1.5rem;
-  color: #cbd5e1;
-}
-
-.register-text a {
-  color: #60a5fa;
+/* Olvidaste tu contraseña" */
+.link {
+  color: #000000;
   text-decoration: none;
+  font-weight: 500;
 }
 
-.register-text a:hover {
+.link:hover {
   text-decoration: underline;
 }
 
-/* ======== Responsivo ======== */
-@media (max-width: 480px) {
-  .login-card {
-    padding: 1.5rem;
+/* Mensajes de error */
+.msg {
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.msg.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Responsivo para pantallas pequeñas */
+@media (max-width: 640px) {
+  .auth-card .card-content {
+    padding: 1.75rem 1.4rem;
   }
 
-  .title {
-    font-size: 2rem;
+  .auth-card.card {
+    max-width: 100%;
+  }
+
+  .title-xl {
+    font-size: 1.7rem;
   }
 }
+
+/* Contenedor de logo en login */
+.login-brand {
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;    
+  justify-content: center;  
+  gap: 0.75rem;             
+}
+
+/* Nutria */
+.login-logo-icon {
+  height: 56px;
+  width: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Logo de letras */
+.login-logo-wordmark {
+  height: 64px;
+  width: auto;
+  object-fit: contain;
+}
+

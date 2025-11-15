@@ -1,4 +1,4 @@
-/* ===== Escena principal estilo “cabina espacial” ===== */
+/* ===== Escena principal ===== */
 .scene-wrap{
   position:relative;
   min-height: calc(100vh - var(--navbar-h, 64px));
@@ -9,7 +9,7 @@
 }
 .scene-bg{
   position:absolute; inset:0;
-  background-image: var(--bg);   /* <-- usa la variable */
+  background-image: var(--bg);  
   background-size: cover;
   background-position: center;
   z-index:0;
@@ -48,18 +48,18 @@
   50%{ transform:translateY(-8px) }
 }
 
-/* — Botones flotantes laterales — */
+/* — Botones laterales — */
 .sidecard{
-  position:absolute; bottom: 400px;;
+  position:absolute; bottom: 300px;
   display:inline-flex; align-items:center; gap:10px;
-  background:#2a6ba7; color:#fff; text-decoration:none;
+  background:#437fb6; color:#fff; text-decoration:none;
   padding:14px 22px; border-radius:18px;
   border:3px solid #cfd7f0;
   box-shadow:0 10px 0 rgba(0,0,0,.18), 0 16px 24px rgba(0,0,0,.25);
   z-index:2; font-weight:800;
 }
 .sidecard .emoji i {
-  font-size: 1.3rem; /* ajusta a gusto */
+  font-size: 1.3rem; 
 }
 
 .sidecard--left{ left:24px; }
@@ -98,3 +98,4 @@
   .hud-progress{ transform: scale(.9); }
   .hero-character{ width: 80vw; top: 56%; }
 }
+

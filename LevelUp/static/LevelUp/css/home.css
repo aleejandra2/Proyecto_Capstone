@@ -18,8 +18,8 @@ body {
 
 /* ======== NAVBAR ======== */
 .navbar-home {
-  background: linear-gradient(90deg, #cfe8ff 0%, #a8d8ff 100%);
-  border-bottom: 3px solid #b5e0ff;
+  background-color: #ffffff;
+  border-bottom: 3px solid #fffc54;
 }
 
 .navbar-home .navbar-brand span {
@@ -30,14 +30,14 @@ body {
 
 /* Botón acceder */
 .navbar-home .btn-edu {
-  background-color: #5bb46a;
+  background-color: #9ad6a4;
   color: white;
   border-radius: 10px;
   transition: all 0.3s ease;
 }
 
 .navbar-home .btn-edu:hover {
-  background-color: #0094ff;
+  background-color: #96cbf1;
 }
 
 /* ======== HERO ======== */
@@ -142,26 +142,42 @@ body {
 
 /* ===== Navbar Home  ===== */
 .navbar-home.navbar-home--kids{
-  /* Reusa tu paleta actual */
-  --ink: var(--azul-oscuro, #004c91);
   --teal: var(--verde, #75d67a);
-  --teal-100: #e6fffb;
-  --sky: var(--celeste, #4db7ff);
 
   /* Compactación */
-  --h: 90px;     /* baja a 48px si lo quieres ultra fino */
+  --h: 90px;  
   --py: 8px;
 
-
-  /* Mantén tu gradiente pero con borde más sutil */
+  /* Mantén tu gradiente */
   min-height: var(--h);
   padding-top: var(--py);
   padding-bottom: var(--py);
 }
 
 /* Marca compacta */
-.navbar-home--kids .navbar-brand{ padding:0; line-height:1; }
-.navbar-home--kids .navbar-brand img{ height: 40px; width:auto; } 
+.navbar-home--kids .navbar-brand{
+  padding:0;
+  line-height:1;
+  display:flex;
+  align-items:center;
+  gap: .75rem;
+}
+
+/* Ícono pequeño (nutria redonda) */
+.navbar-home--kids .navbar-brand img.navbar-logo-icon{
+  height: 48px;
+  width: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Logo de letras GRANDE */
+.navbar-home--kids .navbar-brand img.navbar-logo-wordmark{
+  height: 75px;
+  width: auto;
+  object-fit: contain;
+}
+
 .navbar-home--kids .navbar-brand span{
   font-family: "Henny Penny", cursive;
   font-size: 1.5rem;           
@@ -173,11 +189,11 @@ body {
   padding:.25rem .5rem; border-color: rgba(0,0,0,.1); border-radius:10px;
 }
 
-/* Botón Acceder estilo pill (respeta tus colores) */
+/* Botón Acceder */
 .btn-edu.pill{
   border-radius: var(--radius);
   font-weight: 800;
-  padding: .35rem .8rem;            /* compacto */
+  padding: .35rem .8rem;            
   border: 2px solid var(--teal);
   background: var(--teal);
   color: #000000;
@@ -189,15 +205,13 @@ body {
 /* Colapso con poco aire en mobile */
 .navbar-home--kids .navbar-collapse{ padding-top:.25rem; padding-bottom:.25rem; }
 
-
-/* ===== Sección estilo "Khan Academy Kids" (título manuscrito + subrayados) ===== */
 .kak-section{
   position: relative;
   padding-top: 3.5rem;
-  padding-bottom: 0; /* la banda curva añade espacio */
+  padding-bottom: 0;
 }
 
-/* Banda curva clara detrás del screenshot */
+/* Banda curva */
 .kak-section::after{
   content:"";
   position: absolute; left: 0; right: 0; bottom: 0;
@@ -215,7 +229,7 @@ body {
   font-size: 4rem;
 }
 
-/* Subrayados coloridos tipo “marcador” */
+/* Subrayados */
 .hl{
   position: relative;
   white-space: nowrap;
@@ -233,7 +247,7 @@ body {
 .kak-sublead{
   max-width: 860px;
   margin: 0 auto 2rem;
-  color: #000000; /* slate-600 */
+  color: #000000;
   font-size: 1.5rem;
 }
 
@@ -242,7 +256,7 @@ body {
   position: relative;
   z-index: 1;
   max-width: 1040px;
-  margin-bottom: -60px; /* “se mete” en la banda curva */
+  margin-bottom: -60px; 
   background: #fff;
   border: 1px solid rgba(0,0,0,.06);
   border-radius: 16px;
@@ -267,7 +281,7 @@ body {
 
 
 
-/* ===== Bloque "Todas las funciones" estilo kids ===== */
+/* ===== Bloque "Todas las funciones" ===== */
 
 /* Título manuscrito + subrayados */
 .kak-title{
@@ -283,7 +297,7 @@ body {
   margin-bottom: 1.5rem;
 }
 
-/* Subrayados tipo marcador (reutiliza los del bloque anterior si ya los tienes) */
+/* Subrayados tipo marcador */
 .hl{ position:relative; display:inline-block; white-space:nowrap; }
 .hl::after{
   content:""; position:absolute; left:0; right:0; bottom:.08em; height:.38em;
@@ -322,7 +336,7 @@ body {
   margin:0;
 }
 
-/* Badge de estrella en esquina */
+/* estrella */
 .feat-badge{
   position: relative;
   display: inline-grid;
@@ -344,7 +358,139 @@ body {
   border-bottom:1px solid rgba(0,0,0,.04);
 }
 
-/* Responsive */
+/* Utils de landing educativa */
+.fw-800{font-weight:800;}
+.text-edu-ink-700{color:var(--edu-ink-700);}
+.btn-edu-primary{
+  background:linear-gradient(180deg,#2a5db0,#1e3a8a);
+  color:#fff;border:0;border-radius:14px;padding:.85rem 1.2rem;font-weight:700;
+  box-shadow:0 12px 22px rgba(15,42,85,.25);
+}
+.btn-edu-primary:hover{filter:brightness(1.05);}
+.btn-edu-ghost{
+  background:#eef2ff;color:#1e3a8a;border:0;border-radius:14px;padding:.85rem 1.2rem;font-weight:700;
+}
+.section-pad{padding:72px 0;}
+.mini-bullets{list-style:none;padding:0;margin:0;display:flex;gap:1rem;flex-wrap:wrap}
+.mini-bullets li{position:relative;padding-left:1.25rem}
+.mini-bullets li::before{content:"✓";position:absolute;left:0;color:#10b981;font-weight:900}
+
+/* ====== HERO landing ====== */
+
+.hero-illustration{ 
+  position:relative; 
+  min-height:280px; 
+  display:grid; 
+  place-items:center; 
+}
+
+.hero-illustration img{ 
+  max-width:100%; 
+  height:auto; 
+}
+
+.hero-fallback{ 
+  font-size:4rem; 
+  opacity:.25; 
+  position:absolute; 
+}
+
+/* ====== SPLIT ====== */
+.landing-split{ background:#fff; }
+.split-card{
+  background:var(--edu-card); border-radius:18px; padding:1.25rem 1.25rem 1.4rem;
+  box-shadow:0 12px 24px rgba(13,38,76,.06), inset 0 0 0 1px rgba(13,38,76,.06);
+}
+.split-card .tag{
+  display:inline-block; background:#e6f7f1; color:#0b6b53; border-radius:10px;
+  padding:.25rem .6rem; font-weight:700; margin-bottom:.5rem;
+}
+.split-card .tag.alt{ background:#eef2ff; color:#1e3a8a; }
+.split-card h3{ font-weight:800; }
+
+.font-merienda{
+  font-family: "Merienda", cursive;
+  font-optical-sizing: auto;
+  font-weight: 900;
+  letter-spacing: .1px;
+  line-height: 1.65;
+  text-wrap: balance; 
+}
+
+/* ====== Responsivo ====== */
 @media (max-width: 991.98px){
-  .feat-grid{ grid-template-columns: 1fr; }
+  .section-pad{ padding:56px 0; }
+  .landing-hero{ padding:72px 0 96px; }
+}
+
+@media (max-width: 991.98px) {
+
+  /* Barra superior (logo + hamburguesa) */
+  .navbar-home.navbar-home--kids {
+    background: #ffffff;             
+    padding-top: .4rem;
+    padding-bottom: .4rem;
+  }
+
+  /* "Acceder" */
+  .navbar-home--kids .navbar-collapse {
+    background: #ffffff;  
+    padding: .5rem 0 .75rem;
+    border-bottom: 2px solid #ffda6b; 
+  }
+
+  /* Botón "Acceder" en móvil: ancho completo y centrado */
+  .navbar-home--kids .navbar-collapse .btn-edu.pill {
+    width: 100%;
+    justify-content: center;
+    margin-top: .25rem;
+  }
+}
+
+/* ===== Ajustes NAVBAR HOME en vista móvil ===== */
+@media (max-width: 767.98px) {
+
+  /* El container de la navbar NO se parte en dos filas */
+  .navbar-home--kids .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+  }
+
+  /* La marca (nutria + logo) ocupa el espacio disponible sin saltar de línea */
+  .navbar-home--kids .navbar-brand {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* Reducimos un poco los tamaños en móvil para que no empujen nada hacia abajo */
+  .navbar-home--kids .navbar-brand img.navbar-logo-icon {
+    height: 40px;
+    width: 40px;
+  }
+
+  .navbar-home--kids .navbar-brand img.navbar-logo-wordmark {
+    height: 56px;
+    width: auto;
+  }
+
+  /* El botón hamburguesa se queda pegado a la derecha */
+  .navbar-home--kids .navbar-toggler {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  /* Panel colapsado: fondo blanco y botón Acceder a lo ancho */
+  .navbar-home--kids .navbar-collapse {
+    background: #ffffff;
+    padding: 0.5rem 0 0.75rem;
+    border-bottom: 2px solid #ffda6b;
+  }
+
+  .navbar-home--kids .navbar-collapse .btn-edu.pill {
+    width: 100%;
+    justify-content: center;
+    margin-top: 0.25rem;
+  }
 }
