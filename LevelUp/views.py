@@ -1064,16 +1064,16 @@ def estudiante_mis_actividades(request):
     )
     counts_map = {row["actividad"]: row for row in subs_counts}
 
-    # Intentos personalizados
+    # Intentos personalizados (solo >0; 0 o NULL = ilimitado)
     overrides = (
         AsignacionActividad.objects
         .filter(estudiante=estudiante, actividad__in=act_qs)
         .values("actividad_id", "intentos_permitidos")
     )
     ov_map = {
-        r["actividad_id"]: r["intentos_permitidos"] 
-        for r in overrides 
-        if r["intentos_permitidos"]
+        r["actividad_id"]: r["intentos_permitidos"]
+        for r in overrides
+        if r["intentos_permitidos"] is not None  # puede ser 0 = ilimitado
     }
 
     now = timezone.now()
@@ -1086,8 +1086,23 @@ def estudiante_mis_actividades(request):
         finalizados = int(c["finalizados"])
         
         cerrada = bool(a.fecha_cierre and now > a.fecha_cierre)
-        max_for_student = ov_map.get(a.id) or (a.intentos_max or 1)
-        puede_intentar = (not cerrada) and (usados < max_for_student)
+
+        # ---- lógica de intentos (0 o None = ilimitado) ----
+        raw_max = ov_map.get(a.id)
+        if raw_max is None:
+            raw_max = a.intentos_max  # puede ser None o 0
+
+        if raw_max is None:
+            raw_max = 0
+
+        try:
+            max_for_student = int(raw_max)
+        except (TypeError, ValueError):
+            max_for_student = 0
+
+        es_ilimitado = (max_for_student == 0)
+
+        puede_intentar = (not cerrada) and (es_ilimitado or usados < max_for_student)
         tiene_abierto = abiertos > 0
         tiene_resultados = finalizados > 0
 
@@ -1106,6 +1121,7 @@ def estudiante_mis_actividades(request):
             "a": a, 
             "usados": usados, 
             "max": max_for_student,
+            "es_ilimitado": es_ilimitado,
             "tiene_abierto": tiene_abierto, 
             "puede_intentar": puede_intentar,
             "tiene_resultados": tiene_resultados, 
@@ -1196,9 +1212,24 @@ def actividad_resultados(request, pk):
         items_data.append({"item": item, "detalle": detalle})
 
     intentos_usados = Submission.objects.filter(actividad=act, estudiante=estudiante).count()
-    intentos_max = act.intentos_max
+
+    # ----- intentos_max (0 o None = ilimitado) -----
+    raw_max = act.intentos_max
+    if raw_max is None:
+        raw_max = 0
+    try:
+        intentos_max = int(raw_max)
+    except (TypeError, ValueError):
+        intentos_max = 0
+
+    es_intentos_ilimitados = (intentos_max == 0)
+
     now = timezone.now()
-    puede_reintentar = act.es_publicada and (not act.fecha_cierre or now <= act.fecha_cierre) and intentos_usados < intentos_max
+    puede_reintentar = (
+        act.es_publicada and
+        (not act.fecha_cierre or now <= act.fecha_cierre) and
+        (es_intentos_ilimitados or intentos_usados < intentos_max)
+    )
 
     return render(request, "LevelUp/actividades/estudiante_resultados.html", {
         "actividad": act,
@@ -1206,8 +1237,10 @@ def actividad_resultados(request, pk):
         "items_data": items_data,
         "intentos_usados": intentos_usados,
         "intentos_max": intentos_max,
+        "es_intentos_ilimitados": es_intentos_ilimitados,
         "puede_reintentar": puede_reintentar,
         "intentos": list(intento_qs),
+        "celebration_video_url": static("LevelUp/video/Timo_celebrando_animado.mp4"),
     })
 
 # ===================================================================
@@ -1257,14 +1290,25 @@ def actividad_play(request, pk):
         messages.warning(request, "La actividad está cerrada.")
         return redirect("estudiante_lista")
     
-    # Intentos
+    # ----- Intentos (0 o None = ilimitado) -----
     intentos_usados = Submission.objects.filter(
         actividad=act, 
         estudiante=estudiante
     ).count()
-    intentos_max = act.intentos_max or 1
-    
-    print(f"🔢 Intentos: {intentos_usados}/{intentos_max}")
+
+    raw_max = act.intentos_max  # puede ser None o 0
+    if raw_max is None:
+        raw_max = 0
+    try:
+        intentos_max = int(raw_max)
+    except (TypeError, ValueError):
+        intentos_max = 0
+
+    es_intentos_ilimitados = (intentos_max == 0)
+
+    print(f"🔢 Intentos usados: {intentos_usados}")
+    print(f"🔢 intentos_max (0 = ilimitado): {intentos_max}")
+    print(f"   es_intentos_ilimitados: {es_intentos_ilimitados}")
     
     # Buscar submission abierto
     sub = (Submission.objects
@@ -1274,8 +1318,8 @@ def actividad_play(request, pk):
     print(f"📝 Submission existente: {sub is not None}")
     
     if not sub:
-        if intentos_usados >= intentos_max:
-            print(f"❌ Sin intentos disponibles")
+        if (not es_intentos_ilimitados) and intentos_usados >= intentos_max:
+            print(f"❌ Sin intentos disponibles (limitado)")
             messages.info(request, "Ya no tienes intentos disponibles.")
             return redirect("resolver_resultado", pk=act.pk)
         
@@ -1380,6 +1424,8 @@ def actividad_play(request, pk):
             "xp_total": act.xp_total or 0,
             "intento_actual": sub.intento,
             "intentos_max": intentos_max,
+            "es_intentos_ilimitados": es_intentos_ilimitados,
+            "celebration_video_url": static("LevelUp/video/Timo_celebrando_animado.mp4"),
         }
         
         return render(request, "LevelUp/actividades/play.html", ctx)
@@ -1425,7 +1471,6 @@ def api_item_answer(request, pk, item_id):
     ).order_by('-intento').first()
     
     if not sub:
-        # Crear nuevo submission
         intentos_count = Submission.objects.filter(
             actividad=actividad,
             estudiante=estudiante
@@ -1470,7 +1515,6 @@ def api_item_answer(request, pk, item_id):
     )
     
     if not created:
-        # Actualizar existente
         answer.respuesta = payload
         answer.es_correcta = completado
         answer.puntaje_obtenido = meta.get('correctas', 0) * 10
@@ -1479,7 +1523,7 @@ def api_item_answer(request, pk, item_id):
     else:
         print(f"✅ Answer creado: #{answer.pk}")
 
-    # Actualizar score del submission
+    # Actualizar score del submission (si tiene esos campos)
     total_correctas = meta.get('correctas', 0)
     total_incorrectas = meta.get('misses', 0)
     
@@ -1493,25 +1537,33 @@ def api_item_answer(request, pk, item_id):
     sub.finished_at = timezone.now()
     sub.save()
     
-    print(f"✅ Submission actualizado: score={getattr(sub, 'score', 'N/A')}")
+    print(f"✅ Submission actualizado")
 
-    # Calcular recompensas
-    outcome = compute_rewards(meta)
-    res = apply_rewards(estudiante, outcome)
+    # ⚠️ COMENTAR TEMPORALMENTE LAS RECOMPENSAS
+    # Si hay error en rewards.py, comentar estas líneas:
+    try:
+        outcome = compute_rewards(meta)
+        res = apply_rewards(estudiante, outcome)
+        
+        print(f"🎁 Recompensas aplicadas: XP={outcome.xp}, Coins={outcome.coins}")
+        
+        reward_data = {
+            "xp": outcome.xp, 
+            "coins": outcome.coins, 
+            "unlocks": outcome.unlocks, 
+            **res
+        }
+    except Exception as e:
+        print(f"⚠️ Error en rewards (ignorado): {e}")
+        reward_data = {"xp": 0, "coins": 0, "unlocks": []}
 
-    print(f"🎁 Recompensas aplicadas: XP={outcome.xp}, Coins={outcome.coins}")
     print(f"{'='*60}\n")
 
     return JsonResponse({
         "ok": True,
         "submission_id": sub.id,
         "answer_id": answer.id,
-        "reward": {
-            "xp": outcome.xp, 
-            "coins": outcome.coins, 
-            "unlocks": outcome.unlocks, 
-            **res
-        },
+        "reward": reward_data,
     })
 
 @require_POST

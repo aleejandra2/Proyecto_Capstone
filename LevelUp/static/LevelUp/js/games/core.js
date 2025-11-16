@@ -1,73 +1,107 @@
+console.log('[core.js] ✅ Módulo cargado');
+
 export function getCSRF() {
   const m = document.cookie.match(/csrftoken=([^;]+)/);
   return m ? m[1] : "";
 }
 
 export async function postAnswer(actividadId, itemId, payload = {}) {
+  console.log(`[core.js] 💾 Guardando respuesta - Item ${itemId}`, payload);
   const res = await fetch(`/api/actividades/${actividadId}/answer/${itemId}/`, {
     method: "POST",
     headers: { "X-CSRFToken": getCSRF(), "Content-Type": "application/json" },
     body: JSON.stringify({ payload })
   });
-  if (!res.ok) throw new Error("Fallo guardando respuesta");
-  return res.json();
+  if (!res.ok) {
+    console.error('[core.js] ❌ Error guardando respuesta:', res.status);
+    throw new Error("Fallo guardando respuesta");
+  }
+  const data = await res.json();
+  console.log('[core.js] ✅ Respuesta guardada:', data);
+  return data;
 }
 
-export function shuffle(a){ return a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]); }
+export function shuffle(a) {
+  console.log('[core.js] 🔀 Mezclando array de', a.length, 'elementos');
+  return a.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(x => x[1]);
+}
 
-export function header(root, title, timeStart=90){
-  const wrap = document.createElement("div");
-  wrap.className = "lv-header";
-  const left = document.createElement("div");
-  left.innerHTML = `
-    <div style="display:flex; align-items:center; gap:12px;">
-      <div class="lv-avatar" id="lvAvatar">
-        <img id="lvAvatarImg" alt="avatar">
-        <div class="lv-layer" id="lvLayerCara"></div>
-        <div class="lv-layer" id="lvLayerCabeza"></div>
-        <div class="lv-layer" id="lvLayerEspalda"></div>
-      </div>
-      <div>
-        <div style="font-weight:800">${title}</div>
-        <div class="lv-meta">
-          <span class="pill">Nivel <span id="lvLevel">1</span></span>
-          <span class="pill">XP <span id="lvXP">0</span></span>
-        </div>
-      </div>
-    </div>`;
-  const right = document.createElement("div");
-  right.innerHTML = `
-    <div class="pill">⏱ <span id="lvTime">Tiempo</span></div>
-    <div class="lv-progress"><div id="lvBar"></div></div>`;
-  wrap.appendChild(left); wrap.appendChild(right);
-  root.appendChild(wrap);
+// Función para reproducir sonidos
+export function playSound(type) {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
 
-  // Avatar + equip
-  const AV = window.GAME_AVATAR || {};
-  const img = root.querySelector("#lvAvatarImg");
-  img.src = AV.img || "";
-  root.querySelector("#lvLevel").textContent = AV.nivel ?? 1;
-  root.querySelector("#lvXP").textContent = AV.xp ?? 0;
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
 
-  const equip = AV.equip || {};
-  const map = { cara: "lvLayerCara", cabeza: "lvLayerCabeza", espalda: "lvLayerEspalda" };
-  Object.entries(map).forEach(([slot, id])=>{
-    const layer = root.querySelector("#"+id);
-    const slug = (equip[slot] || "").trim();
-    layer.className = "lv-layer " + (slug ? ("lv-accessorio-" + slug) : "");
-  });
+  switch (type) {
+    case 'success':
+      // Sonido alegre ascendente
+      oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+      oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+      oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+      break;
 
-  // contador
-  let t = timeStart;
-  const timeEl = root.querySelector("#lvTime");
-  timeEl.textContent = `${t}s`;
-  const it = setInterval(()=>{ t--; timeEl.textContent = `${t}s`; if (t<=0) clearInterval(it); },1000);
+    case 'error':
+      // Sonido grave descendente
+      oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(150, audioContext.currentTime + 0.15);
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.2);
+      break;
 
+    case 'complete':
+      // Fanfarria de victoria
+      const notes = [523.25, 587.33, 659.25, 783.99, 880.00];
+      notes.forEach((freq, i) => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.frequency.setValueAtTime(freq, audioContext.currentTime + i * 0.1);
+        gain.gain.setValueAtTime(0.2, audioContext.currentTime + i * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i * 0.1 + 0.3);
+        osc.start(audioContext.currentTime + i * 0.1);
+        osc.stop(audioContext.currentTime + i * 0.1 + 0.3);
+      });
+      break;
+  }
+}
+
+// Header simplificado - sin avatar ni nivel
+export function header(root, title, timeStart = 90) {
+  console.log('[core.js] 📋 Header simplificado (sin avatar)');
   return {
-    setBar: (p)=>{ root.querySelector("#lvBar").style.width = `${Math.max(0, Math.min(100, p))}%`; },
-    bump: ()=>{
-      const a = root.querySelector("#lvAvatar");
-      a.style.transform = "translateY(-4px)"; setTimeout(()=>a.style.transform="", 180);
-    }
+    setBar: (p) => { },
+    bump: () => { }
   };
 }
+
+// Verificar que el CSS de games esté cargado
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('[core.js] 🎨 Verificando carga de CSS...');
+  const testDiv = document.createElement('div');
+  testDiv.className = 'tr-opt';
+  testDiv.style.display = 'none';
+  document.body.appendChild(testDiv);
+
+  const styles = window.getComputedStyle(testDiv);
+  const borderRadius = styles.borderRadius;
+
+  if (borderRadius && borderRadius !== '0px') {
+    console.log('[core.js] ✅ CSS de games.css cargado correctamente');
+    console.log('[core.js] 📏 Border radius de .tr-opt:', borderRadius);
+  } else {
+    console.warn('[core.js] ⚠️ CSS de games.css NO se cargó correctamente');
+    console.warn('[core.js] 💡 Verifica que games.css esté en LevelUp/css/games.css');
+  }
+
+  document.body.removeChild(testDiv);
+});

@@ -1,131 +1,196 @@
-// classify.js — Clasificación con DnD + menú "Enviar a…"
-export default async function initClassify(host, cfg = {}) {
-  const { bins, items } = getData(cfg);
-  if (!bins.length || !items.length) {
-    host.innerHTML = `<div class="alert alert-warning" data-game-rendered>Faltan ítems o canastas.</div>`;
+// static/LevelUp/js/games/classify.js
+import { shuffle, header, playSound } from './core.js';
+
+export default function init(host, cfg) {
+  console.group('🎮 [CLASSIFY] Inicializando');
+  console.log('📦 Config:', cfg);
+
+  // Normalizar estructura
+  const bins = cfg.bins || [];
+  let items = cfg.items || [];
+  const answers = cfg.answers || {};
+
+  console.log('📊 Datos:', { bins: bins.length, items: items.length, answers });
+
+  if (!bins.length || !items.length || !Object.keys(answers).length) {
+    console.error('❌ Datos incompletos');
+    host.innerHTML = '<div class="alert alert-warning">Faltan datos para clasificar</div>';
+    console.groupEnd();
     return false;
   }
 
-  const sfx = createSfx(cfg.sfx !== false);
+  host.innerHTML = '';
+  host.setAttribute('data-game-rendered', 'true');
 
-  host.innerHTML = "";
-  host.dataset.gameComplete = "false";
-  host.setAttribute("data-game-rendered", "1");
+  const hd = header(host, 'Clasificar', cfg.timeLimit || 90);
 
-  const wrap = el("div", "lv-card classify-board");
-  const left = el("div", "classify-pool");
-  const right = el("div", "classify-bins");
-  wrap.appendChild(left); wrap.appendChild(right);
+  const wrap = document.createElement('div');
+  wrap.className = 'classify-game';
+  wrap.innerHTML = `
+    <div class="classify-pool">
+      <div class="classify-pool-title">📦 Arrastra los elementos a la categoría correcta</div>
+      <div class="classify-items" id="classifyPool"></div>
+    </div>
+    <div class="classify-bins" id="classifyBins"></div>
+  `;
   host.appendChild(wrap);
 
-  // build bins
-  const binEls = bins.map((b, i) => {
-    const box = el("div", "classify-bin", `<div class="bin-title">${escapeHtml(b.title)}</div><div class="bin-drop" data-bin="${b.id}"></div>`);
-    right.appendChild(box);
-    const drop = box.querySelector(".bin-drop");
-    drop.addEventListener("dragover", ev => { ev.preventDefault(); drop.classList.add("over"); });
-    drop.addEventListener("dragleave", () => drop.classList.remove("over"));
-    drop.addEventListener("drop", ev => {
-      ev.preventDefault(); drop.classList.remove("over");
-      const chip = left.querySelector(".classify-chip.dragging") || document.querySelector(".classify-chip.dragging");
-      chip && drop.appendChild(chip);
-      sfx.flip(); checkPartial();
-    });
-    return drop;
-  });
+  const pool = wrap.querySelector('#classifyPool');
+  const binsContainer = wrap.querySelector('#classifyBins');
 
-  // build chips
-  shuffle(items.slice()).forEach(it => {
-    const chip = el("button", "classify-chip btn btn-light btn-sm", escapeHtml(it.text));
-    chip.type = "button"; chip.draggable = true; chip.dataset.id = it.id; chip.dataset.bin = it.bin;
-    chip.addEventListener("dragstart", () => { chip.classList.add("dragging"); sfx.flip(); });
-    chip.addEventListener("dragend", () => chip.classList.remove("dragging"));
-    chip.addEventListener("click", () => {
-      // Accesibilidad: menú "Enviar a…"
-      const names = bins.map((b, idx) => `${idx + 1}) ${b.title}`).join("\n");
-      const pick = window.prompt(`Enviar a…\n${names}\n(Número)`);
-      const idx = Number(pick) - 1;
-      if (!isNaN(idx) && idx >= 0 && idx < binEls.length) {
-        binEls[idx].appendChild(chip); sfx.flip(); checkPartial();
+  // Mezclar ítems
+  items = shuffle([...items]);
+
+  // Estado
+  const state = {
+    placed: {},
+    correct: 0
+  };
+
+  function renderEndCard() {
+    const total = items.length;
+    const score = state.correct / total;
+    const good = score >= 0.6;
+
+    wrap.innerHTML = `
+      <div style="
+        text-align:center;
+        padding:3rem 2rem;
+        background:white;
+        border-radius:24px;
+        box-shadow:0 18px 60px rgba(15,23,42,0.18);
+      ">
+        <div style="font-size:4rem; margin-bottom:1rem;">
+          ${good ? '🎉' : '😢'}
+        </div>
+        <h3 style="
+          font-size:2.4rem;
+          font-weight:900;
+          color:#1f2933;
+          margin-bottom:0.75rem;
+        ">
+          ${good ? '¡Excelente!' : 'Sigue practicando'}
+        </h3>
+        <p style="
+          font-size:1.25rem;
+          font-weight:700;
+          color:${good ? '#15803d' : '#b91c1c'};
+          margin-bottom:0.25rem;
+        ">
+          ${state.correct} de ${total} clasificados correctamente
+        </p>
+        <p style="font-size:1.05rem; color:#4b5563;">
+          Puntuación: ${Math.round(score * 100)}%
+        </p>
+      </div>
+    `;
+
+    host.dataset.gameComplete = 'true';
+    host.dataset.gameScore = score.toFixed(2);
+    host.dataset.gameCorrect = state.correct;
+    host.dataset.gameTotal = total;
+  }
+
+  // Crear bins
+  bins.forEach(bin => {
+    const binEl = document.createElement('div');
+    binEl.className = 'classify-bin';
+    binEl.dataset.binId = bin.id;
+    binEl.innerHTML = `
+      <div class="classify-bin-title">${bin.label || bin.title || bin.id}</div>
+      <div class="classify-bin-items" data-bin-id="${bin.id}"></div>
+    `;
+
+    // Drag over
+    binEl.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      binEl.classList.add('drag-over');
+    });
+
+    binEl.addEventListener('dragleave', () => {
+      binEl.classList.remove('drag-over');
+    });
+
+    // Drop
+    binEl.addEventListener('drop', (e) => {
+      e.preventDefault();
+      binEl.classList.remove('drag-over');
+
+      const itemDomId = e.dataTransfer.getData('text/plain');
+      const itemEl = document.getElementById(itemDomId);
+
+      if (!itemEl) return;
+
+      const total = items.length;
+
+      // Si este ítem ya estaba en otro bin, no contamos doble
+      if (!state.placed[itemDomId]) {
+        state.placed[itemDomId] = bin.id;
+      } else {
+        state.placed[itemDomId] = bin.id;
+      }
+
+      // Mover a bin
+      const binItems = binEl.querySelector('.classify-bin-items');
+      binItems.appendChild(itemEl);
+
+      // Verificar si es correcto
+      const correctBin = answers[itemDomId.replace('item-', '')] || answers[itemDomId];
+      if (bin.id === correctBin) {
+        itemEl.style.background = 'linear-gradient(135deg, #51CF66, #8ce99a)';
+        itemEl.style.color = '#fff';
+        playSound('success');
+        // evitar sumar varias veces el mismo ítem
+        if (!itemEl.dataset.countedCorrect) {
+          state.correct++;
+          itemEl.dataset.countedCorrect = '1';
+        }
+      } else {
+        itemEl.style.background = 'linear-gradient(135deg, #FF6B6B, #ff8787)';
+        itemEl.style.color = '#fff';
+        playSound('error');
+        if (itemEl.dataset.countedCorrect === '1') {
+          state.correct--;
+          itemEl.dataset.countedCorrect = '0';
+        }
+      }
+
+      // Actualizar progreso
+      const placed = Object.keys(state.placed).length;
+      hd.setBar((placed / total) * 100);
+      hd.bump && hd.bump();
+
+      // Si terminó
+      if (placed === total) {
+        playSound('complete');
+        setTimeout(renderEndCard, 400);
       }
     });
-    left.appendChild(chip);
+
+    binsContainer.appendChild(binEl);
   });
 
-  const checkBtn = el("button", "btn btn-primary btn-sm mt-2", "Corregir");
-  left.appendChild(checkBtn);
+  // Crear ítems
+  items.forEach(item => {
+    const itemEl = document.createElement('div');
+    itemEl.className = 'classify-item';
+    itemEl.id = `item-${item.id}`;
+    itemEl.textContent = item.text;
+    itemEl.draggable = true;
 
-  checkBtn.addEventListener("click", () => {
-    let correct = 0, total = items.length;
-    document.querySelectorAll(".bin-drop").forEach(drop => {
-      const binId = drop.dataset.bin;
-      drop.querySelectorAll(".classify-chip").forEach(ch => {
-        const ok = (ch.dataset.bin === binId);
-        ch.classList.toggle("ok", ok);
-        ch.classList.toggle("bad", !ok);
-        if (ok) correct++;
-      });
+    itemEl.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', itemEl.id);
+      itemEl.classList.add('dragging');
     });
-    host.dataset.gameComplete = "true";
-    host.dataset.gameCorrect = String(correct);
-    host.dataset.gameTotal = String(total);
-    host.dataset.gameScore = String((correct / total).toFixed(4));
-    if (correct === total) { sfx.ok(); confetti(host); } else sfx.bad();
+
+    itemEl.addEventListener('dragend', () => {
+      itemEl.classList.remove('dragging');
+    });
+
+    pool.appendChild(itemEl);
   });
 
-  function checkPartial() {
-    // Pinta solo el porcentaje en título (feedback suave)
-    document.querySelectorAll(".classify-bin").forEach(box => {
-      const drop = box.querySelector(".bin-drop");
-      const binId = drop.dataset.bin;
-      const chips = Array.from(drop.querySelectorAll(".classify-chip"));
-      if (!chips.length) { box.style.setProperty("--pct", "0%"); return; }
-      const ok = chips.filter(c => c.dataset.bin === binId).length;
-      const pct = Math.round((ok / chips.length) * 100);
-      box.style.setProperty("--pct", pct + "%");
-    });
-  }
-
-  // helpers
-  function getData(cfg) {
-    // Preferir estructuras explícitas
-    if (Array.isArray(cfg.bins) && Array.isArray(cfg.items) && cfg.bins.length && cfg.items.length) {
-      return {
-        bins: cfg.bins.map(b => ({ id: String(b.id ?? b.value ?? b.key ?? b.title), title: String(b.title ?? b.name ?? b.id) })),
-        items: cfg.items.map((it, idx) => ({ id: String(it.id ?? idx), text: String(it.text ?? it.label ?? it.left ?? it.term), bin: String(it.bin ?? it.to) }))
-      };
-    }
-    // Texto: "item | bin"
-    const outBins = new Map(); const outItems = [];
-    (String(cfg.text || cfg.game_pairs || "")).split(/\r?\n/).forEach((ln, i) => {
-      ln = (ln || "").trim(); if (!ln) return;
-      const p = ln.split("|").map(s => s.trim());
-      if (p.length >= 2) {
-        const item = p[0], binName = p[1];
-        if (!outBins.has(binName)) outBins.set(binName, { id: binName, title: binName });
-        outItems.push({ id: "i" + i, text: item, bin: binName });
-      }
-    });
-    return { bins: Array.from(outBins.values()), items: outItems };
-  }
-  function shuffle(a) { return a.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(x => x[1]); }
-  function el(tag, cls, html) { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; }
-  function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
-  function confetti(root) { const wrap = el("div", "confetti-wrap"); root.appendChild(wrap); for (let k = 0; k < 60; k++) { const p = el("i", "confetti"); p.style.setProperty("--tx", (Math.random() * 200 - 100).toFixed(0)); p.style.setProperty("--d", (0.6 + Math.random() * 0.8).toFixed(2) + "s"); p.style.left = (10 + Math.random() * 80).toFixed(0) + "%"; wrap.appendChild(p); } setTimeout(() => wrap.remove(), 1200); }
-  function createSfx(enabled = true) {
-    let ctx = null;
-    function beep(freq = 440, dur = 0.12, type = "sine", gain = 0.05) {
-      if (!enabled) return;
-      try {
-        ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = type; o.frequency.value = freq; g.gain.value = gain; o.connect(g); g.connect(ctx.destination);
-        o.start(); o.stop(ctx.currentTime + dur);
-      } catch { }
-    }
-    return {
-      get enabled() { return enabled; }, set enabled(v) { enabled = !!v; },
-      flip() { beep(400, .07, "triangle", .04); }, ok() { beep(760, .10, "sine", .07); }, bad() { beep(180, .18, "sawtooth", .07); }
-    };
-  }
+  console.log('✅ Classify renderizado');
+  console.groupEnd();
+  return true;
 }

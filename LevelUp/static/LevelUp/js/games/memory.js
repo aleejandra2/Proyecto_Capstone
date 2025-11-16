@@ -1,126 +1,228 @@
-﻿// memory.js — Memoria con flip 3D, brillo y SFX
-export default async function initMemory(host, cfg = {}) {
-  const pairs = normalizePairs(cfg);
-  if (!pairs.length) {
-    host.innerHTML = `<div class="alert alert-warning" data-game-rendered>No hay pares.</div>`;
-    return false;
+﻿import { shuffle, playSound } from './core.js';
+
+console.log('🎮 [MEMORY] Módulo cargado');
+
+export default async function init(host, cfg) {
+  console.log('🎮 [MEMORY] Inicializando');
+
+  const pairs = cfg.pairs || [];
+  if (pairs.length < 2) {
+    console.error('❌ [MEMORY] Necesita al menos 2 pares');
+    return;
   }
 
-  const sfx = createSfx(cfg.sfx !== false);
-
-  host.innerHTML = "";
-  host.dataset.gameComplete = "false";
-  host.setAttribute("data-game-rendered", "1");
-
-  const board = el("div", "game-board");
-  host.appendChild(board);
-
+  // Crear cartas duplicadas a partir de pairs
   const cards = [];
-  pairs.forEach(([a, b], k) => {
-    cards.push(makeCard(a, k));
-    cards.push(makeCard(b, k));
-  });
-  shuffle(cards).forEach(c => board.appendChild(c.el));
-
-  let sel = [];
-  let solved = 0;
-
-  board.addEventListener("click", (ev) => {
-    const btn = ev.target.closest(".game-card");
-    if (!btn) return;
-    const card = cards.find(c => c.el === btn);
-    if (!card || card.solved || card.flipped) return;
-    flip(card);
+  pairs.forEach((pair, idx) => {
+    // pair[0] y pair[1] = textos o imágenes de las dos mitades
+    cards.push({ id: `a-${idx}`, text: pair[0], pairId: idx });
+    cards.push({ id: `b-${idx}`, text: pair[1], pairId: idx });
   });
 
-  function flip(card) {
-    sfx.flip();
-    card.flip(true);
-    sel.push(card);
-    if (sel.length === 2) {
-      const [c1, c2] = sel;
-      if (c1.pair === c2.pair) {
-        c1.solved = c2.solved = true;
-        c1.el.classList.add("ok", "glow-ok");
-        c2.el.classList.add("ok", "glow-ok");
-        sfx.ok();
-        solved++;
-        sel = [];
-        if (solved === pairs.length) finish();
-      } else {
-        sfx.bad();
-        c1.el.classList.add("glow-bad"); c2.el.classList.add("glow-bad");
-        setTimeout(() => { c1.el.classList.remove("glow-bad"); c2.el.classList.remove("glow-bad"); }, 250);
-        setTimeout(() => { c1.flip(false); c2.flip(false); sel = []; }, 520);
+  const shuffled = shuffle(cards);
+  let flipped = [];
+  let matched = 0;
+  let attempts = 0;
+
+  // Limpiar host
+  host.innerHTML = '';
+  host.style.padding = '0';
+  host.style.background = 'transparent';
+
+  // Contenedor principal
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'padding: 0;';
+
+  // Header del juego
+  const headerDiv = document.createElement('div');
+  headerDiv.style.cssText = `
+    background: linear-gradient(135deg, #e599f7 0%, #b197fc 100%);
+    padding: 2rem 1.5rem;
+    border-radius: 20px;
+    margin-bottom: 2rem;
+    text-align: center;
+    box-shadow: 0 6px 24px rgba(181, 151, 252, 0.3);
+  `;
+  headerDiv.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1rem;">
+      <div style="width: 60px; height: 60px; background: rgba(255, 255, 255, 0.2); border-radius: 50%;
+                  display: flex; align-items: center; justify-content: center; font-size: 2rem; backdrop-filter: blur(10px);">
+        🧠
+      </div>
+      <div>
+        <div style="color: white; font-size: 1.8rem; font-weight: 900; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);">
+          Juego de Memoria
+        </div>
+      </div>
+    </div>
+    <div style="color: rgba(255,255,255,0.95); font-size: 1.1rem; font-weight: 600; margin-bottom: 1.5rem;">
+      🎯 Encuentra todos los pares volteando las cartas
+    </div>
+    <div style="display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap;">
+      <div style="background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); padding: 0.75rem 1.5rem; border-radius: 12px;">
+        <div style="color: rgba(255,255,255,0.8); font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem;">Parejas</div>
+        <div style="color: white; font-size: 1.8rem; font-weight: 900;">
+          <span id="mem-matched">0</span><span style="font-size: 1.2rem; opacity: 0.7;">/${pairs.length}</span>
+        </div>
+      </div>
+      <div style="background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); padding: 0.75rem 1.5rem; border-radius: 12px;">
+        <div style="color: rgba(255,255,255,0.8); font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem;">Intentos</div>
+        <div style="color: white; font-size: 1.8rem; font-weight: 900;" id="mem-attempts">0</div>
+      </div>
+    </div>
+  `;
+  wrapper.appendChild(headerDiv);
+
+  // Board de cartas
+  const board = document.createElement('div');
+  board.className = 'memory-board';
+  board.style.cssText = `
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 1.25rem;
+    padding: 0;
+  `;
+
+  shuffled.forEach((card) => {
+    const cardWrap = document.createElement('div');
+    cardWrap.className = 'memory-card-wrap';
+
+    const cardEl = document.createElement('div');
+    cardEl.className = 'memory-card';
+    cardEl.dataset.cardId = card.id;
+    cardEl.dataset.pairId = card.pairId;
+
+    // Cara frontal (dorso)
+    const front = document.createElement('div');
+    front.className = 'card-front';
+
+    // Cara trasera (texto)
+    const back = document.createElement('div');
+    back.className = 'card-back';
+    back.textContent = card.text;
+
+    cardEl.appendChild(front);
+    cardEl.appendChild(back);
+    cardWrap.appendChild(cardEl);
+
+    // Lógica de click
+    cardEl.addEventListener('click', () => {
+      if (cardEl.classList.contains('flipped') ||
+        cardEl.classList.contains('matched') ||
+        flipped.length >= 2) {
+        return;
       }
-    }
-  }
+
+      console.log(`👆 [MEMORY] Click en carta ${card.id}`);
+
+      cardEl.classList.add('flipped');
+      flipped.push(cardEl);
+
+      if (flipped.length === 2) {
+        attempts++;
+        const attemptsEl = headerDiv.querySelector('#mem-attempts');
+        if (attemptsEl) attemptsEl.textContent = attempts;
+
+        const [c1, c2] = flipped;
+        const pair1 = c1.dataset.pairId;
+        const pair2 = c2.dataset.pairId;
+
+        if (pair1 === pair2) {
+          console.log('✅ [MEMORY] Par encontrado!');
+          playSound('success');
+
+          setTimeout(() => {
+            c1.classList.add('matched');
+            c2.classList.add('matched');
+
+            // Efecto visual en el texto
+            const back1 = c1.querySelector('.card-back');
+            const back2 = c2.querySelector('.card-back');
+            if (back1 && back2) {
+              back1.style.cssText += `
+                background: linear-gradient(135deg, #51CF66 0%, #8ce99a 100%) !important;
+                color: white !important;
+                border-color: #51CF66 !important;
+              `;
+              back2.style.cssText += `
+                background: linear-gradient(135deg, #51CF66 0%, #8ce99a 100%) !important;
+                color: white !important;
+                border-color: #51CF66 !important;
+              `;
+            }
+
+            matched++;
+            const matchedEl = headerDiv.querySelector('#mem-matched');
+            if (matchedEl) matchedEl.textContent = matched;
+
+            flipped = [];
+
+            if (matched === pairs.length) {
+              setTimeout(() => finish(), 600);
+            }
+          }, 500);
+        } else {
+          console.log('❌ [MEMORY] No coinciden');
+          playSound('error');
+
+          setTimeout(() => {
+            c1.classList.remove('flipped');
+            c2.classList.remove('flipped');
+
+            c1.style.animation = 'wiggle 0.5s ease-out';
+            c2.style.animation = 'wiggle 0.5s ease-out';
+
+            setTimeout(() => {
+              c1.style.animation = '';
+              c2.style.animation = '';
+            }, 500);
+
+            flipped = [];
+          }, 900);
+        }
+      }
+    });
+
+    board.appendChild(cardWrap);
+  });
+
+  wrapper.appendChild(board);
+  host.appendChild(wrapper);
 
   function finish() {
-    host.dataset.gameComplete = "true";
-    host.dataset.gameCorrect = String(pairs.length);
-    host.dataset.gameTotal = String(pairs.length);
-    host.dataset.gameScore = "1";
-    confetti(host); sfx.win();
+    console.log('🏁 [MEMORY] Juego completado');
+    playSound('complete');
+
+    const efficiency = attempts > 0 ? (pairs.length / attempts) : 1;
+    const stars = efficiency >= 0.8 ? '⭐⭐⭐' : efficiency >= 0.6 ? '⭐⭐' : '⭐';
+
+    wrapper.innerHTML = `
+      <div style="text-align: center; padding: 3rem 2rem; background: white; border-radius: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.12);">
+        <div style="font-size: 5rem; margin-bottom: 1.5rem; animation: bounce-in 0.6s ease-out;">🎉</div>
+        <h3 style="font-size: 2.5rem; font-weight: 900; color: #2c3e50; margin-bottom: 1rem;">
+          ¡Felicitaciones!
+        </h3>
+        <div style="font-size: 3rem; margin-bottom: 1rem;">
+          ${stars}
+        </div>
+        <div style="font-size: 1.4rem; font-weight: 700; color: #51CF66; margin-bottom: 1rem;">
+          Encontraste todos los ${pairs.length} pares
+        </div>
+        <div style="font-size: 1.2rem; font-weight: 600; color: #6c757d;">
+          En ${attempts} intentos
+        </div>
+      </div>
+    `;
+
+    host.dataset.gameComplete = 'true';
+    host.dataset.gameScore = '1';
+    host.dataset.gameCorrect = pairs.length;
+    host.dataset.gameTotal = pairs.length;
+
+    console.log('✅ [MEMORY] Marcado como completado');
   }
 
-  // ------- helpers -------
-  function makeCard(text, pair) {
-    const elBtn = document.createElement("button");
-    elBtn.type = "button";
-    elBtn.className = "game-card";
-    const isImg = isImgToken(text);
-    const back = isImg ? `<img src="${isImg}" alt="img" style="max-width:100%;max-height:100%;object-fit:contain">` : escapeHtml(text);
-    elBtn.innerHTML = `<span class="front">?</span><span class="back">${back}</span>`;
-    let flipped = false;
-    const api = {
-      el: elBtn, pair, solved: false,
-      get flipped() { return flipped; },
-      flip(on) { flipped = !!on; elBtn.classList.toggle("flipped", flipped); }
-    };
-    return api;
-  }
-  function isImgToken(t) { const s = String(t || "").trim(); if (/^https?:\/\//.test(s)) return s; if (/\.(png|jpg|jpeg|gif|webp)$/i.test(s)) return s; return null; }
-  function shuffle(a) { return a.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(x => x[1]); }
-  function el(tag, cls, html) { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; }
-  function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
-  function confetti(root) {
-    const wrap = el("div", "confetti-wrap"); root.appendChild(wrap);
-    for (let k = 0; k < 60; k++) { const p = el("i", "confetti"); p.style.setProperty("--tx", (Math.random() * 200 - 100).toFixed(0)); p.style.setProperty("--d", (0.6 + Math.random() * 0.8).toFixed(2) + "s"); p.style.left = (10 + Math.random() * 80).toFixed(0) + "%"; wrap.appendChild(p); }
-    setTimeout(() => wrap.remove(), 1200);
-  }
-  function createSfx(enabled = true) {
-    let ctx = null;
-    function beep(freq = 440, dur = 0.12, type = "sine", gain = 0.05) {
-      if (!enabled) return;
-      try {
-        ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = type; o.frequency.value = freq; g.gain.value = gain;
-        o.connect(g); g.connect(ctx.destination);
-        o.start(); o.stop(ctx.currentTime + dur);
-      } catch { }
-    }
-    return {
-      get enabled() { return enabled; }, set enabled(v) { enabled = !!v; },
-      flip() { beep(400, .07, "triangle", .04); },
-      ok() { beep(760, .10, "sine", .07); },
-      bad() { beep(180, .18, "sawtooth", .07); },
-      win() { [660, 880, 990].forEach((f, i) => setTimeout(() => beep(f, .10, "sine", .09), i * 120)); },
-    };
-  }
-
-  function normalizePairs(cfg) {
-    if (Array.isArray(cfg.pairs) && cfg.pairs.length) return cfg.pairs;
-    if (Array.isArray(cfg.items) && cfg.items.length) {
-      const out = cfg.items.map(it => [it.a || it.left || it.term || "", it.b || it.right || it.def || ""]).filter(p => p[0] && p[1]);
-      if (out.length) return out;
-    }
-    const text = cfg.text || cfg.game_pairs || cfg.pairsRaw || "";
-    if (typeof text === "string") {
-      return text.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
-        .map(ln => ln.split("|").map(s => s.trim())).filter(p => p.length >= 2).map(p => [p[0], p[1]]);
-    }
-    return [];
-  }
+  console.log('✅ Memory renderizado');
+  host.dataset.gameRendered = 'true';
+  return wrapper;
 }

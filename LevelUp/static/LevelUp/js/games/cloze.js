@@ -1,126 +1,215 @@
-// cloze.js — Rellenar huecos con banco de opciones, drag & drop y SFX
-export default async function initCloze(host, cfg = {}) {
-  const text = String(cfg.text || cfg.cloze || cfg.game_pairs || "").trim();
-  const bank = Array.isArray(cfg.bank) ? cfg.bank : parseBank(cfg.text || cfg.game_pairs || "");
-  if (!text) {
-    host.innerHTML = `<div class="alert alert-warning" data-game-rendered>Falta el texto con [huecos].</div>`;
+// static/LevelUp/js/games/cloze.js
+import { shuffle, header, playSound } from './core.js';
+
+export default function init(host, cfg) {
+  console.group('🎮 [CLOZE] Inicializando');
+  console.log('📦 Config:', cfg);
+
+  const text = cfg.text || '';
+  const blanks = cfg.blanks || {};
+
+  console.log('📊 Datos:', { text: text.length, blanks: Object.keys(blanks).length });
+
+  if (!text || !Object.keys(blanks).length) {
+    console.error('❌ Faltan datos');
+    host.innerHTML = '<div class="alert alert-warning">Falta texto o blanks</div>';
+    console.groupEnd();
     return false;
   }
-  const sfx = createSfx(cfg.sfx !== false);
 
-  // parse: [palabra] hueco
-  const tokens = []; const holes = [];
-  text.split(/(\[[^\]]+\])/g).forEach(tok => {
-    if (/^\[[^\]]+\]$/.test(tok)) {
-      const ans = tok.slice(1, -1).trim();
-      const id = holes.length;
-      holes.push(ans);
-      tokens.push({ type: "hole", id, ans });
-    } else {
-      if (tok) tokens.push({ type: "text", text: tok });
-    }
-  });
+  host.innerHTML = '';
+  host.setAttribute('data-game-rendered', 'true');
 
-  const options = unique(bank.concat(holes)).filter(Boolean);
-  shuffle(options);
+  const hd = header(host, 'Completar Espacios', cfg.timeLimit || 90);
 
-  host.innerHTML = "";
-  host.dataset.gameComplete = "false";
-  host.setAttribute("data-game-rendered", "1");
-
-  const wrap = el("div", "cloze-wrap");
-  const p = el("p", "cloze-text");
-  tokens.forEach(t => {
-    if (t.type === "text") p.appendChild(document.createTextNode(t.text));
-    else {
-      const s = el("span", "cloze-hole", "_____"); s.dataset.id = String(t.id);
-      s.dataset.ans = t.ans;
-      s.addEventListener("dragover", ev => { ev.preventDefault(); s.classList.add("over"); });
-      s.addEventListener("dragleave", () => s.classList.remove("over"));
-      s.addEventListener("drop", ev => {
-        ev.preventDefault(); s.classList.remove("over");
-        const val = ev.dataTransfer.getData("text/plain");
-        s.textContent = val; s.dataset.value = val;
-        s.classList.add("filled");
-        sfx.flip();
-        check();
-      });
-      p.appendChild(s);
-    }
-  });
-
-  const bankBox = el("div", "cloze-bank");
-  options.forEach(opt => {
-    const b = el("button", "btn btn-light btn-sm me-2 mb-2", escapeHtml(opt));
-    b.type = "button"; b.draggable = true;
-    b.addEventListener("dragstart", ev => {
-      b.classList.add("dragging"); ev.dataTransfer.setData("text/plain", opt); sfx.flip();
-    });
-    b.addEventListener("dragend", () => b.classList.remove("dragging"));
-    b.addEventListener("click", () => {
-      const hole = wrap.querySelector(".cloze-hole:not(.filled)");
-      if (hole) { hole.textContent = opt; hole.dataset.value = opt; hole.classList.add("filled"); sfx.flip(); check(); }
-    });
-    bankBox.appendChild(b);
-  });
-
-  const reset = el("button", "btn btn-outline-secondary btn-sm mt-2", "Limpiar");
-  reset.type = "button";
-  reset.addEventListener("click", () => {
-    wrap.querySelectorAll(".cloze-hole").forEach(h => { h.textContent = "_____"; h.dataset.value = ""; h.classList.remove("filled", "ok", "bad"); });
-  });
-
-  wrap.appendChild(p);
-  wrap.appendChild(el("div", "small text-muted mt-2", "Arrastra o haz clic para completar los espacios."));
-  wrap.appendChild(bankBox);
-  wrap.appendChild(reset);
+  const wrap = document.createElement('div');
+  wrap.className = 'cloze-game';
   host.appendChild(wrap);
 
-  function check() {
-    const holesEls = Array.from(wrap.querySelectorAll(".cloze-hole"));
-    let correct = 0;
-    holesEls.forEach(h => {
-      const ok = (h.dataset.value || "").trim().toLowerCase() === (h.dataset.ans || "").trim().toLowerCase();
-      h.classList.toggle("ok", ok);
-      h.classList.toggle("bad", h.classList.contains("filled") && !ok);
-      if (ok) correct++;
+  // Crear banco de palabras si no existe
+  const bank = cfg.bank || [];
+  const allOptions = new Set();
+  Object.values(blanks).forEach(b => {
+    if (Array.isArray(b.options)) {
+      b.options.forEach(opt => allOptions.add(opt));
+    }
+  });
+  const finalBank = bank.length ? bank : Array.from(allOptions);
+
+  // Estado
+  const state = {
+    filled: {},
+    correct: 0
+  };
+
+  // Renderizar texto con blanks
+  let html = text;
+  const blankIds = Object.keys(blanks);
+
+  blankIds.forEach(id => {
+    // Reemplazar [[id]] por un span
+    const regex = new RegExp(`\\[\\[${id}\\]\\]`, 'g');
+    html = html.replace(regex, `<span class="cloze-blank" data-blank-id="${id}" id="blank-${id}">______</span>`);
+  });
+
+  wrap.innerHTML = `
+    <div class="cloze-text">${html}</div>
+    <div class="cloze-bank" id="clozeBank">
+      <div class="cloze-bank-title">📝 Arrastra o haz clic para completar:</div>
+      <div class="cloze-words" id="clozeWords"></div>
+    </div>
+  `;
+
+  const wordsContainer = wrap.querySelector('#clozeWords');
+
+  // Crear palabras del banco (mezcladas)
+  const shuffledBank = shuffle([...finalBank]);
+
+  shuffledBank.forEach((word, idx) => {
+    const wordEl = document.createElement('div');
+    wordEl.className = 'cloze-word';
+    wordEl.textContent = word;
+    wordEl.draggable = true;
+    wordEl.dataset.word = word;
+    wordEl.id = `word-${idx}`;
+
+    // Drag
+    wordEl.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', word);
+      wordEl.classList.add('dragging');
     });
-    if (correct === holesEls.length) {
-      host.dataset.gameComplete = "true";
-      host.dataset.gameCorrect = String(correct);
-      host.dataset.gameTotal = String(holesEls.length);
-      host.dataset.gameScore = "1";
-      sfx.ok(); confetti(host);
+
+    wordEl.addEventListener('dragend', () => {
+      wordEl.classList.remove('dragging');
+    });
+
+    // Click para seleccionar
+    wordEl.addEventListener('click', () => {
+      document.querySelectorAll('.cloze-word').forEach(w => w.classList.remove('selected'));
+      wordEl.classList.add('selected');
+    });
+
+    wordsContainer.appendChild(wordEl);
+  });
+
+  // Configurar blanks
+  wrap.querySelectorAll('.cloze-blank').forEach(blank => {
+    // Drag over
+    blank.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      blank.classList.add('drag-over');
+    });
+
+    blank.addEventListener('dragleave', () => {
+      blank.classList.remove('drag-over');
+    });
+
+    // Drop
+    blank.addEventListener('drop', (e) => {
+      e.preventDefault();
+      blank.classList.remove('drag-over');
+
+      const word = e.dataTransfer.getData('text/plain');
+      fillBlank(blank, word, false);
+    });
+
+    // Click en blank (si hay palabra seleccionada)
+    blank.addEventListener('click', () => {
+      const selected = document.querySelector('.cloze-word.selected');
+      if (selected) {
+        fillBlank(blank, selected.dataset.word, true);
+        selected.remove();
+      }
+    });
+  });
+
+  function renderEndCard() {
+    const total = blankIds.length;
+    const score = state.correct / total;
+    const good = score >= 0.6;
+
+    wrap.innerHTML = `
+      <div style="
+        text-align:center;
+        padding:3rem 2rem;
+        background:white;
+        border-radius:24px;
+        box-shadow:0 18px 60px rgba(15,23,42,0.18);
+      ">
+        <div style="font-size:4rem; margin-bottom:1rem;">
+          ${good ? '🎉' : '😢'}
+        </div>
+        <h3 style="
+          font-size:2.4rem;
+          font-weight:900;
+          color:#1f2933;
+          margin-bottom:0.75rem;
+        ">
+          ${good ? '¡Excelente!' : 'Sigue practicando'}
+        </h3>
+        <p style="
+          font-size:1.25rem;
+          font-weight:700;
+          color:${good ? '#15803d' : '#b91c1c'};
+          margin-bottom:0.25rem;
+        ">
+          ${state.correct} de ${total} espacios completados correctamente
+        </p>
+        <p style="font-size:1.05rem; color:#4b5563;">
+          Puntuación: ${Math.round(score * 100)}%
+        </p>
+      </div>
+    `;
+
+    host.dataset.gameComplete = 'true';
+    host.dataset.gameScore = score.toFixed(2);
+    host.dataset.gameCorrect = state.correct;
+    host.dataset.gameTotal = total;
+  }
+
+  function fillBlank(blank, word, removeFromBank) {
+    const blankId = blank.dataset.blankId;
+    const total = blankIds.length;
+
+    // Si ya tenía algo, ajustar estado.correct
+    if (state.filled[blankId]) {
+      const prevWord = state.filled[blankId];
+      if (prevWord === blanks[blankId].answer) {
+        state.correct--;
+      }
+    }
+
+    blank.textContent = word;
+    blank.classList.add('filled');
+    blank.classList.remove('correct', 'incorrect');
+
+    state.filled[blankId] = word;
+
+    const correctAnswer = blanks[blankId].answer;
+    if (word === correctAnswer) {
+      blank.classList.add('correct');
+      playSound('success');
+      state.correct++;
+    } else {
+      blank.classList.add('incorrect');
+      playSound('error');
+    }
+
+    // Si vino por click, ya borramos la palabra del banco arriba
+
+    // Actualizar progreso
+    const filled = Object.keys(state.filled).length;
+    hd.setBar((filled / total) * 100);
+    hd.bump && hd.bump();
+
+    // Si terminó
+    if (filled === total) {
+      playSound('complete');
+      setTimeout(renderEndCard, 400);
     }
   }
 
-  // helpers
-  function unique(arr) { return Array.from(new Set(arr)); }
-  function parseBank(text) {
-    const out = []; (text || "").split(/\r?\n/).forEach(ln => { ln = (ln || "").trim(); if (!ln) return; const p = ln.split("|").map(s => s.trim()); if (p.length >= 2) { out.push(p[0]); out.push(p[1]); } });
-    return out;
-  }
-  function el(tag, cls, html) { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; }
-  function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
-  function shuffle(a) { return a.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(x => x[1]); }
-  function confetti(root) { const wrap = el("div", "confetti-wrap"); root.appendChild(wrap); for (let k = 0; k < 60; k++) { const p = el("i", "confetti"); p.style.setProperty("--tx", (Math.random() * 200 - 100).toFixed(0)); p.style.setProperty("--d", (0.6 + Math.random() * 0.8).toFixed(2) + "s"); p.style.left = (10 + Math.random() * 80).toFixed(0) + "%"; wrap.appendChild(p); } setTimeout(() => wrap.remove(), 1200); }
-  function createSfx(enabled = true) {
-    let ctx = null;
-    function beep(freq = 440, dur = 0.12, type = "sine", gain = 0.05) {
-      if (!enabled) return;
-      try {
-        ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = type; o.frequency.value = freq; g.gain.value = gain;
-        o.connect(g); g.connect(ctx.destination);
-        o.start(); o.stop(ctx.currentTime + dur);
-      } catch { }
-    }
-    return {
-      get enabled() { return enabled; }, set enabled(v) { enabled = !!v; },
-      flip() { beep(400, .07, "triangle", .04); },
-      ok() { beep(760, .10, "sine", .07); },
-      bad() { beep(180, .18, "sawtooth", .07); },
-    };
-  }
+  console.log('✅ Cloze renderizado');
+  console.groupEnd();
+  return true;
 }

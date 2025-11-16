@@ -1,5 +1,5 @@
 // static/LevelUp/js/games/vf.js
-import { shuffle, header } from './core.js';
+import { shuffle, header, playSound } from './core.js';
 
 export default function init(host, cfg) {
   console.group('🎮 [VF] Inicializando Verdadero/Falso');
@@ -42,6 +42,58 @@ export default function init(host, cfg) {
   let correct = 0;
   let answered = 0;
 
+  function renderEndCard() {
+    const total = items.length;
+    const score = correct / total;
+    let title, icon, color;
+
+    if (score >= 0.6) {
+      title = '¡Excelente!';
+      icon = '🎉';
+      color = '#15803d';
+    } else {
+      title = 'Sigue practicando';
+      icon = '😢';
+      color = '#b91c1c';
+    }
+
+    wrap.innerHTML = `
+      <div style="
+        text-align:center;
+        padding:3rem 2rem;
+        background:white;
+        border-radius:24px;
+        box-shadow:0 18px 60px rgba(15,23,42,0.18);
+      ">
+        <div style="font-size:4rem; margin-bottom:1rem;">${icon}</div>
+        <h3 style="
+          font-size:2.4rem;
+          font-weight:900;
+          color:#1f2933;
+          margin-bottom:0.75rem;
+        ">
+          ${title}
+        </h3>
+        <p style="
+          font-size:1.25rem;
+          font-weight:700;
+          color:${color};
+          margin-bottom:0.25rem;
+        ">
+          ${correct} de ${total} correctas
+        </p>
+        <p style="font-size:1.05rem; color:#4b5563;">
+          Puntuación: ${Math.round(score * 100)}%
+        </p>
+      </div>
+    `;
+
+    host.dataset.gameComplete = 'true';
+    host.dataset.gameScore = score.toFixed(2);
+    host.dataset.gameCorrect = correct;
+    host.dataset.gameTotal = total;
+  }
+
   // Renderizar items
   items.forEach((item, idx) => {
     const card = document.createElement('div');
@@ -75,18 +127,20 @@ export default function init(host, cfg) {
       const buttons = card.querySelectorAll('.vf-btn');
 
       // Deshabilitar botones
-      buttons.forEach(b => b.disabled = true);
+      buttons.forEach(b => (b.disabled = true));
 
       // Validar respuesta
       const isCorrect = userAnswer === correctAnswer;
 
       if (isCorrect) {
+        playSound('success');
         btn.classList.add('correct');
         feedback.innerHTML = '<span class="text-success">✓ ¡Correcto!</span>';
         correct++;
       } else {
+        playSound('error');
         btn.classList.add('incorrect');
-        feedback.innerHTML = `<span class="text-danger">✗ Incorrecto. La respuesta correcta era: <strong>${correctAnswer === 'V' ? 'Verdadero' : 'Falso'}</strong></span>`;
+        feedback.innerHTML = '<span class="text-danger">✗ Incorrecto</span>';
       }
 
       answered++;
@@ -94,26 +148,14 @@ export default function init(host, cfg) {
       // Actualizar UI
       host.querySelector('#vfCorrect').textContent = correct;
       hd.setBar((answered / items.length) * 100);
-      hd.bump();
+      hd.bump && hd.bump();
 
       // Si terminó, marcar como completo
       if (answered === items.length) {
+        playSound('complete');
         console.log('✅ Juego completado:', { correct, total: items.length });
-        host.dataset.gameComplete = 'true';
-        host.dataset.gameScore = (correct / items.length).toFixed(2);
-        host.dataset.gameCorrect = correct;
-        host.dataset.gameTotal = items.length;
 
-        setTimeout(() => {
-          const summary = document.createElement('div');
-          summary.className = 'alert alert-success mt-3';
-          summary.innerHTML = `
-            <h5>¡Juego terminado! 🎉</h5>
-            <p>Respuestas correctas: <strong>${correct}</strong> de <strong>${items.length}</strong></p>
-            <p>Puntuación: <strong>${Math.round((correct / items.length) * 100)}%</strong></p>
-          `;
-          wrap.appendChild(summary);
-        }, 300);
+        setTimeout(renderEndCard, 400);
       }
     });
   });

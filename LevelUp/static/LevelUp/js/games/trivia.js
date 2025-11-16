@@ -1,185 +1,216 @@
-// trivia.js — Trivia con efectos visuales y SFX
-export default async function initTrivia(host, cfg = {}) {
-  const qlist = Array.isArray(cfg.trivia) ? cfg.trivia : normalizeText(cfg.text || cfg.game_pairs || "");
-  if (!qlist.length) {
-    host.innerHTML = `<div class="alert alert-warning" data-game-rendered>No hay preguntas.</div>`;
-    return false;
+// static/LevelUp/js/games/trivia.js
+import { shuffle, playSound } from './core.js';
+
+console.log('🎮 [TRIVIA] Módulo cargado');
+
+export default async function init(host, cfg) {
+  console.log('🎮 [TRIVIA] Inicializando');
+  console.log('📦 Config:', cfg);
+
+  const questions = shuffle(cfg.trivia || cfg.questions || []);
+  if (!questions.length) {
+    console.error('❌ [TRIVIA] No hay preguntas');
+    return;
   }
 
-  // --- SFX (WebAudio, sin assets) ---
-  const sfx = createSfx(cfg.sfx !== false);
+  let currentQ = 0;
+  let correctas = 0;
+  let lives = cfg.lives != null ? cfg.lives : 3;
 
-  // --- UI shell ---
-  host.innerHTML = "";
-  host.dataset.gameComplete = "false";
-  host.setAttribute("data-game-rendered", "1");
+  // Limpiar host
+  host.innerHTML = '';
+  host.style.padding = '0';
+  host.style.background = 'transparent';
 
-  const theme = (cfg.theme || "ink").toLowerCase();
+  // Contenedor principal
+  const wrapper = document.createElement('div');
+  wrapper.className = 'tr-card';
 
-  const card = el("div", "lv-card tr-card");
-  const header = el("div", "d-flex align-items-center justify-content-between mb-2");
-  const prog = el("div", "progress flex-grow-1 me-3", `<div class="progress-bar" style="width:0%"></div>`);
-  const timeBox = el("div", "badge text-bg-secondary", `<span class="me-1">⏱</span><span id="tr-timer">--</span>`);
-  header.appendChild(prog); header.appendChild(timeBox);
+  // Header del juego (sin avatar)
+  const headerDiv = document.createElement('div');
+  headerDiv.style.cssText = `
+    background: linear-gradient(135deg, #FF6B6B 0%, #ff8787 100%);
+    padding: 2rem 1.5rem;
+    border-radius: 20px;
+    margin-bottom: 2rem;
+    text-align: center;
+    box-shadow: 0 6px 24px rgba(255, 107, 107, 0.4);
+  `;
+  headerDiv.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;gap:1rem;margin-bottom:1rem;">
+      <div style="width:60px;height:60px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;backdrop-filter:blur(10px);">
+        🧠
+      </div>
+      <div>
+        <div style="color:white;font-size:1.8rem;font-weight:900;text-shadow:0 2px 8px rgba(0,0,0,0.2);">
+          Trivia
+        </div>
+      </div>
+    </div>
+    <div style="color:rgba(255,255,255,0.95);font-size:1.1rem;font-weight:600;margin-bottom:1.5rem;">
+      ❓ Responde correctamente para avanzar
+    </div>
+    <div style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;">
+      <div style="background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);padding:0.75rem 1.5rem;border-radius:12px;">
+        <div style="color:rgba(255,255,255,0.8);font-size:0.9rem;font-weight:600;margin-bottom:0.25rem;">Pregunta</div>
+        <div style="color:white;font-size:1.6rem;font-weight:900;">
+          <span id="tr-current">1</span><span style="font-size:1.1rem;opacity:0.7;">/${questions.length}</span>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);padding:0.75rem 1.5rem;border-radius:12px;">
+        <div style="color:rgba(255,255,255,0.8);font-size:0.9rem;font-weight:600;margin-bottom:0.25rem;">Vidas</div>
+        <div style="font-size:1.8rem;" id="tr-lives">${'❤️'.repeat(lives)}</div>
+      </div>
+    </div>
+  `;
+  wrapper.appendChild(headerDiv);
 
-  const qEl = el("div", "tr-q h6 mb-2");
-  const opts = el("div", "tr-opts d-flex flex-wrap");
+  // Pregunta
+  const qDiv = document.createElement('div');
+  qDiv.className = 'tr-q';
+  qDiv.id = 'tr-question';
+  qDiv.style.marginBottom = '2rem';
+  wrapper.appendChild(qDiv);
 
-  const toolbar = el("div", "d-flex align-items-center justify-content-between mt-3");
-  const livesBox = el("div", "tr-lives");
-  const soundBtn = el("button", "btn btn-sm btn-outline-secondary", "🔊");
-  soundBtn.type = "button"; soundBtn.title = "Sonido on/off";
-  soundBtn.addEventListener("click", () => { sfx.enabled = !sfx.enabled; soundBtn.classList.toggle("opacity-50", !sfx.enabled); });
-  toolbar.appendChild(livesBox); toolbar.appendChild(soundBtn);
+  // Opciones
+  const optsDiv = document.createElement('div');
+  optsDiv.className = 'tr-opts';
+  optsDiv.id = 'tr-options';
+  optsDiv.style.cssText = 'display:flex;flex-direction:column;gap:1rem;';
+  wrapper.appendChild(optsDiv);
 
-  card.appendChild(header);
-  card.appendChild(qEl);
-  card.appendChild(opts);
-  card.appendChild(toolbar);
-  host.appendChild(card);
+  host.appendChild(wrapper);
 
-  // State
-  let i = 0, correct = 0, hearts = typeof cfg.hearts === "number" ? cfg.hearts : 3;
-  let t = Math.max(5, Number(cfg.timeLimit || cfg.time_limit || 0) || 0);
-  let it = null;
+  function renderQuestion() {
+    console.log(`📝 [TRIVIA] Renderizando pregunta ${currentQ + 1}`);
 
-  renderLives();
-  next();
+    const q = questions[currentQ];
+    qDiv.textContent = q.q || q.question || '¿Pregunta?';
 
-  function next() {
-    if (i >= qlist.length) return finish();
-    const q = qlist[i];
-    qEl.textContent = q.q || q.text || `Pregunta ${i + 1}`;
-    opts.innerHTML = "";
-    const all = (q.opts || q.options || []).map(String);
-    const ans = Number(q.ans || q.correct || 0);
-    all.forEach((txt, idx) => {
-      const b = el("button", "btn btn-light me-2 mb-2 tr-opt", escapeHtml(txt));
-      b.type = "button";
-      b.addEventListener("click", () => choose(idx, ans, b));
-      b.addEventListener("keyup", (ev) => { if (ev.key === "Enter" || ev.key === " ") choose(idx, ans, b); });
-      opts.appendChild(b);
-    });
-    const onKey = (ev) => {
-      const n = parseInt(ev.key, 10);
-      if (!isNaN(n) && n >= 1 && n <= all.length) {
-        const b = opts.children[n - 1]; if (b) b.click();
-      }
-    };
-    document.addEventListener("keydown", onKey, { once: true });
+    // Actualizar contador
+    const currentEl = headerDiv.querySelector('#tr-current');
+    if (currentEl) currentEl.textContent = currentQ + 1;
 
-    clearInterval(it);
-    if (t > 0) {
-      let left = t;
-      timeBox.querySelector("#tr-timer").textContent = `${left}s`;
-      it = setInterval(() => {
-        left--;
-        timeBox.querySelector("#tr-timer").textContent = `${Math.max(0, left)}s`;
-        if (left <= 0) {
-          clearInterval(it);
-          shake(card);
-          sfx.bad();
-          hearts--; renderLives();
-          i++; updateProg(); next();
+    // Limpiar opciones
+    optsDiv.innerHTML = '';
+
+    const opts = q.opts || q.options || [];
+    const correctIndex = q.ans !== undefined ? q.ans : (q.answer || 0);
+
+    opts.forEach((opt, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'tr-opt';
+      btn.textContent = opt;
+      btn.setAttribute('data-index', idx);
+
+      btn.addEventListener('click', () => {
+        console.log(`👆 [TRIVIA] Click en opción ${idx}`);
+
+        // Deshabilitar todos los botones
+        optsDiv.querySelectorAll('.tr-opt').forEach(b => {
+          b.disabled = true;
+          b.style.cursor = 'not-allowed';
+        });
+
+        if (idx === correctIndex) {
+          console.log('✅ [TRIVIA] Respuesta correcta');
+          playSound('success');
+          btn.classList.add('btn-success');
+          correctas++;
+        } else {
+          console.log('❌ [TRIVIA] Respuesta incorrecta');
+          playSound('error');
+          btn.classList.add('btn-danger');
+          lives--;
+
+          // Actualizar corazones
+          const livesEl = headerDiv.querySelector('#tr-lives');
+          if (livesEl) {
+            livesEl.textContent = '❤️'.repeat(Math.max(0, lives)) || '💔';
+          }
+
+          // Mostrar la correcta
+          const correctBtn = optsDiv.querySelector(`[data-index="${correctIndex}"]`);
+          if (correctBtn) {
+            setTimeout(() => {
+              correctBtn.classList.add('btn-success');
+            }, 300);
+          }
         }
-      }, 1000);
+
+        // Siguiente pregunta o finalizar
+        setTimeout(() => {
+          currentQ++;
+          if (currentQ < questions.length && lives > 0) {
+            renderQuestion();
+          } else {
+            finish(lives <= 0);
+          }
+        }, 1500);
+      });
+
+      optsDiv.appendChild(btn);
+    });
+  }
+
+  function finish(outOfLives = false) {
+    console.log('🏁 [TRIVIA] Juego terminado');
+    console.log(`📊 [TRIVIA] Correctas: ${correctas}/${questions.length}`);
+
+    const score = correctas / questions.length;
+
+    let icon, title, detail;
+    if (outOfLives) {
+      icon = '😢';
+      title = 'Sigue practicando';
+      detail = 'Te quedaste sin vidas. Puedes intentarlo de nuevo cuando quieras.';
+      playSound('error');
+    } else if (score >= 0.7) {
+      icon = '🎉';
+      title = '¡Excelente!';
+      detail = 'Respondiste muy bien la trivia.';
+      playSound('complete');
+    } else if (score >= 0.4) {
+      icon = '😊';
+      title = '¡Buen intento!';
+      detail = 'Vas por buen camino, sigue practicando.';
+      playSound('success');
     } else {
-      timeBox.querySelector("#tr-timer").textContent = "∞";
+      icon = '😢';
+      title = 'Sigue practicando';
+      detail = 'Puedes volver a intentarlo para mejorar tu puntuación.';
+      playSound('error');
     }
+
+    wrapper.innerHTML = `
+      <div style="text-align:center;padding:3rem 1.5rem;">
+        <div style="font-size:4rem;margin-bottom:1rem;">${icon}</div>
+        <h3 style="font-size:2rem;font-weight:800;color:#2c3e50;margin-bottom:1rem;">
+          ${title}
+        </h3>
+        <div style="font-size:1.5rem;font-weight:700;color:#495057;margin-bottom:1.5rem;">
+          ${correctas} de ${questions.length} correctas
+        </div>
+        <div style="width:100%;max-width:300px;height:20px;background:#e9ecef;border-radius:10px;overflow:hidden;margin:0 auto 0.75rem auto;">
+          <div style="width:${score * 100}%;height:100%;background:linear-gradient(135deg,#51CF66,#8ce99a);transition:width 1s ease;"></div>
+        </div>
+        <p style="margin-top:0.5rem;color:#6b7280;">${detail}</p>
+      </div>
+    `;
+
+    // Marcar como completado
+    host.dataset.gameComplete = 'true';
+    host.dataset.gameScore = score.toFixed(2);
+    host.dataset.gameCorrect = correctas;
+    host.dataset.gameTotal = questions.length;
+
+    console.log('✅ [TRIVIA] Marcado como completado');
   }
 
-  function choose(idx, ans, btn) {
-    clearInterval(it);
-    disableAll();
-    if (idx === ans) {
-      btn.classList.add("btn-success", "glow-ok");
-      sfx.ok();
-      correct++;
-    } else {
-      btn.classList.add("btn-danger", "glow-bad");
-      const ok = opts.children[ans]; ok && ok.classList.add("btn-success", "flash");
-      sfx.bad();
-      hearts--; renderLives();
-    }
-    i++; updateProg();
-    setTimeout(next, 700);
-  }
+  // Iniciar primera pregunta
+  renderQuestion();
 
-  function disableAll() { opts.querySelectorAll("button").forEach(b => b.disabled = true); }
-  function updateProg() {
-    const pct = Math.round((i / qlist.length) * 100);
-    prog.querySelector(".progress-bar").style.width = pct + "%";
-  }
-  function renderLives() {
-    livesBox.innerHTML = "";
-    for (let k = 0; k < Math.max(0, hearts); k++) livesBox.appendChild(el("span", "mx-1", "❤️"));
-    for (let k = hearts; k < 3; k++) livesBox.appendChild(el("span", "mx-1 text-muted", "🤍"));
-    if (hearts <= 0) { // reinicio parcial
-      hearts = typeof cfg.hearts === "number" ? cfg.hearts : 3;
-      i = Math.max(0, i - 2); // retrocede 2
-    }
-  }
-
-  function finish() {
-    host.dataset.gameComplete = "true";
-    const score = correct / qlist.length;
-    host.dataset.gameCorrect = String(correct);
-    host.dataset.gameTotal = String(qlist.length);
-    host.dataset.gameScore = String(score.toFixed(4));
-    sfx.win(); confetti(host);
-    card.innerHTML = `
-      <div class="text-center py-4">
-        <div class="display-6 mb-2">¡Listo!</div>
-        <div class="lead mb-3">Aciertos: <b>${correct}</b> / ${qlist.length}</div>
-        <div class="progress mb-3"><div class="progress-bar bg-success" style="width:${Math.round(score * 100)}%"></div></div>
-        <button type="button" class="btn btn-primary" data-retry>Reintentar</button>
-      </div>`;
-    card.querySelector("[data-retry]").addEventListener("click", () => { i = 0; correct = 0; updateProg(); next(); });
-  }
-
-  // ---------- helpers ----------
-  function confetti(root) {
-    const wrap = el("div", "confetti-wrap");
-    root.appendChild(wrap);
-    for (let k = 0; k < 80; k++) {
-      const p = el("i", "confetti");
-      p.style.setProperty("--tx", (Math.random() * 200 - 100).toFixed(0));
-      p.style.setProperty("--d", (0.6 + Math.random() * 0.8).toFixed(2) + "s");
-      p.style.left = (10 + Math.random() * 80).toFixed(0) + "%";
-      wrap.appendChild(p);
-    }
-    setTimeout(() => wrap.remove(), 1200);
-  }
-  function shake(node) { node.classList.add("shake"); setTimeout(() => node.classList.remove("shake"), 300); }
-  function el(tag, cls, html) { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; }
-  function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
-  function normalizeText(text) {
-    const out = []; (text || "").split(/\r?\n/).forEach(ln => {
-      ln = (ln || "").trim(); if (!ln) return;
-      const parts = ln.split("|").map(s => (s || "").trim()).filter(Boolean);
-      if (parts.length < 3) return;
-      let ans = 0; const q = parts[0], opts = parts.slice(1).map((t, i) => { if (/\*$/.test(t)) { ans = i; return t.replace(/\*$/, "").trim(); } return t; });
-      out.push({ q, opts, ans });
-    }); return out;
-  }
-  function createSfx(enabled = true) {
-    let ctx = null;
-    function beep(freq = 440, dur = 0.12, type = "sine", gain = 0.05) {
-      if (!enabled) return;
-      try {
-        ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = type; o.frequency.value = freq; g.gain.value = gain;
-        o.connect(g); g.connect(ctx.destination);
-        o.start(); o.stop(ctx.currentTime + dur);
-      } catch { }
-    }
-    const api = {
-      get enabled() { return enabled; }, set enabled(v) { enabled = !!v; },
-      ok() { beep(760, .10, "sine", .07); },
-      bad() { beep(180, .18, "sawtooth", .07); },
-      win() { [660, 880, 990].forEach((f, i) => setTimeout(() => beep(f, .10, "sine", .09), i * 120)); },
-    };
-    return api;
-  }
+  console.log('✅ Trivia renderizada');
+  host.dataset.gameRendered = 'true';
+  return wrapper;
 }
