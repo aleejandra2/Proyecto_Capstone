@@ -1,102 +1,193 @@
 {% extends "LevelUp/base.html" %}
 {% block title %}Portal del Docente · LevelUp{% endblock %}
+{% block body_class %}with-docente-navbar{% endblock %}
 
 {% block content %}
-<main class="min-h-screen">
+<main class="portal-docente min-h-screen">
   <div class="container">
 
-    <!-- Encabezado -->
-    <div class="card mb-3">
-      <div class="card-body d-flex flex-wrap justify-content-between align-items-start gap-2">
-        <div>
-          <h1 class="h3 m-0">Portal del Profesor 👨‍🏫</h1>
-          <p class="text-muted mb-0 mt-1">Gestiona tus clases y el progreso de tus estudiantes.</p>
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-          <a href="{% url 'crear' %}" class="btn btn-primary">+ Crear actividad</a>
-          <a href="{% url 'docente_lista' %}" class="btn btn-outline-primary">Mis actividades</a>
-          <a href="{% url 'reportes_docente' %}" class="btn btn-outline-secondary">Ver reportes</a>
-        </div>
-      </div>
-    </div>
-
-    <!-- KPIs -->
-    <div class="card mb-3">
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-6 col-md-3">
-            <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Estudiantes</div>
-              <div class="fs-3 fw-bold">{{ total_estudiantes|default:0 }}</div>
-            </div>
-          </div>
-          <div class="col-6 col-md-3">
-            <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Actividades</div>
-              <div class="fs-3 fw-bold">{{ total_actividades|default:0 }}</div>
-            </div>
-          </div>
-          <div class="col-6 col-md-3">
-            <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Promedio General</div>
-              <div class="fs-3 fw-bold">{{ promedio_general|default:"—" }}</div>
-            </div>
-          </div>
-          <div class="col-6 col-md-3">
-            <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Días activos</div>
-              <div class="fs-3 fw-bold">{{ dias_activos|default:0 }}</div>
-            </div>
-          </div>
+    <!-- HERO HEADER -->
+    <div class="portal-hero">
+      <div class="portal-hero-content">
+        <h1>¡Bienvenido, Profesor! 👋</h1>
+        <p>Gestiona tus clases, crea actividades y motiva a tus estudiantes a alcanzar nuevos niveles.</p>
+        <div class="portal-hero-actions">
+          <a href="{% url 'crear' %}" class="btn btn-light">
+            <i class="bi bi-plus-circle me-2"></i>Crear actividad
+          </a>
+          <a href="{% url 'docente_lista' %}" class="btn btn-outline-light">
+            <i class="bi bi-folder2-open me-2"></i>Mis actividades
+          </a>
+          <a href="{% url 'reportes_docente' %}" class="btn btn-outline-light">
+            <i class="bi bi-graph-up me-2"></i>Ver reportes
+          </a>
         </div>
       </div>
     </div>
 
-    <!-- Dos columnas: Actividad reciente + Acciones -->
-    <div class="row g-3">
-      <!-- Actividad reciente (placeholder) -->
-      <div class="col-lg-8">
-        <div class="card h-100">
-          <div class="card-body">
-            <h2 class="h5 mb-3">Actividad reciente de tus alumnos👀</h2>
-
-            <div class="d-flex align-items-center gap-3 mb-3 border rounded p-2">
-              <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center"
-                style="width:40px;height:40px;">AV</div>
-              <div class="flex-grow-1">
-                <div class="fw-semibold">Ana Vargas completó “Fracciones Básicas”</div>
-                <div class="text-muted small">Hace 5 minutos</div>
-              </div>
-              <span class="btn btn-outline-secondary disabled">+150 pts</span>
-            </div>
-
-            <div class="d-flex align-items-center gap-3 border rounded p-2">
-              <div class="rounded-circle d-flex align-items-center justify-content-center"
-                style="width:40px;height:40px;background:#f59e0b;color:#111827;">LR</div>
-              <div class="flex-grow-1">
-                <div class="fw-semibold">Luis Ramírez subió al nivel 4</div>
-                <div class="text-muted small">Hace 12 minutos</div>
-              </div>
-              <span class="btn btn-outline-secondary disabled">Nivel Up!</span>
-            </div>
-          </div>
+    <!-- KPI CARDS -->
+    <div class="kpi-grid">
+      <div class="kpi-card kpi-students">
+        <div class="kpi-icon">👥</div>
+        <div class="kpi-label">Estudiantes Activos</div>
+        <div class="kpi-value">
+          {{ total_estudiantes|default:0 }}
+          <span class="kpi-trend up">
+            <i class="bi bi-arrow-up-short"></i>+12%
+          </span>
         </div>
       </div>
 
-      <!-- Acciones rápidas -->
-      <div class="col-lg-4">
-        <div class="card h-100">
-          <div class="card-body">
-            <h3 class="h6 mb-3">Acciones rápidas</h3>
-            <div class="d-grid gap-2">
-              <a href="{% url 'crear' %}" class="btn btn-primary">📝 Nueva actividad</a>
-              <a href="{% url 'docente_lista' %}" class="btn btn-outline-primary">📚 Mis actividades</a>
-              <a href="/admin/LevelUp/asignacionactividad/add/" target="_blank" class="btn btn-outline-secondary">🎯
-                Asignar actividad (Admin)</a>
-              <a href="{% url 'reportes_docente' %}" class="btn btn-outline-dark">📊 Reportes</a>
+      <div class="kpi-card kpi-activities">
+        <div class="kpi-icon">📚</div>
+        <div class="kpi-label">Actividades Creadas</div>
+        <div class="kpi-value">{{ total_actividades|default:0 }}</div>
+      </div>
+
+      <div class="kpi-card kpi-average">
+        <div class="kpi-icon">⭐</div>
+        <div class="kpi-label">Promedio General</div>
+        <div class="kpi-value">{{ promedio_general|default:"—" }}</div>
+      </div>
+
+      <div class="kpi-card kpi-days">
+        <div class="kpi-icon">🔥</div>
+        <div class="kpi-label">Racha de días</div>
+        <div class="kpi-value">
+          {{ dias_activos|default:0 }}
+          <span class="kpi-trend up">
+            <i class="bi bi-fire"></i>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIVIDAD RECIENTE -->
+    <div class="activity-section">
+      <div class="section-header">
+        <h2 class="section-title">
+          <span class="emoji">👀</span>
+          Actividad reciente
+        </h2>
+        <a href="{% url 'reportes_docente' %}" class="section-link">
+          Ver todo <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
+
+      <div class="activity-timeline">
+        <div class="activity-item">
+          <div class="activity-avatar purple">AV</div>
+          <div class="activity-content">
+            <div class="activity-text">
+              <strong>Ana Vargas</strong> completó <span class="highlight">"Fracciones Básicas"</span>
+            </div>
+            <div class="activity-meta">
+              <i class="bi bi-clock"></i> Hace 5 minutos
             </div>
           </div>
+          <span class="activity-badge points">
+            <i class="bi bi-star-fill"></i> +150 pts
+          </span>
         </div>
+
+        <div class="activity-item">
+          <div class="activity-avatar orange">LR</div>
+          <div class="activity-content">
+            <div class="activity-text">
+              <strong>Luis Ramírez</strong> alcanzó el <span class="highlight">Nivel 4</span>
+            </div>
+            <div class="activity-meta">
+              <i class="bi bi-clock"></i> Hace 12 minutos
+            </div>
+          </div>
+          <span class="activity-badge level-up">
+            <i class="bi bi-trophy-fill"></i> ¡Nivel Up!
+          </span>
+        </div>
+
+        <div class="activity-item">
+          <div class="activity-avatar blue">MC</div>
+          <div class="activity-content">
+            <div class="activity-text">
+              <strong>María Castro</strong> entregó <span class="highlight">"Ecuaciones Lineales"</span>
+            </div>
+            <div class="activity-meta">
+              <i class="bi bi-clock"></i> Hace 25 minutos
+            </div>
+          </div>
+          <span class="activity-badge completed">
+            <i class="bi bi-check-circle-fill"></i> Completado
+          </span>
+        </div>
+
+        <div class="activity-item">
+          <div class="activity-avatar green">JP</div>
+          <div class="activity-content">
+            <div class="activity-text">
+              <strong>Jorge Pérez</strong> obtuvo 95% en <span class="highlight">"Quiz de Geometría"</span>
+            </div>
+            <div class="activity-meta">
+              <i class="bi bi-clock"></i> Hace 1 hora
+            </div>
+          </div>
+          <span class="activity-badge points">
+            <i class="bi bi-star-fill"></i> +200 pts
+          </span>
+        </div>
+      </div>
+
+      <!-- Estado vacío (mostrar si no hay actividades) -->
+      <!-- 
+      <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <div class="empty-state-text">
+          Aún no hay actividad reciente de tus estudiantes
+        </div>
+      </div>
+      -->
+    </div>
+
+    <!-- ACCIONES RÁPIDAS -->
+    <div class="activity-section">
+      <div class="section-header">
+        <h2 class="section-title">
+          <span class="emoji">⚡</span>
+          Acciones rápidas
+        </h2>
+      </div>
+
+      <div class="quick-actions-grid">
+        <a href="{% url 'crear' %}" class="action-card primary">
+          <div class="action-icon">📝</div>
+          <div class="action-title">Crear Actividad</div>
+          <div class="action-description">
+            Diseña nuevas actividades y desafíos para tus estudiantes
+          </div>
+        </a>
+
+        <a href="{% url 'docente_lista' %}" class="action-card secondary">
+          <div class="action-icon">📚</div>
+          <div class="action-title">Mis Actividades</div>
+          <div class="action-description">
+            Revisa y administra todas tus actividades creadas
+          </div>
+        </a>
+
+        <a href="/admin/LevelUp/asignacionactividad/add/" target="_blank" class="action-card success">
+          <div class="action-icon">🎯</div>
+          <div class="action-title">Asignar Actividad</div>
+          <div class="action-description">
+            Asigna actividades a grupos o estudiantes específicos
+          </div>
+        </a>
+
+        <a href="{% url 'reportes_docente' %}" class="action-card warning">
+          <div class="action-icon">📊</div>
+          <div class="action-title">Ver Reportes</div>
+          <div class="action-description">
+            Analiza el progreso y desempeño de tus estudiantes
+          </div>
+        </a>
       </div>
     </div>
 

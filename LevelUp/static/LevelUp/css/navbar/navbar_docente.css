@@ -1,4 +1,4 @@
-/* ==== SIDEBAR DOCENTE ==== */
+/* ==== SIDEBAR DOCENTE (DESKTOP) ==== */
 
 .navbar-docente {
   position: fixed;
@@ -6,7 +6,7 @@
   left: 0;
   bottom: 0;
   width: 230px;
-  background: #111829;   
+  background: #111829;
   color: #f9fafb;
   z-index: 1030;
   display: flex;
@@ -32,9 +32,16 @@
 }
 
 /* Menú principal */
+.navbar-docente-menu-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+
 .navbar-docente-menu {
   padding: 0;
   margin: 0;
+  flex: 1 1 auto;
 }
 .navbar-docente-link {
   padding: 0.55rem 1.1rem;
@@ -58,7 +65,7 @@
   color: #ffffff;
 }
 
-/* Zona inferior (usuario) */
+/* Zona inferior (cerrar sesión) */
 .navbar-docente-bottom {
   padding: 0.75rem 1rem;
   border-top: 1px solid #1f2933;
@@ -84,28 +91,90 @@
   font-weight: 700;
 }
 
-/* Que el contenido no quede debajo del sidebar */
+/* Empuje del contenido cuando hay sidebar */
 body.with-docente-navbar {
-  padding-left: 230px; /* igual al width del sidebar */
+  padding-left: 230px;
 }
 
-/* Responsive: en pantallas chicas se vuelve barra superior */
+/* Botón hamburguesa (oculto en desktop) */
+.navbar-docente-toggle {
+  display: none;
+  margin-left: auto;
+  padding: 0.25rem 0.5rem;
+  background: none;
+  border: 0;
+  color: #f9fafb;
+  font-size: 1.6rem;
+  cursor: pointer;
+}
+
+/* ==== RESPONSIVE MOBILE (<= 991.98px) ==== */
 @media (max-width: 991.98px) {
   .navbar-docente {
-    position: relative;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: auto;
     width: 100%;
-    height: auto;
-  }
-
-  body.with-docente-navbar {
-    padding-left: 0;
+    height: 56px;
+    padding: 0;
+    flex-direction: row;
   }
 
   .navbar-docente-inner {
-    height: auto;
+    height: 100%;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 0.75rem;
+  }
+
+  .navbar-docente-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* El panel que se despliega */
+  .navbar-docente-menu-wrapper {
+    display: none;
+    position: fixed;
+    top: 56px;          /* justo debajo de la barra */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #111829;
+    padding-top: 0.75rem;
+    overflow-y: auto;
+    z-index: 1029;
+    flex-direction: column;
+  }
+
+  /* Cuando el nav tiene la clase is-open, se muestra el menú */
+  .navbar-docente.is-open .navbar-docente-menu-wrapper {
+    display: flex;
+  }
+
+  .navbar-docente-menu {
+    flex: 0 0 auto;
+    padding: 0;
+    margin: 0;
   }
 
   .navbar-docente-link {
-    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    margin: 0.15rem 0.75rem;
+  }
+
+  .navbar-docente-bottom {
+    border-top: 1px solid #1f2933;
+    margin-top: 0.75rem;
+    padding: 0.75rem 1rem 1rem;
+  }
+
+  /* Ahora el contenido baja en vez de moverse a la derecha */
+  body.with-docente-navbar {
+    padding-left: 0;
+    padding-top: 56px;
   }
 }
+

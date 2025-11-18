@@ -4,7 +4,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}LevelUp - Plataforma Educativa{% endblock %}</title>
 
   <!-- Bootstrap CSS (solo una vez) -->
@@ -13,17 +13,18 @@
   <!-- Tus estilos -->
   <link rel="stylesheet" href="{% static 'LevelUp/css/style.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/navbar/navbar.css' %}?v=5">
-  <link rel="stylesheet" href="{% static 'LevelUp/css/navbar/navbar_docente.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'LevelUp/css/navbar/navbar_docente.css' %}?v=7">
   <link rel="stylesheet" href="{% static 'LevelUp/css/navbar/navbar_estudiante.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/footer.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/global.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/login.css' %}?v=6">
   <link rel="stylesheet" href="{% static 'LevelUp/css/home.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/home_estudiante.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'LevelUp/css/home_docente.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/Ranking/ranking.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/games.css' %}?v=5">
-
-
+  <link rel="stylesheet" href="{% static 'LevelUp/css/register/register.css' %}">
+  <link rel="stylesheet" href="{% static 'LevelUp/css/recuperar_contraseña/recuperar.css' %}?v=5">
 
   <!-- Fuentes / íconos -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -35,17 +36,8 @@
   {% block extra_head %}{% endblock %}
 </head>
 
-{% block extra_js %}
-<!-- Bootstrap JS bundle (con Popper) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- Tus scripts, después del bundle -->
-<script src="{% static 'LevelUp/js/script.js' %}?v=5"></script>
-<script src="{% static 'LevelUp/js/partials/navbar.js' %}?v=5"></script>
-{% endblock %}
-
-
-<body>
+<body class="{% block body_class %}{% if request.user.is_authenticated %}{% if request.user.rol|default_if_none:''|lower == 'docente' or request.user.es_docente %}with-docente-navbar{% elif request.user.rol|default_if_none:''|lower == 'estudiante' or request.user.es_estudiante %}with-estudiante-navbar{% endif %}{% endif %}{% endblock %}">
   {% block navbar %}
   {% if request.user.is_authenticated %}
 
@@ -73,23 +65,31 @@
 
   {% block footer %}
   {% if request.user.is_authenticated %}
-  {% with rol=request.user.rol|default_if_none:''|lower es_est=request.user.es_estudiante|default:False %}
-  {% if rol == 'estudiante' or es_est %}
-  {# Estudiante: sin footer #}
+    {% with rol=request.user.rol|default_if_none:''|lower url_name=request.resolver_match.url_name %}
+      {% if rol == 'estudiante' %}
+        {# Estudiante: sin footer #}
+      {% elif rol == 'docente' and url_name == 'portal_docente' %}
+        {# Portal del docente: sin footer #}
+      {% else %}
+        {# Otras vistas: con footer #}
+        {% include "LevelUp/partials/footer.html" %}
+      {% endif %}
+    {% endwith %}
   {% else %}
-  {# Docente/Admin/Otros: footer general #}
-  {% include "LevelUp/partials/footer.html" %}
-  {# o, si tienes uno específico: "LevelUp/partials/footer_doc_admin.html" #}
-  {% endif %}
-  {% endwith %}
-  {% else %}
-  {# Público/no autenticado: footer público o el general #}
-  {% include "LevelUp/partials/footer.html" %}
+    {# Público/no autenticado: footer público #}
+    {% include "LevelUp/partials/footer.html" %}
   {% endif %}
   {% endblock %}
 
+  {% block extra_js %}
+  <!-- Bootstrap JS bundle (con Popper) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Tus scripts, después del bundle -->
+  <script src="{% static 'LevelUp/js/script.js' %}?v=5"></script>
+  <script src="{% static 'LevelUp/js/partials/navbar.js' %}?v=5"></script>
+  {% endblock %}
 
 </body>
-
 
 </html>

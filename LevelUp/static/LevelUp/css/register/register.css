@@ -1,0 +1,230 @@
+html, body {
+  height: 100%;
+}
+
+/* Fondo de la página de registro */
+.register-bg {
+  position: relative;
+  /* NO usamos flex, así evitamos problemas con el footer */
+  padding: 3rem 1.5rem 5rem;
+  background: radial-gradient(circle at 0% 0%, #b2f2bb 0, transparent 55%),
+              radial-gradient(circle at 100% 0%, #a5d8ff 0, transparent 55%),
+              radial-gradient(circle at 100% 100%, #c3fae8 0, transparent 55%),
+              linear-gradient(135deg, #0fb9b1, #22c1c3);
+  background-attachment: fixed;
+}
+
+/* Tarjeta del formulario */
+.register-card.card {
+  position: relative;
+  max-width: 780px;
+  width: 100%;
+  margin: 0 auto;             /* 👉 esto la centra horizontalmente */
+  border: none;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 18px 45px rgba(15, 137, 145, 0.35);
+  background: #ffffff;
+}
+
+/* Cinta decorativa superior */
+.register-card.card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  height: 10px;
+  width: 100%;
+  background: linear-gradient(90deg, #ff6b6b, #feca57, #54a0ff, #5f27cd);
+}
+
+/* Contenido interno */
+.register-card-body {
+  padding: 2.5rem 2.75rem 1.75rem;
+}
+
+/* ===== Tipografías y títulos ===== */
+
+.register-title {
+  font-size: 2.1rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 0.75rem;
+  background: linear-gradient(90deg, #ff6b6b, #ffa94d);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ===== Formularios ===== */
+
+.form-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #364958;
+  margin-bottom: 0.25rem;
+}
+
+.form-control,
+.form-select {
+  border-radius: 999px;
+  border: 1.5px solid #dee2e6;
+  padding: 0.65rem 1.1rem;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.05s ease;
+  background-color: #fdfdfd;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #0fb9b1;
+  box-shadow: 0 0 0 0.15rem rgba(15, 185, 177, 0.25);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.form-control::placeholder {
+  color: #adb5bd;
+}
+
+/* Invalid state */
+.form-control.is-invalid,
+.form-select.is-invalid {
+  border-color: #fa5252;
+  box-shadow: 0 0 0 0.15rem rgba(250, 82, 82, 0.15);
+}
+
+/* Mensajes de error */
+.invalid-feedback {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.invalid-feedback.client {
+  color: #e03131;
+}
+
+/* Grid del form */
+.register-card form.row.g-3 {
+  row-gap: 1.1rem;
+}
+
+/* ===== Requisitos contraseña ===== */
+
+#pw-requirements {
+  border-radius: 16px;
+  border: 1px dashed #ced4da;
+  background: #f8f9fa;
+  font-size: 0.85rem;
+  padding: 0.85rem 1rem;
+}
+
+#pw-requirements .fw-semibold {
+  font-size: 0.9rem;
+  color: #343a40;
+}
+
+#pw-requirements ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+#pw-requirements li {
+  margin-bottom: 0.25rem;
+}
+
+#pw-requirements li[data-rule] .badge {
+  border-radius: 999px;
+  min-width: 1.5rem;
+  text-align: center;
+}
+
+#pw-requirements small {
+  font-size: 0.75rem;
+}
+
+/* ===== Botón principal ===== */
+
+.btn-primary {
+  border-radius: 999px;
+  border: none;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 0.8rem 1.2rem;
+  background-image: linear-gradient(135deg, #ff6b6b, #ffa94d);
+  box-shadow: 0 10px 24px rgba(255, 107, 107, 0.45);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.03);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(255, 107, 107, 0.5);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 8px 16px rgba(255, 107, 107, 0.4);
+}
+
+/* Texto de “¿Ya tienes cuenta?” solo en register */
+.register-login-hint small {
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.register-link {
+  color: #0fb9b1;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.register-link:hover {
+  text-decoration: underline;
+}
+
+/* ===== Responsivo ===== */
+
+@media (max-width: 768px) {
+  .register-card-body {
+    padding: 1.8rem 1.5rem 1.6rem;
+  }
+
+  .register-title {
+    font-size: 1.7rem;
+    text-align: center;
+  }
+
+  .register-card form .col-md-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  .register-login-hint {
+    margin-top: 0.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .register-bg {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .register-card.card {
+    border-radius: 18px;
+  }
+
+  .register-title {
+    font-size: 1.6rem;
+  }
+}
+
+
+/* Cinta decorativa superior */
+.auth-card.card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  height: 10px;
+  width: 100%;
+  background: linear-gradient(90deg, #ff6b6b, #feca57, #54a0ff, #5f27cd);
+}

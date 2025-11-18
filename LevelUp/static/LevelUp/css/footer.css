@@ -1,6 +1,7 @@
 /* Estilos del Footer para LevelUp */
 
 .footer {
+   --footer-height: 350px;
   background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
   color: #f3f4f6;
   padding: 3rem 0 1rem;
@@ -372,4 +373,28 @@
   background: #2563eb;
   transform: translateY(-2px);
   box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.15);
+}
+
+body.with-docente-navbar footer,
+body.with-estudiante-navbar footer {
+  margin-left: 0;
+  position: relative;
+  clear: both;
+}
+
+
+body.with-docente-navbar main,
+body.with-estudiante-navbar main {
+  margin-bottom: 2rem; 
+}
+
+@media (max-width: 991.98px) {
+  footer {
+    --footer-height: auto;
+  }
+  
+  body.with-docente-navbar footer,
+  body.with-estudiante-navbar footer {
+    margin-top: 2rem;
+  }
 }

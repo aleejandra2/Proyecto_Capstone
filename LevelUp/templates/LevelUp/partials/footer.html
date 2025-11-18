@@ -1,27 +1,29 @@
 {% load static %}
-
 <style>
-/* Sticky footer inyectado desde el propio footer */
-
-/* Navegadores modernos: usa :has() */
-@supports selector(body:has(#main-footer)) {
-  body:has(#main-footer) {
-    min-height: 100dvh;           /* 100vh si prefieres */
-    display: flex;
-    flex-direction: column;
-  }
-  #main-footer { margin-top: auto; }
+/* Solo aplicar el flexbox cuando NO hay navbar de docente/estudiante */
+body:not(.with-docente-navbar):not(.with-estudiante-navbar) {
+  min-height: 100dvh;  
+  display: flex;
+  flex-direction: column;
 }
 
-/* Fallback para navegadores sin :has() */
-@supports not selector(body:has(#main-footer)) {
-  html, body { height: 100%; }
-  body { display: flex; flex-direction: column; }
-  #main-footer { margin-top: auto; }
+/* Footer sticky solo en páginas sin navbar lateral */
+body:not(.with-docente-navbar):not(.with-estudiante-navbar) #main-footer {
+  margin-top: auto;
+}
+
+/* En vistas con navbar lateral, footer normal */
+body.with-docente-navbar #main-footer,
+body.with-estudiante-navbar #main-footer {
+  margin-top: 3rem;
+  position: static;
 }
 
 /* Asegura que no esté fijo ni se sobreponga */
-#main-footer { position: static; width: 100%; }
+#main-footer { 
+  position: static; 
+  width: 100%; 
+}
 </style>
 
 <footer class="footer" id="main-footer">
@@ -41,7 +43,6 @@
           <a href="#" class="footer-social-link">📺</a>
         </div>
       </div>
-
       <!-- Soporte -->
       <div class="footer-section">
         <h3>Soporte</h3>
@@ -53,7 +54,6 @@
           <li><a href="#" class="footer-link">💡 Sugerencias</a></li>
         </ul>
       </div>
-
       <!-- Contacto -->
       <div class="footer-section">
         <h3>Información de Contacto</h3>
@@ -64,7 +64,6 @@
         </div>
       </div>
     </div>
-
     <!-- Bottom -->
     <div class="footer-bottom">
       <div class="footer-bottom-content">
