@@ -3,6 +3,9 @@ from django.contrib.auth import views as auth_views
 from . import views
 from .forms import PasswordResetFormVisible
 
+from django.contrib import admin
+from django.urls import include
+
 urlpatterns = [
     # Home pública
     path("", views.home, name="home"),
@@ -124,4 +127,7 @@ urlpatterns = [
         ),
         name="password_reset_complete",
     ),
+
+    path("gamificacion/", include("gamificacion.urls")),
+
 ]

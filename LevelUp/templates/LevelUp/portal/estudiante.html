@@ -3,10 +3,46 @@
 {% block title %}Portal del Estudiante · LevelUp{% endblock %}
 {% block content %}
 
+{% load static %}
+
+<link rel="stylesheet" href="{% static 'LevelUp/css/gamificacion.css' %}?v=1">
+
+{% with perfil=user.perfil_gamificacion|default_if_none:'' %}
+{% if perfil %}
+<section class="xp-widget">
+  <div class="xp-card">
+    <div class="xp-card-header">
+      <div class="xp-level">
+        Nivel
+        <span class="xp-level-number">{{ perfil.nivel }}</span>
+      </div>
+      <div class="xp-total">
+        <span class="xp-total-label">XP total</span>
+        <span class="xp-total-value">{{ perfil.xp_total }}</span>
+      </div>
+    </div>
+
+    <div class="xp-bar-wrapper">
+      <div class="xp-bar-track">
+        <div class="xp-bar-fill" data-progress="{{ perfil.progreso_porcentaje|default_if_none:0 }}"></div>
+      </div>
+      <div class="xp-bar-text">
+        {{ perfil.xp_actual }} / {{ perfil.xp_para_siguiente_nivel }} XP
+      </div>
+    </div>
+
+    <div style="margin-top:.5rem; font-size:.8rem;">
+      <a href="{% url 'recompensas' %}">🎁 Ver recompensas</a>
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endwith %}
+
 <main class="scene-wrap">
-<div class="scene-bg"
-     data-bg="{% if fondo_portal %}{{ fondo_portal }}{% else %}{% static 'LevelUp/img/fondos/fondo_ciencias-naturales.jpg' %}{% endif %}">
-</div>
+  <div class="scene-bg"
+    data-bg="{% if fondo_portal %}{{ fondo_portal }}{% else %}{% static 'LevelUp/img/fondos/fondo_ciencias-naturales.jpg' %}{% endif %}">
+  </div>
   <!-- HUD superior -->
   <header class="hud-top">
     <h1 class="hud-name">{{ request.user.get_full_name|default:request.user.username }}</h1>
@@ -26,10 +62,10 @@
   </a>
 
   <a class="sidecard sidecard--right" href="#">
-  <span class="emoji">
-    <i class="bi bi-graph-up-arrow"></i>
-  </span>
-  Estadísticas
+    <span class="emoji">
+      <i class="bi bi-graph-up-arrow"></i>
+    </span>
+    Estadísticas
   </a>
 
 
@@ -45,39 +81,51 @@
     </a>
   </div>
 
-  
+
 </main>
 
 {# ===== JS: Cambiar fondo según la asignatura clickeada en el NAVBAR ===== #}
 <script>
-(function(){
-  const bgEl = document.querySelector('.scene-bg');
-  if (!bgEl) return;
-  const initial = bgEl.getAttribute('data-bg');
-  if (initial) bgEl.style.backgroundImage = `url(${initial})`;
+  (function () {
+    const bgEl = document.querySelector('.scene-bg');
+    if (!bgEl) return;
+    const initial = bgEl.getAttribute('data-bg');
+    if (initial) bgEl.style.backgroundImage = `url(${initial})`;
 
-  // Soporte para cambiar el fondo desde el navbar (botones con .js-subject + data-slug)
-  const STATIC_BASE = "{{ STATIC_URL|default:'/static/' }}";
-  const FOLDER = "LevelUp/img/fondos/";
-  const PREFIX = "fondo_";
-  const EXT = ".jpg";
-  const LS_KEY = "asignatura_slug";
+    // Soporte para cambiar el fondo desde el navbar (botones con .js-subject + data-slug)
+    const STATIC_BASE = "{{ STATIC_URL|default:'/static/' }}";
+    const FOLDER = "LevelUp/img/fondos/";
+    const PREFIX = "fondo_";
+    const EXT = ".jpg";
+    const LS_KEY = "asignatura_slug";
 
-  // Restaurar preferencia
-  const saved = localStorage.getItem(LS_KEY);
-  if (saved) bgEl.style.backgroundImage = `url(${STATIC_BASE}${FOLDER}${PREFIX}${saved}${EXT})`;
+    // Restaurar preferencia
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) bgEl.style.backgroundImage = `url(${STATIC_BASE}${FOLDER}${PREFIX}${saved}${EXT})`;
 
-  // Delegación global (el navbar puede estar en otro parcial)
-  document.addEventListener('click', function(e){
-    const btn = e.target.closest('.js-subject');
-    if (!btn) return;
-    e.preventDefault();
-    const slug = (btn.dataset.slug || "").trim();
-    if (!slug) return;
-    const url = `${STATIC_BASE}${FOLDER}${PREFIX}${slug}${EXT}`;
-    bgEl.style.backgroundImage = `url(${url})`;
-    localStorage.setItem(LS_KEY, slug);
-  });
-})();
+    // Delegación global (el navbar puede estar en otro parcial)
+    document.addEventListener('click', function (e) {
+      const btn = e.target.closest('.js-subject');
+      if (!btn) return;
+      e.preventDefault();
+      const slug = (btn.dataset.slug || "").trim();
+      if (!slug) return;
+      const url = `${STATIC_BASE}${FOLDER}${PREFIX}${slug}${EXT}`;
+      bgEl.style.backgroundImage = `url(${url})`;
+      localStorage.setItem(LS_KEY, slug);
+    });
+  })();
 </script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".xp-bar-fill").forEach(function (el) {
+      var p = parseInt(el.dataset.progress || "0", 10);
+      if (p < 0) p = 0;
+      if (p > 100) p = 100;
+      el.style.width = p + "%";
+    });
+  });
+</script>
+
 {% endblock %}

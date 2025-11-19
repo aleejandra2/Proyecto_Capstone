@@ -1,0 +1,143 @@
+/* Barra de experiencia */
+.xp-widget {
+  margin-bottom: 1.5rem;
+}
+
+.xp-card {
+  background: linear-gradient(135deg, #ffe066, #ffd43b);
+  border-radius: 20px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  position: relative;
+  overflow: hidden;
+}
+
+.xp-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.xp-level {
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  color: #343a40;
+}
+
+.xp-level-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: #ff6b6b;
+  color: #fff;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.45);
+}
+
+.xp-total {
+  text-align: right;
+  font-size: 0.75rem;
+  color: #495057;
+}
+
+.xp-total-label {
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.xp-total-value {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.xp-bar-wrapper {
+  margin-top: 0.9rem;
+}
+
+.xp-bar-track {
+  width: 100%;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  overflow: hidden;
+}
+
+.xp-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4dabf7, #845ef7, #ff6b6b);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: width 0.5s ease-out;
+}
+
+.xp-bar-text {
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #343a40;
+}
+
+/* Grid de recompensas */
+
+.rewards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.reward-card {
+  border-radius: 16px;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.reward-card--locked {
+  opacity: 0.6;
+}
+
+.reward-card-title {
+  font-weight: 700;
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.reward-card-condicion {
+  font-size: 0.75rem;
+  color: #555;
+  margin-top: 0.25rem;
+}
+
+.reward-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  margin: 0 auto;
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reward-card-icon img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.reward-card-icon--locked {
+  background: #e9ecef;
+  font-size: 1.5rem;
+}

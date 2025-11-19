@@ -1,0 +1,53 @@
+{% extends "LevelUp/base.html" %}
+{% load static %}
+
+{% block title %}Recompensas · LevelUp{% endblock %}
+
+{% block content %}
+<main class="container py-3">
+  <h1 class="h4 mb-3">🎁 Recompensas</h1>
+
+  {% if perfil %}
+    <p class="mb-3">
+      Nivel actual: <strong>{{ perfil.nivel }}</strong> ·
+      XP total: <strong>{{ perfil.xp_total }}</strong>
+    </p>
+  {% endif %}
+
+  <div class="rewards-grid">
+    {% for r in recompensas %}
+      {% if r.id in desbloqueadas_ids %}
+        <div class="reward-card">
+          <div>
+            <div class="reward-card-icon">
+              {% if r.icono %}
+                <img src="{% static r.icono %}" alt="{{ r.nombre }}">
+              {% else %}
+                ⭐
+              {% endif %}
+            </div>
+            <div class="reward-card-title">{{ r.nombre }}</div>
+            {% if r.condicion_texto %}
+              <div class="reward-card-condicion">{{ r.condicion_texto }}</div>
+            {% endif %}
+          </div>
+        </div>
+      {% else %}
+        <div class="reward-card reward-card--locked">
+          <div>
+            <div class="reward-card-icon reward-card-icon--locked">
+              🔒
+            </div>
+            <div class="reward-card-title">{{ r.nombre }}</div>
+            {% if r.condicion_texto %}
+              <div class="reward-card-condicion">{{ r.condicion_texto }}</div>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    {% empty %}
+      <p>No hay recompensas configuradas aún.</p>
+    {% endfor %}
+  </div>
+</main>
+{% endblock %}
