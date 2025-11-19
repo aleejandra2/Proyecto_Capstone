@@ -49,6 +49,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'LevelUp.errores.Custom404Middleware',
 ]
 
 ROOT_URLCONF = 'ProyectoLevelUP.urls'
@@ -150,9 +151,18 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# --- Email (desarrollo) ---
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# --- Email ---
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 DEFAULT_FROM_EMAIL = "no-reply@levelup.local"
+
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
+EMAIL_HOST_USER = "amcompanyMPH@gmail.com"          # remitente
+EMAIL_HOST_PASSWORD = "tcyw fjho lwtn xfud"  # contraseña o app password
+
+DEFAULT_FROM_EMAIL = "LevelUp <amcompanyMPH@gmail.com>"
 
 X_FRAME_OPTIONS = "SAMEORIGIN"
 

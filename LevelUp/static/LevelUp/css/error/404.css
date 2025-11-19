@@ -1,0 +1,142 @@
+/* Reset básico */
+html,
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #ffffff;
+    box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: inherit;
+}
+
+/* Contenedor principal: ocupa toda la vista y centra contenido */
+.error-404-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+/* Tarjeta central, responsiva */
+.error-404-inner {
+    width: 100%;
+    max-width: 560px;
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 2rem 1.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+/* Pill "Error 404" con tipografía marcada */
+.error-404-kicker {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 1.1rem;
+    margin-bottom: 1.25rem;
+    border-radius: 999px;
+    background: #f1f3f5;
+    color: #343a40;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* Imagen un poquito más grande */
+.error-404-img {
+    max-width: 300px;
+    /* <- aquí la agrandamos un poco */
+    width: 100%;
+    height: auto;
+    margin-bottom: 1.75rem;
+}
+
+/* Texto con diseño, más grande pero legible en móvil */
+.error-404-text {
+    margin-bottom: 2rem;
+    color: #212529;
+    font-size: 1.1rem;
+    line-height: 1.7;
+    font-weight: 500;
+}
+
+/* Contenedor de botones */
+.error-404-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+/* Botones grandes tipo pastilla */
+.error-404-btn {
+    display: inline-block;
+    width: 100%;
+    padding: 0.9rem 1.4rem;
+    border-radius: 999px;
+    border: none;
+    text-decoration: none;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    background: #4dabf7;
+    color: #fff;
+    box-shadow: 0 6px 14px rgba(77, 171, 247, 0.35);
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.error-404-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(77, 171, 247, 0.45);
+}
+
+.error-404-btn-secondary {
+    background: #e9ecef;
+    color: #444;
+    box-shadow: none;
+}
+
+.error-404-btn-secondary:hover {
+    background: #dde2e6;
+}
+
+/* RESPONSIVO */
+@media (min-width: 576px) {
+    .error-404-inner {
+        padding: 2.5rem 2rem;
+    }
+
+    .error-404-actions {
+        flex-direction: row;
+        justify-content: center;
+    }
+
+    .error-404-btn {
+        width: auto;
+        min-width: 160px;
+    }
+}
+
+@media (min-width: 992px) {
+    .error-404-inner {
+        max-width: 640px;
+        padding: 3rem 2.5rem;
+    }
+
+    .error-404-text {
+        font-size: 1.2rem;
+    }
+}

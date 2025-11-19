@@ -1,5 +1,5 @@
 {% extends "LevelUp/base.html" %}
-{% block title %}Asignaciones Docentes{% endblock %}
+{% block title %}Profesor ↔ Asignatura{% endblock %}
 {% block content %}
 <main class="container py-3">
     <div class="d-flex align-items-center justify-content-between mb-3">
@@ -15,7 +15,7 @@
                         <tr>
                             <th>Profesor</th>
                             <th>Asignatura</th>
-                            <th style="width:160px">Acciones</th>
+                            <th style="width:220px">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -23,14 +23,19 @@
                         <tr>
                             <td>{{ r.profesor.get_full_name|default:r.profesor.username }}</td>
                             <td>{{ r.asignatura.nombre }}</td>
-                            <td>
+                            <td class="d-flex gap-2">
+                                <a class="btn btn-chip" href="{% url 'adm_asignaciones_editar' r.id %}">
+                                    ✎ Editar
+                                </a>
                                 <a class="btn btn-chip btn-ghost" href="{% url 'adm_asignaciones_borrar' r.id %}"
-                                    onclick="return confirm('¿Eliminar esta asignación?');">🗑 Eliminar</a>
+                                    onclick="return confirm('¿Eliminar esta asignación?');">
+                                    🗑 Eliminar
+                                </a>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="3" class="text-muted">Aún no hay asignaciones.</td>
+                            <td colspan="3" class="text-muted">Sin registros.</td>
                         </tr>
                         {% endfor %}
                     </tbody>

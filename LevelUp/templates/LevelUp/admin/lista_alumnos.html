@@ -3,30 +3,43 @@
 {% block content %}
 <main class="container py-3">
     <h1 class="section-title mb-3">Alumnos</h1>
+
     <div class="card">
         <div class="card-content">
-            <table class="table mb-0">
-                <thead>
-                    <tr>
-                        <th>Nombre</th>
-                        <th>RUT</th>
-                        <th>Email</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for e in alumnos %}
-                    <tr>
-                        <td>{{ e.usuario.get_full_name|default:e.usuario.username }}</td>
-                        <td>{{ e.usuario.rut }}</td>
-                        <td>{{ e.usuario.email }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="3" class="text-muted">No hay alumnos registrados.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>RUT</th>
+                            <th>Email</th>
+                            <th style="width:220px">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in alumnos %}
+                        <tr>
+                            <td>{{ e.usuario.get_full_name|default:e.usuario.username }}</td>
+                            <td>{{ e.usuario.rut }}</td>
+                            <td>{{ e.usuario.email }}</td>
+                            <td class="d-flex gap-2">
+                                <a class="btn btn-chip" href="{% url 'adm_alumno_editar' e.usuario.pk %}">
+                                    ✎ Editar
+                                </a>
+                                <a class="btn btn-chip btn-ghost" href="{% url 'adm_alumno_borrar' e.usuario.pk %}"
+                                    onclick="return confirm('¿Eliminar este alumno y todos sus datos asociados (matrículas, progreso, etc.)?');">
+                                    🗑 Eliminar
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-muted">No hay alumnos registrados.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </main>

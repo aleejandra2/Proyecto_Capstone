@@ -1,0 +1,37 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <title>Error 404 - Página no encontrada</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- CSS específico del 404 -->
+    <link rel="stylesheet" href="{% static 'LevelUp/css/error/404.css' %}?v=3">
+</head>
+
+<body>
+    <div class="error-404-wrapper">
+        <div class="error-404-inner">
+
+            <span class="error-404-kicker">Error 404</span>
+
+            <img src="{% static 'LevelUp/img/error/Error_404.png' %}" alt="Error 404" class="error-404-img">
+
+            <p class="error-404-text">
+                La página que estás buscando no existe o fue movida.<br>
+                Pero Timo te puede ayudar a volver al camino.
+            </p>
+
+            <div class="error-404-actions">
+                <a href="/" class="error-404-btn">Volver al inicio</a>
+                <a href="javascript:history.back()" class="error-404-btn error-404-btn-secondary">
+                    Página anterior
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -12,6 +12,7 @@
                         <tr>
                             <th>Nombre</th>
                             <th>Email</th>
+                            <th class="text-end" style="width:220px;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -19,10 +20,19 @@
                         <tr>
                             <td>{{ u.get_full_name|default:u.username }}</td>
                             <td>{{ u.email }}</td>
+                            <td class="text-end">
+                                <a class="btn btn-chip btn-ghost" href="{% url 'adm_profesor_editar' u.pk %}">
+                                    ✎ Editar
+                                </a>
+                                <a class="btn btn-chip btn-ghost" href="{% url 'adm_profesor_borrar' u.pk %}"
+                                    onclick="return confirm('¿Eliminar este profesor y todos sus datos asociados?');">
+                                    🗑 Eliminar
+                                </a>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="2" class="text-muted">No hay profesores registrados.</td>
+                            <td colspan="3" class="text-muted">No hay profesores registrados.</td>
                         </tr>
                         {% endfor %}
                     </tbody>

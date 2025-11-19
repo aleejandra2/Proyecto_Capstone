@@ -206,7 +206,29 @@ class MatriculaForm(forms.ModelForm):
         widgets = {
             "curso": forms.Select(attrs={"class": "form-select"}),
         }
+        
+# =====================================================
+# Formulario ADMIN para editar usuarios (docentes/alumnos)
+# =====================================================
+class AdminUsuarioForm(forms.ModelForm):
+    class Meta:
+        model = Usuario
+        fields = ("first_name", "last_name", "email")
+        widgets = {
+            "first_name": forms.TextInput(attrs={"class": "form-control"}),
+            "last_name":  forms.TextInput(attrs={"class": "form-control"}),
+            "email":      forms.EmailInput(attrs={"class": "form-control"}),
+        }
 
+    def clean_email(self):
+        email = (self.cleaned_data.get("email") or "").strip().lower()
+        qs = Usuario.objects.filter(email__iexact=email)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError("Este email ya está registrado.")
+        return email
+    
 # ---------------------------------------------------------
 # Actividad
 # ---------------------------------------------------------

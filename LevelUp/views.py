@@ -21,7 +21,7 @@ from django.templatetags.static import static
 from django.contrib.staticfiles import finders
 from django import forms
 
-from .forms import RegistrationForm, LoginForm, ProfileForm, ActividadForm, ItemForm, CursoForm, AsignaturaForm, AsignacionDocenteForm, MatriculaForm
+from .forms import RegistrationForm, LoginForm, ProfileForm, ActividadForm, ItemForm, CursoForm, AsignaturaForm, AsignacionDocenteForm, MatriculaForm, AdminUsuarioForm
 from .rewards import compute_rewards, apply_rewards
 
 
@@ -76,17 +76,34 @@ def reportes_docente_view(request):
 # -------------------------------------------------------------------
 # Auth
 # -------------------------------------------------------------------
+@login_required
 def register_view(request):
+    # Validar que sea ADMIN:
+    if not (request.user.is_superuser or getattr(request.user, "rol", None) == Usuario.Rol.ADMINISTRADOR):
+        return redirect("dashboard") 
+
     if request.method == "POST":
         form = RegistrationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            messages.success(request, "¡Cuenta creada con éxito! Bienvenido/a a LevelUp.")
+            nuevo_usuario = form.save()
+
+            nombre_mostrable = (
+                nuevo_usuario.get_full_name()
+                or getattr(nuevo_usuario, "email", None)
+                or nuevo_usuario.username
+            )
+            messages.success(
+                request,
+                f"✅ Usuario «{nombre_mostrable}» creado correctamente."
+            )
+
+            # Volver al portal admin
             return redirect("dashboard")
+
         messages.error(request, "Por favor corrige los errores del formulario.")
     else:
         form = RegistrationForm()
+
     return render(request, "LevelUp/auth/register.html", {"form": form})
 
 def login_view(request):
@@ -372,6 +389,37 @@ def adm_asignaciones_nueva(request):
     return render(request, "LevelUp/admin/admin_form.html", {"form": form, "titulo": "Asignar profesor → asignatura", "post_url": reverse("adm_asignaciones_nueva")})
 
 @admin_required
+def adm_asignaciones_editar(request, pk):
+    asign = get_object_or_404(AsignacionDocente, pk=pk)
+
+    class AsignacionEditForm(AsignacionDocenteForm):
+        def clean(self_inner):
+            data = super(AsignacionEditForm, self_inner).clean()
+            prof = data.get("profesor")
+            asig = data.get("asignatura")
+            if prof and asig:
+                qs = AsignacionDocente.objects.filter(
+                    profesor=prof,
+                    asignatura=asig,
+                ).exclude(pk=asign.pk)
+                if qs.exists():
+                    raise forms.ValidationError("Esa combinación profesor/asignatura ya existe.")
+            return data
+
+    form = AsignacionEditForm(request.POST or None, instance=asign)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Asignación actualizada.")
+        return redirect("adm_asignaciones_lista")
+
+    return render(request, "LevelUp/admin/admin_form.html", {
+        "form": form,
+        "titulo": "Editar asignación profesor → asignatura",
+        "post_url": reverse("adm_asignaciones_editar", args=[pk]),
+        "back_url": reverse("adm_asignaciones_lista"),
+    })
+
+@admin_required
 def adm_asignaciones_borrar(request, pk):
     reg = get_object_or_404(AsignacionDocente, pk=pk)
     reg.delete()
@@ -395,6 +443,35 @@ def adm_matriculas_nueva(request):
     return render(request, "LevelUp/admin/admin_form.html", {"form": form, "titulo": "Matricular alumno → curso", "post_url": reverse("adm_matriculas_nueva")})
 
 @admin_required
+def adm_matriculas_editar(request, pk):
+    matricula = get_object_or_404(Matricula, pk=pk)
+
+    class MatriculaEditForm(MatriculaForm):
+        def clean(self_inner):
+            data = super(MatriculaEditForm, self_inner).clean()
+            est = data.get("estudiante")
+            curso = data.get("curso")
+            if est and curso:
+                qs = Matricula.objects.filter(estudiante=est, curso=curso).exclude(pk=matricula.pk)
+                if qs.exists():
+                    raise forms.ValidationError("Este alumno ya está matriculado en ese curso.")
+            return data
+
+    form = MatriculaEditForm(request.POST or None, instance=matricula)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Matrícula actualizada.")
+        return redirect("adm_matriculas_lista")
+
+    titulo = f"Editar matrícula de {matricula.estudiante.get_full_name() or matricula.estudiante.username}"
+    return render(request, "LevelUp/admin/admin_form.html", {
+        "form": form,
+        "titulo": titulo,
+        "post_url": reverse("adm_matriculas_editar", args=[pk]),
+        "back_url": reverse("adm_matriculas_lista"),
+    })
+
+@admin_required
 def adm_matriculas_borrar(request, pk):
     m = get_object_or_404(Matricula, pk=pk)
     m.delete()
@@ -402,17 +479,54 @@ def adm_matriculas_borrar(request, pk):
     return redirect("adm_matriculas_lista")
 
 # ---------- LISTADOS ----------
+# Docentes
 @admin_required
 def adm_list_profesores(request):
     profesores = User.objects.filter(rol=Usuario.Rol.DOCENTE).order_by("last_name", "first_name")
     return render(request, "LevelUp/admin/lista_docentes.html", {"profesores": profesores})
 
 @admin_required
+def adm_profesor_editar(request, pk):
+    profesor = get_object_or_404(User, pk=pk, rol=Usuario.Rol.DOCENTE)
+    form = AdminUsuarioForm(request.POST or None, instance=profesor)
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Datos del profesor actualizados.")
+        return redirect("adm_list_profesores")
+
+    titulo = f"Editar profesor: {profesor.get_full_name() or profesor.username}"
+    return render(request, "LevelUp/admin/admin_form.html", {
+        "form": form,
+        "titulo": titulo,
+        "post_url": reverse("adm_profesor_editar", args=[pk]),
+        "back_url": reverse("adm_list_profesores"),
+    })
+
+@admin_required
+def adm_profesor_borrar(request, pk):
+    profesor = get_object_or_404(User, pk=pk, rol=Usuario.Rol.DOCENTE)
+    nombre = profesor.get_full_name() or profesor.username
+
+    try:
+        profesor.delete()
+        messages.success(request, f"Profesor «{nombre}» eliminado correctamente.")
+    except ProtectedError:
+        messages.error(
+            request,
+            f"No se puede eliminar al profesor «{nombre}» porque tiene registros asociados protegidos."
+        )
+
+    return redirect("adm_list_profesores")
+
+# Alumnos
+@admin_required
 def adm_list_alumnos(request):
     alumnos = (Estudiante.objects.select_related("usuario")
                .order_by("usuario__last_name", "usuario__first_name"))
     return render(request, "LevelUp/admin/lista_alumnos.html", {"alumnos": alumnos})
 
+# Alumnos por curso
 @admin_required
 def adm_list_alumnos_por_curso(request):
     curso_id = request.GET.get("curso")
@@ -432,6 +546,39 @@ def adm_list_alumnos_por_curso(request):
         "curso_id": int(curso_id or 0),
     })
 
+@admin_required
+def adm_alumno_editar(request, pk):
+    alumno = get_object_or_404(User, pk=pk, rol=Usuario.Rol.ESTUDIANTE)
+    form = AdminUsuarioForm(request.POST or None, instance=alumno)
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Datos del alumno actualizados.")
+        return redirect("adm_list_alumnos")
+
+    titulo = f"Editar alumno: {alumno.get_full_name() or alumno.username}"
+    return render(request, "LevelUp/admin/admin_form.html", {
+        "form": form,
+        "titulo": titulo,
+        "post_url": reverse("adm_alumno_editar", args=[pk]),
+        "back_url": reverse("adm_list_alumnos"),
+    })
+
+@admin_required
+def adm_alumno_borrar(request, pk):
+    alumno = get_object_or_404(User, pk=pk, rol=Usuario.Rol.ESTUDIANTE)
+    nombre = alumno.get_full_name() or alumno.username
+
+    try:
+        alumno.delete()
+        messages.success(request, f"Alumno «{nombre}» eliminado correctamente.")
+    except ProtectedError:
+        messages.error(
+            request,
+            f"No se puede eliminar al alumno «{nombre}» porque tiene registros asociados protegidos."
+        )
+
+    return redirect("adm_list_alumnos")
 
 # ===================================================================
 # Flujo de Actividades (Docente y Estudiante)
@@ -1088,17 +1235,26 @@ def estudiante_mis_actividades(request):
         cerrada = bool(a.fecha_cierre and now > a.fecha_cierre)
 
         # ---- lógica de intentos (0 o None = ilimitado) ----
-        raw_max = ov_map.get(a.id)
-        if raw_max is None:
-            raw_max = a.intentos_max  # puede ser None o 0
+        # Si la actividad está marcada como intentos_ilimitados => ilimitado (sin importar intentos_max)
+        # Si existe un override en AsignacionActividad.intentos_permitidos se usa 0 como valor máximo
+        # En cualquier otro caso, se usa a.intentos_max (1 - 1000)
+        override_raw = ov_map.get(a.id)
 
-        if raw_max is None:
-            raw_max = 0
-
-        try:
-            max_for_student = int(raw_max)
-        except (TypeError, ValueError):
-            max_for_student = 0
+        if override_raw is not None:
+            # Override para este estudiante
+            try:
+                max_for_student = int(override_raw)
+            except (TypeError, ValueError):
+                max_for_student = 0
+        else:
+            if a.intentos_ilimitados:
+                # Si la actividad es ilimitada, no se toma en cuenta el campo intentos_max
+                max_for_student = 0  # 0 = ilimitado
+            else:
+                try:
+                    max_for_student = int(a.intentos_max or 0)
+                except (TypeError, ValueError):
+                    max_for_student = 0
 
         es_ilimitado = (max_for_student == 0)
 
@@ -1243,12 +1399,8 @@ def actividad_resultados(request, pk):
         "celebration_video_url": static("LevelUp/video/Timo_celebrando_animado.mp4"),
     })
 
-# ===================================================================
-# MODO GAMIFICADO (PLAY) + APIs AJAX
-# ===================================================================
-
 # =====================================================
-# ESTUDIANTE: Jugar actividad (corregido)
+# ESTUDIANTE: Jugar actividad
 # =====================================================
 @login_required
 def actividad_play(request, pk):
@@ -1290,19 +1442,23 @@ def actividad_play(request, pk):
         messages.warning(request, "La actividad está cerrada.")
         return redirect("estudiante_lista")
     
-    # ----- Intentos (0 o None = ilimitado) -----
+    # ----- Intentos (actividad ilimitada o con tope) -----
     intentos_usados = Submission.objects.filter(
         actividad=act, 
         estudiante=estudiante
     ).count()
 
-    raw_max = act.intentos_max  # puede ser None o 0
-    if raw_max is None:
-        raw_max = 0
-    try:
-        intentos_max = int(raw_max)
-    except (TypeError, ValueError):
-        intentos_max = 0
+    if act.intentos_ilimitados:
+        # Actividad marcada como ilimitada no considera intentos_max
+        intentos_max = 0  # 0 = ilimitado
+    else:
+        raw_max = act.intentos_max  # puede ser None
+        if raw_max is None:
+            raw_max = 0
+        try:
+            intentos_max = int(raw_max)
+        except (TypeError, ValueError):
+            intentos_max = 0
 
     es_intentos_ilimitados = (intentos_max == 0)
 
@@ -1827,3 +1983,12 @@ def actividad_crear_mision(request):
     # si viene ?preview=1, abre el editor con la vista previa automáticamente
     open_preview = "1" if request.GET.get("preview") == "1" else "0"
     return redirect(f"{reverse('actividad_editar', args=[act.pk])}?open_preview={open_preview}")
+
+# ---------------------------------------------------------------------
+# ERROR 404
+# ---------------------------------------------------------------------
+def custom_404(request, exception):
+    """
+    Página personalizada para error 404 (no encontrado).
+    """
+    return render(request, "LevelUp/error/404.html", status=404)
