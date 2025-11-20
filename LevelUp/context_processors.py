@@ -1,6 +1,9 @@
 from django.urls import reverse
 from .models import Asignatura
 from .models import Estudiante
+from gamificacion.services import obtener_o_crear_perfil
+from .models import Usuario
+
 
 def user_home_url(request):
     user = request.user
@@ -39,3 +42,28 @@ def estudiante_actual(request):
     except Estudiante.DoesNotExist:
         return {}
     return {"estudiante_actual": est}
+
+def gamificacion_context(request):
+    """
+    Inyecta 'perfil' y 'estudiante_actual' en todas las plantillas
+    cuando el usuario es ESTUDIANTE.
+    """
+    if not request.user.is_authenticated:
+        return {}
+
+    try:
+        rol = getattr(request.user, "rol", None)
+    except Exception:
+        rol = None
+
+    ctx = {}
+
+    if rol == Usuario.Rol.ESTUDIANTE:
+        # Estudiante "dueño" de los puntos/XP
+        est = Estudiante.objects.select_related("usuario").filter(usuario=request.user).first()
+        perfil = obtener_o_crear_perfil(request.user)
+
+        ctx["estudiante_actual"] = est
+        ctx["perfil"] = perfil
+
+    return ctx

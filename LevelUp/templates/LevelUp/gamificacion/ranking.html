@@ -7,67 +7,67 @@
   <div class="container py-3">
 
     <div class="league-card">
-      <!-- Pestañas superiores -->
       <div class="league-tabs">
         <button class="league-tab is-active">
-          🌍 Liga General
+          Rango General
         </button>
       </div>
 
       <div class="league-inner">
-        {% if estudiantes_top %}
-          <!-- Cabecera de columnas -->
+        {% if ranking_rows %}
+          <!-- Cabecera -->
           <div class="league-head-row">
             <div class="league-col league-col--pos">Posición:</div>
             <div class="league-col league-col--trainer">Nombre del estudiante:</div>
-            <div class="league-col league-col--score">Puntuación:</div>
+            <div class="league-col league-col--score">Rango / Actividades:</div>
           </div>
 
-          <!-- Lista de posiciones -->
+          <!-- Lista -->
           <ul class="league-list">
-            {% for e in estudiantes_top %}
+            {% for row in ranking_rows %}
             <li class="league-row
                        {% if forloop.first %} is-leader{% endif %}
-                       {% if e.usuario == request.user %} is-me{% endif %}">
+                       {% if row.usuario == request.user %} is-me{% endif %}">
               
-              <!-- Columna posición -->
+              <!-- Posición -->
               <div class="league-col league-col--pos">
                 {% if forloop.first %}
                   <i class="bi bi-trophy-fill league-trophy"></i>
                 {% else %}
-                  <span class="league-rank">{{ forloop.counter }}º</span>
+                  <span class="league-rank">{{ row.posicion }}º</span>
                 {% endif %}
               </div>
 
-              <!-- Columna entrenador (foto + nombre) -->
+              <!-- Estudiante -->
               <div class="league-col league-col--trainer">
                 <div class="league-player">
                   <div class="league-avatar">
-                    {% if e.foto_perfil %}
-                      <img src="{{ e.foto_perfil.url }}" alt="Avatar" class="league-avatar-img">
+                    {% if row.foto %}
+                      <img src="{{ row.foto.url }}" alt="Avatar" class="league-avatar-img">
                     {% else %}
                       <span class="league-avatar-fallback">
-                        {{ e.usuario.first_name|default:e.usuario.username|slice:":2"|upper }}
+                        {{ row.iniciales }}
                       </span>
                     {% endif %}
                   </div>
                   <span class="league-name">
-                    {{ e.usuario.get_full_name|default:e.usuario.username }}
+                    {{ row.nombre }}
                   </span>
                 </div>
               </div>
 
-              <!-- Columna puntuación -->
+              <!-- Rango + actividades -->
               <div class="league-col league-col--score">
                 <span class="league-score">
-                  {{ e.puntos|default:0 }} pts
+                  {{ row.rango }}<br>
+                  <small>{{ row.actividades }} actividad(es) completada(s)</small>
                 </span>
               </div>
             </li>
             {% endfor %}
           </ul>
 
-          <!-- Pie: resumen del jugador actual (opcional) -->
+          <!-- Footer: info del jugador actual -->
           <div class="league-footer">
             <div class="league-footer-pill">
               <span class="league-footer-pos">
@@ -78,15 +78,17 @@
                 {% endif %}
               </span>
               <span class="league-footer-text">
-                Tu puntuación:
-                <strong>{{ estudiante_actual.puntos|default:0 }} pts</strong>
+                Tu rango:
+                <strong>{{ perfil.rango_timo|default:"Timo Explorador" }}</strong>
+                · Actividades:
+                <strong>{{ perfil.actividades_completadas|default:0 }}</strong>
               </span>
             </div>
           </div>
 
         {% else %}
           <div class="py-4 text-center text-muted">
-            Aún no hay estudiantes con puntaje. ¡Sé el primero en sumar puntos! ✨
+            Aún no hay estudiantes con actividades registradas. ¡Sé el primero en completar una! ✨
           </div>
         {% endif %}
       </div>
@@ -94,7 +96,6 @@
 
   </div>
 
-  {# Botón flotante Timo #}
   <a href="{% url 'dashboard' %}" class="timo-home-btn" aria-label="Volver al inicio">
     <img src="{% static 'LevelUp/img//icons/timo_bolita.png' %}" alt="Volver al inicio">
   </a>

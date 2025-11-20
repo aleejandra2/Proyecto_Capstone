@@ -67,6 +67,7 @@ TEMPLATES = [
                 'LevelUp.context_processors.user_home_url',
                 'LevelUp.context_processors.navbar_asignaturas',
                 'LevelUp.context_processors.estudiante_actual',
+                'LevelUp.context_processors.gamificacion_context',
             ],
         },
     },

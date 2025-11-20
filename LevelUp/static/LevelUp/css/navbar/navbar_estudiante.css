@@ -3,7 +3,7 @@
 .seussbar.topbar{
   background: #ffffff;
   border-bottom: 0px solid #f1f1f5;
-  padding: -2px 0;
+  padding: 4px 0;              /* antes: padding: -2px 0; */
 }
 
 .topbar-inner {
@@ -11,13 +11,16 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  padding-left: 8px;           /* pegamos más a la izquierda */
+  padding-right: 12px;
 }
 
 /* --- IZQUIERDA: asignatura --- */
 
 .topbar-left {
   display: flex;
-  align-items: center;   /* 👈 corregido (antes decía 'cenlefter') */
+  align-items: center;
+  margin-right: 8px;
 }
 
 .subject-selector {
@@ -30,7 +33,7 @@
   gap: 10px;
   border: none;
   background: transparent;
-  padding: 4px 0;
+  padding: 4px 4px 4px 0;      /* padding pequeñito a la izquierda */
   cursor: pointer;
 }
 
@@ -45,7 +48,7 @@
   font-size: 18px;
 }
 
-/* 👇 NUEVO: imagen del icono elegido en el botón principal */
+/* 👇 imagen del icono elegido en el botón principal */
 .subject-icon .subject-main-img {
   width: 20px;
   height: 20px;
@@ -63,7 +66,7 @@
   color: #4b5563;
 }
 
-/* Dropdown asignaturas (re-uso pero más limpio) */
+/* Dropdown asignaturas */
 
 .subject-dropdown {
   position: absolute;
@@ -169,13 +172,57 @@
   background: #e5e7eb;
 }
 
-.coins-block {
-  color: #f59e0b;
+/* --- MINI BARRA DE XP EN EL NAVBAR --- */
+
+.status-block--level {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
 }
 
-.coin-icon {
-  font-size: 16px;
-  margin-right: 2px;
+.status-level-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #111827;
+}
+
+.status-info-icon {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* contenedor gris de la barra */
+.xp-mini-bar {
+  position: relative;
+  width: 140px;
+  height: 6px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+/* parte morada (progreso) */
+.xp-mini-fill {
+  position: absolute;
+  inset: 0;
+  width: var(--xp-progress, 0%);
+  max-width: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #a855f7, #6366f1);
+}
+
+/* bolita al final de la barra */
+.xp-mini-thumb {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translate(50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px #7c3aed;
 }
 
 /* --- DERECHA: iconos, usuario y botón --- */
@@ -263,7 +310,7 @@
 
 @media (max-width: 992px) {
   .topbar-center {
-    display: none; /* ocultar pastilla en pantallas chicas */
+    display: none; 
   }
   .user-name {
     display: none !important;

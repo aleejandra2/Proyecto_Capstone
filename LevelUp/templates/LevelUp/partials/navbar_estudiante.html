@@ -1,6 +1,5 @@
 {% load static %}
 
-<!-- === NAVBAR === -->
 <header class="acad-navbar seussbar topbar">
   <div class="container topbar-inner">
 
@@ -56,46 +55,51 @@
       </div>
     </div>
 
-    <!-- CENTRO:  nivel / puntos -->
-<div class="topbar-center">
-  <div class="status-pill">
-    <div class="status-block">
-      <div class="hud-level">
-        Nivel {{ estudiante_actual.nivel|default:1 }}
+    <!-- CENTRO: Rango -->
+    <div class="topbar-center">
+      <div class="status-pill">
+        <div class="status-block">
+          <!-- Rango -->
+          <span class="status-text">
+            Rango: {{ perfil.rango_timo|default:"Timo Explorador" }}
+          </span>
+
+          <!-- <span class="status-divider"></span>
+          <span class="status-text" style="margin-left: .5rem;">
+          {{ request.user.get_full_name|default:request.user.username }}
+          </span> -->
+        </div>
+        
+        <!-- <div class="status-block status-block--level">
+           Nivel + barra XP 
+           <div class="status-level-label">
+            Nivel {{ estudiante_actual.nivel|default:1 }}
+            <span class="status-info-icon" title="XP hasta el siguiente nivel">
+              <i class="bi bi-info-circle"></i>
+            </span>
+          </div>
+           {% if perfil %}
+          <div class="xp-mini-bar" style="--xp-progress: {{ perfil.progreso_porcentaje|default_if_none:0 }}%;">
+            <div class="xp-mini-fill">
+              <span class="xp-mini-thumb"></span>
+            </div>
+          </div>
+          {% endif %} 
+        </div> 
+        Puntos 
+        <span class="status-divider"></span>
+        <div class="status-block">
+          <span class="status-text">
+            {{ estudiante_actual.puntos|default:0 }} pts
+          </span>
+        </div> -->
       </div>
     </div>
 
-    <span class="status-divider"></span>
-
-    <div class="status-block">
-      <span class="status-text">
-        {{ estudiante_actual.puntos|default:0 }} pts
-      </span>
-    </div>
-
-    <span class="status-divider"></span>
-
-    <div class="status-block coins-block">
-      <span class="coin-icon">🪙</span>
-      <span class="status-value">
-        {{ estudiante_actual.monedas|default:0 }}
-      </span>
-    </div>
-  </div>
-</div>
-
-    <!-- DERECHA: iconos, usuario y botón -->
+    <!-- DERECHA: usuario -->
     <div class="topbar-right">
-
-      <!-- Icono medalla -->
-      <button type="button" class="circle-badge">
-        <i class="bi bi-award-fill"></i>
-      </button>
-
-      <!-- Separador -->
       <span class="topbar-divider"></span>
 
-      <!-- Usuario -->
       <div class="dropdown user-dropdown">
         <button class="user-pill" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menú de usuario">
           <span class="user-avatar">
@@ -118,36 +122,36 @@
         </ul>
       </div>
     </div>
+
   </div>
 </header>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-  const subjectMain = document.querySelector(".subject-main");
-  if (!subjectMain) return;
+  document.addEventListener("DOMContentLoaded", function () {
+    const subjectMain = document.querySelector(".subject-main");
+    if (!subjectMain) return;
 
-  const mainImg  = subjectMain.querySelector(".subject-icon img.subject-main-img");
-  const mainName = subjectMain.querySelector(".subject-name");
+    const mainImg = subjectMain.querySelector(".subject-icon img.subject-main-img");
+    const mainName = subjectMain.querySelector(".subject-name");
 
-  document.querySelectorAll(".subject-item.js-subject").forEach(function (item) {
-    item.addEventListener("click", function (e) {
-      e.preventDefault(); // que no haga salto a "#"
+    document.querySelectorAll(".subject-item.js-subject").forEach(function (item) {
+      item.addEventListener("click", function (e) {
+        e.preventDefault(); // que no haga salto a "#"
 
-      const name = item.dataset.name;
-      const icon = item.dataset.icon;
+        const name = item.dataset.name;
+        const icon = item.dataset.icon;
 
-      if (mainName && name) {
-        mainName.textContent = name;
-      }
-      if (mainImg && icon) {
-        mainImg.src = icon;
-      }
+        if (mainName && name) {
+          mainName.textContent = name;
+        }
+        if (mainImg && icon) {
+          mainImg.src = icon;
+        }
 
-      // opcional: marcar seleccionado en el dropdown
-      document.querySelectorAll(".subject-item.js-subject.is-active")
-              .forEach(el => el.classList.remove("is-active"));
-      item.classList.add("is-active");
+        document.querySelectorAll(".subject-item.js-subject.is-active")
+          .forEach(el => el.classList.remove("is-active"));
+        item.classList.add("is-active");
+      });
     });
   });
-});
 </script>

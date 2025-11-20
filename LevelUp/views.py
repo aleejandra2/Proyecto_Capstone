@@ -24,6 +24,9 @@ from django import forms
 from .forms import RegistrationForm, LoginForm, ProfileForm, ActividadForm, ItemForm, CursoForm, AsignaturaForm, AsignacionDocenteForm, MatriculaForm, AdminUsuarioForm
 from .rewards import compute_rewards, apply_rewards
 
+from gamificacion.services import registrar_actividad_completada
+from gamificacion.services import obtener_o_crear_perfil
+from gamificacion.models import PerfilGamificacion
 
 # Modelos
 from .models import (
@@ -61,8 +64,56 @@ def actividades_view(request):
 
 @login_required
 def ranking_view(request):
-    estudiantes_top = Estudiante.objects.order_by("-puntos").select_related("usuario")[:20]
-    return render(request, "LevelUp/gamificacion/ranking.html", {"estudiantes_top": estudiantes_top})
+    """
+    Ranking por:
+    1) rango_numero (4 = Héroe, 1 = Explorador)
+    2) actividades_completadas (más actividades primero)
+    """
+    perfiles_qs = (
+        PerfilGamificacion.objects
+        .select_related("usuario")
+        .filter(usuario__rol=Usuario.Rol.ESTUDIANTE)
+    )
+
+    perfiles = list(perfiles_qs)
+
+    # Ordenar en memoria porque rango_numero es @property
+    perfiles.sort(
+        key=lambda p: (
+            -p.rango_numero,              # rango más alto primero
+            -p.actividades_completadas,   # más actividades primero
+            (p.usuario.get_full_name() or p.usuario.username or "").lower(),
+        )
+    )
+
+    ranking_rows = []
+    mi_posicion = None
+
+    for idx, p in enumerate(perfiles, start=1):
+        # Buscar Estudiante para la foto (si existe)
+        est = Estudiante.objects.filter(usuario=p.usuario).first()
+
+        ranking_rows.append({
+            "posicion": idx,
+            "usuario": p.usuario,
+            "foto": getattr(est, "foto_perfil", None),
+            "nombre": p.usuario.get_full_name() or p.usuario.username,
+            "iniciales": (p.usuario.first_name or p.usuario.username)[:2].upper(),
+            "rango": p.rango_timo,
+            "actividades": p.actividades_completadas,
+        })
+
+        if p.usuario_id == request.user.id:
+            mi_posicion = idx
+
+    return render(
+        request,
+        "LevelUp/gamificacion/ranking.html",
+        {
+            "ranking_rows": ranking_rows,
+            "mi_posicion": mi_posicion,
+        }
+    )
 
 @login_required
 def reportes_docente_view(request):
@@ -159,6 +210,7 @@ def home_view(request):
     }
 
     if rol == Usuario.Rol.ESTUDIANTE:
+        perfil = obtener_o_crear_perfil(request.user)
         try:
             est = Estudiante.objects.select_related("usuario").get(usuario=request.user)
             ctx.update({
@@ -170,6 +222,7 @@ def home_view(request):
         except Estudiante.DoesNotExist:
             ctx.update({"nivel": 1, "puntos": 0, "medallas": 0, "curso": "Sin curso"})
         ctx["actividades_count"] = Actividad.objects.count()
+        ctx["perfil"] = perfil 
 
     elif rol == Usuario.Rol.DOCENTE:
         ctx.update({
@@ -1234,10 +1287,8 @@ def estudiante_mis_actividades(request):
         
         cerrada = bool(a.fecha_cierre and now > a.fecha_cierre)
 
-        # ---- lógica de intentos (0 o None = ilimitado) ----
-        # Si la actividad está marcada como intentos_ilimitados => ilimitado (sin importar intentos_max)
-        # Si existe un override en AsignacionActividad.intentos_permitidos se usa 0 como valor máximo
-        # En cualquier otro caso, se usa a.intentos_max (1 - 1000)
+        # ---- lógica de intentos  ----
+
         override_raw = ov_map.get(a.id)
 
         if override_raw is not None:
@@ -1306,12 +1357,14 @@ def estudiante_mis_actividades(request):
 def actividad_resolver(request, pk):
     return redirect("resolver_play", pk=pk)
 
+
 def _letra(i):
     try:
         i = int(i)
     except Exception:
         return "?"
     return chr(65 + i)
+
 
 @login_required
 def actividad_resultados(request, pk):
@@ -1338,7 +1391,7 @@ def actividad_resultados(request, pk):
         sub = intento_qs.first()
 
     items_data = []
-    for item in act.items.all():  # requiere related_name="items" en ItemActividad
+    for item in act.items.all():  
         tipo = (item.tipo or "").lower()
         ans = Answer.objects.filter(submission=sub, item=item).first()
         respuesta = ans.respuesta if ans else {}
@@ -1369,7 +1422,7 @@ def actividad_resultados(request, pk):
 
     intentos_usados = Submission.objects.filter(actividad=act, estudiante=estudiante).count()
 
-    # ----- intentos_max (0 o None = ilimitado) -----
+    # ----- intentos_max -----
     raw_max = act.intentos_max
     if raw_max is None:
         raw_max = 0
@@ -1642,16 +1695,33 @@ def api_item_answer(request, pk, item_id):
     else:
         print(f"✅ Submission existente: #{sub.pk}")
 
-    # Si item_id == 0, es señal de finalizar
+    # -----------------------------
+    # FIN DE LA ACTIVIDAD / JUEGO
+    # -----------------------------
     if item_id == 0 or str(item_id) == "0":
         print(f"🏁 Finalizando submission...")
         sub.finalizado = True
         sub.finished_at = timezone.now()
         sub.save()
         print(f"✅ Submission finalizado")
+
+        # 👇 Aquí SOLO contamos la actividad para el rango Timo
+        try:
+            registrar_actividad_completada(
+                request.user,
+                xp_ganada=0,           # XP la sumamos abajo con compute_rewards
+                origen="actividad",
+                referencia_id=pk,
+            )
+            print("🐾 Conteo de actividad registrado en PerfilGamificacion.")
+        except Exception as e:
+            print(f"⚠️ Error registrando actividad completada en gamificación: {e}")
+
         return JsonResponse({"ok": True, "message": "Intento finalizado"})
 
-    # Buscar el item
+    # -----------------------------
+    # ITEM INDIVIDUAL
+    # -----------------------------
     try:
         item = ItemActividad.objects.get(pk=item_id, actividad=actividad)
         print(f"✅ Item encontrado: {item.enunciado[:30]}...")
@@ -1695,23 +1765,43 @@ def api_item_answer(request, pk, item_id):
     
     print(f"✅ Submission actualizado")
 
-    # ⚠️ COMENTAR TEMPORALMENTE LAS RECOMPENSAS
-    # Si hay error en rewards.py, comentar estas líneas:
+    # ----------------------------------
+    # RECOMPENSAS + XP DE GAMIFICACIÓN
+    # ----------------------------------
     try:
+        # 1) Rewards propios del minijuego (coins, etc.)
         outcome = compute_rewards(meta)
         res = apply_rewards(estudiante, outcome)
         
         print(f"🎁 Recompensas aplicadas: XP={outcome.xp}, Coins={outcome.coins}")
-        
+
+        # 2) XP → PerfilGamificacion (barra y nivel)
+        try:
+            perfil = obtener_o_crear_perfil(request.user)
+            gamif_info = perfil.agregar_xp(
+                outcome.xp or 0,
+                origen="juego",
+                referencia_id=actividad.pk,
+            )
+            print(f"🆙 Gamificación: +{gamif_info['xp_ganada']} XP, niveles_subidos={gamif_info['niveles_subidos']}")
+        except Exception as e:
+            print(f"⚠️ Error sumando XP en gamificación: {e}")
+            gamif_info = {
+                "xp_ganada": 0,
+                "niveles_subidos": 0,
+                "recompensas_nuevas": [],
+            }
+
         reward_data = {
-            "xp": outcome.xp, 
-            "coins": outcome.coins, 
-            "unlocks": outcome.unlocks, 
-            **res
+            "xp": outcome.xp,
+            "coins": outcome.coins,
+            "unlocks": outcome.unlocks,
+            **res,
+            "niveles_subidos": gamif_info.get("niveles_subidos", 0),
         }
     except Exception as e:
         print(f"⚠️ Error en rewards (ignorado): {e}")
-        reward_data = {"xp": 0, "coins": 0, "unlocks": []}
+        reward_data = {"xp": 0, "coins": 0, "unlocks": [], "niveles_subidos": 0}
 
     print(f"{'='*60}\n")
 
@@ -1721,6 +1811,7 @@ def api_item_answer(request, pk, item_id):
         "answer_id": answer.id,
         "reward": reward_data,
     })
+
 
 @require_POST
 @login_required

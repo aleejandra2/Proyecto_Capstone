@@ -7,47 +7,15 @@
 
 <link rel="stylesheet" href="{% static 'LevelUp/css/gamificacion.css' %}?v=1">
 
-{% with perfil=user.perfil_gamificacion|default_if_none:'' %}
-{% if perfil %}
-<section class="xp-widget">
-  <div class="xp-card">
-    <div class="xp-card-header">
-      <div class="xp-level">
-        Nivel
-        <span class="xp-level-number">{{ perfil.nivel }}</span>
-      </div>
-      <div class="xp-total">
-        <span class="xp-total-label">XP total</span>
-        <span class="xp-total-value">{{ perfil.xp_total }}</span>
-      </div>
-    </div>
-
-    <div class="xp-bar-wrapper">
-      <div class="xp-bar-track">
-        <div class="xp-bar-fill" data-progress="{{ perfil.progreso_porcentaje|default_if_none:0 }}"></div>
-      </div>
-      <div class="xp-bar-text">
-        {{ perfil.xp_actual }} / {{ perfil.xp_para_siguiente_nivel }} XP
-      </div>
-    </div>
-
-    <div style="margin-top:.5rem; font-size:.8rem;">
-      <a href="{% url 'recompensas' %}">🎁 Ver recompensas</a>
-    </div>
-  </div>
-</section>
-{% endif %}
-{% endwith %}
-
 <main class="scene-wrap">
   <div class="scene-bg"
     data-bg="{% if fondo_portal %}{{ fondo_portal }}{% else %}{% static 'LevelUp/img/fondos/fondo_ciencias-naturales.jpg' %}{% endif %}">
   </div>
   <!-- HUD superior -->
-  <header class="hud-top">
+  <!-- <header class="hud-top">
     <h1 class="hud-name">{{ request.user.get_full_name|default:request.user.username }}</h1>
     <div class="hud-level">Nivel {{ nivel|default:1 }}</div>
-  </header>
+  </header> -->
 
   <!-- Personaje centrado -->
   <div class="hero-character">
@@ -62,12 +30,8 @@
   </a>
 
   <a class="sidecard sidecard--right" href="#">
-    <span class="emoji">
-      <i class="bi bi-graph-up-arrow"></i>
-    </span>
-    Estadísticas
+    <span class="emoji"> </span> Rangos
   </a>
-
 
   <!-- Acciones inferiores -->
   <div class="cta-bottom">
