@@ -1,0 +1,231 @@
+{% extends "LevelUp/base.html" %}
+{% load static %}
+
+{% block title %}Rangos de Timo · LevelUp{% endblock %}
+
+{% block content %}
+<main class="rangos-page">
+
+    {# ===== HERO SECTION CON EFECTO PARALLAX ===== #}
+    <section class="rangos-hero-section">
+        <div class="hero-background-animated">
+            <div class="floating-shape shape-1"></div>
+            <div class="floating-shape shape-2"></div>
+            <div class="floating-shape shape-3"></div>
+            <div class="floating-shape shape-4"></div>
+        </div>
+
+        <div class="container">
+            <div class="hero-content-wrapper">
+
+                {# Lado izquierdo - Información #}
+                <div class="hero-text-content">
+                    <div class="hero-badge-tag">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="8" r="7"></circle>
+                            <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+                        </svg>
+                        <span>Sistema de Progresión</span>
+                    </div>
+
+                    <h1 class="hero-main-title">
+                        Rangos de <span class="title-highlight">Timo</span>
+                    </h1>
+
+                    <p class="hero-description">
+                        Avanza junto a Timo completando actividades y desbloquea
+                        nuevos rangos. ¡Cada logro te acerca más a convertirte
+                        en un Héroe Legendario! 🐾
+                    </p>
+
+                    {% if perfil %}
+                    {# SOLO UNA CARD: RANGO ACTUAL #}
+                    <div class="hero-stats-grid">
+                        <div class="stat-card stat-card-primary">
+                            <div class="stat-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                     stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"></path>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-label">Rango Actual</div>
+                                <div class="stat-value">{{ perfil.rango_timo }}</div>
+                                <div class="stat-description">{{ perfil.rango_descripcion }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="hero-cta-box">
+                        <p>🎮 Comienza a jugar para desbloquear tu primer rango</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {# Lado derecho - Ilustración de Timo #}
+                <div class="hero-illustration-side">
+                    <div class="timo-showcase-card">
+                        <div class="showcase-glow"></div>
+                        <div class="showcase-rings">
+                            <div class="ring ring-1"></div>
+                            <div class="ring ring-2"></div>
+                            <div class="ring ring-3"></div>
+                        </div>
+                        <div class="timo-avatar-container">
+                            <img src="{% static 'LevelUp/img/avatars/Timo.png' %}"
+                                 alt="Timo" class="timo-avatar-img">
+                        </div>
+                        {% if perfil %}
+                        <div class="showcase-rank-badge">
+                            <span class="badge-icon">🏆</span>
+                            <span class="badge-text">{{ perfil.rango_timo }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    {# ===== PROGRESSION PATH SECTION ===== #}
+    <section class="rangos-progression-section">
+        <div class="container">
+
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="title-icon">📊</span>
+                    Tu Camino de Progresión
+                </h2>
+                <p class="section-subtitle">
+                    Cada rango representa un nuevo nivel de maestría.
+                    ¡Sigue adelante y alcanza la cima!
+                </p>
+            </div>
+
+            {# Timeline vertical de rangos #}
+            <div class="rangos-timeline">
+                {% for r in rangos %}
+                <article class="timeline-item {% if perfil and perfil.rango_timo == r.nombre %}timeline-item-current{% endif %}">
+
+                    {# Línea conectora #}
+                    {% if not forloop.last %}
+                    <div class="timeline-connector"></div>
+                    {% endif %}
+
+                    {# Número de rango #}
+                    <div class="timeline-marker">
+                        <div class="marker-number">{{ forloop.counter }}</div>
+                        <div class="marker-dot"></div>
+                    </div>
+
+                    {# Contenido del rango #}
+                    <div class="timeline-content">
+                        <div class="rango-card-modern">
+
+                            {# Badge de nivel #}
+                            <div class="rango-header">
+                                <div class="rango-level-badge">
+                                    Nivel {{ forloop.counter }}
+                                </div>
+                                {% if perfil and perfil.rango_timo == r.nombre %}
+                                <div class="current-rank-indicator">
+                                    <span class="indicator-pulse"></span>
+                                    <span class="indicator-text">Tu rango actual</span>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="rango-body">
+                                {# Imagen/Avatar #}
+                                <div class="rango-avatar">
+                                    {% if r.imagen %}
+                                        {# r.imagen debe ser SOLO el nombre del archivo, ej: "Timo_explorador.png" #}
+                                        <img src="{% static 'LevelUp/img/timo/'|add:r.imagen %}"
+                                             alt="{{ r.nombre }}">
+                                    {% else %}
+                                        <div class="rango-avatar-placeholder">
+                                            <span>{{ r.nombre|slice:":1" }}</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                {# Información del rango #}
+                                <div class="rango-info">
+                                    <h3 class="rango-name">{{ r.nombre }}</h3>
+
+                                    {% if r.descripcion %}
+                                    <p class="rango-description">{{ r.descripcion }}</p>
+                                    {% endif %}
+
+                                    {% if r.detalle %}
+                                    <div class="rango-requirements">
+                                        <svg width="16" height="16" viewBox="0 0 24 24"
+                                             fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                        <span>{{ r.detalle }}</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {# Solo dentro del rango actual y si hay siguiente rango #}
+                            {% if perfil and perfil.rango_timo == r.nombre and perfil.actividades_para_siguiente_rango > 0 %}
+                                {% with total_acts=perfil.actividades_completadas|default:0|add:perfil.actividades_para_siguiente_rango %}
+                                    {% if total_acts > 0 %}
+                                        {% widthratio perfil.actividades_completadas|default:0 total_acts 100 as progress_percentage %}
+                                        <div class="rango-progress-bar">
+                                            <div class="progress-track">
+                                                <div class="progress-fill"
+                                                     data-progress="{{ progress_percentage|default:0 }}"></div>
+                                            </div>
+                                            <div class="progress-label">
+                                                {{ perfil.actividades_completadas|default:0 }} / {{ total_acts }} actividades
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <div class="rango-progress-bar">
+                                            <div class="progress-track">
+                                                <div class="progress-fill" data-progress="0"></div>
+                                            </div>
+                                            <div class="progress-label">
+                                                0 / 0 actividades
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endwith %}
+                            {% endif %}
+
+                        </div>
+                    </div>
+
+                </article>
+                {% endfor %}
+            </div>
+
+        </div>
+    </section>
+
+    {# Botón flotante de regreso #}
+    <a href="{% url 'dashboard' %}" class="timo-home-btn" aria-label="Volver al inicio">
+        <img src="{% static 'LevelUp/img/icons/timo_bolita.png' %}" alt="Volver al inicio">
+    </a>
+
+</main>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".rango-progress-bar .progress-fill").forEach(function (el) {
+    var pct = parseFloat(el.dataset.progress || "0");
+    if (isNaN(pct) || pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
+    el.style.width = pct + "%";
+  });
+});
+</script>
+{% endblock %}

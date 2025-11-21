@@ -127,7 +127,9 @@ urlpatterns = [
         ),
         name="password_reset_complete",
     ),
-
+    # Gamificacion
     path("gamificacion/", include("gamificacion.urls")),
+    path("gamificacion/recompensas/", views.recompensas_view, name="recompensas"),
+    path("gamificacion/rangos/", views.rangos_view, name="gamificacion_rangos"),
 
 ]

@@ -27,13 +27,16 @@
   <link rel="stylesheet" href="{% static 'LevelUp/css/recuperar_contraseña/recuperar.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/error/404.css' %}?v=1">
   <link rel="stylesheet" href="{% static 'LevelUp/css/game_builder.css' %}?v=5">
-
+  <link rel="stylesheet" href="{% static 'LevelUp/css/gamificacion.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'LevelUp/css/rangos/rangos.css' %}?v=5">
+  
   <!-- Fuentes / íconos -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Merienda:wght@300..900&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Henny+Penny&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Lobster+Two:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
 
   {% block extra_head %}{% endblock %}
 </head>
@@ -45,25 +48,55 @@
 
   {# === ESTUDIANTE === #}
   {% if request.user.rol|default_if_none:''|lower == 'estudiante' or request.user.es_estudiante %}
-  {% include "LevelUp/partials/navbar_estudiante.html" %}
+    {% include "LevelUp/partials/navbar_estudiante.html" %}
 
   {# === DOCENTE === #}
   {% elif request.user.rol|default_if_none:''|lower == 'docente' or request.user.es_docente %}
-  {% include "LevelUp/partials/navbar_docente.html" %}
+    {% include "LevelUp/partials/navbar_docente.html" %}
 
   {# === ADMIN / OTROS ROLES -> NAVBAR GENERAL === #}
   {% else %}
-  {% include "LevelUp/partials/navbar.html" %}
+    {% include "LevelUp/partials/navbar.html" %}
   {% endif %}
 
   {% else %}
   {# Usuario no autenticado: navbar general #}
-  {% include "LevelUp/partials/navbar.html" %}
+    {% include "LevelUp/partials/navbar.html" %}
   {% endif %}
   {% endblock %}
 
-
   {% block content %}{% endblock %}
+
+  {# ========== TOAST GLOBAL DE RECOMPENSAS ========== #}
+  {% if nuevas_recompensas %}
+  <div id="reward-toast" class="reward-toast">
+    <div class="reward-toast-inner">
+      <div class="reward-toast-icon">🎉</div>
+      <div class="reward-toast-text">
+        <div class="reward-toast-title">¡Nuevo logro desbloqueado!</div>
+        <div class="reward-toast-body">
+          {% for nr in nuevas_recompensas %}
+            <div class="reward-toast-item">
+              <strong>{{ nr.recompensa.nombre }}</strong><br>
+              {% if nr.recompensa.descripcion %}
+                <small>{{ nr.recompensa.descripcion }}</small>
+              {% else %}
+                <small>{{ nr.recompensa.condicion_texto }}</small>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      <button type="button"
+              class="reward-toast-close"
+              aria-label="Cerrar"
+              onclick="document.getElementById('reward-toast').style.display='none';">
+        ✕
+      </button>
+    </div>
+  </div>
+  {% endif %}
+  {# ========== FIN TOAST GLOBAL DE RECOMPENSAS ========== #}
 
   {% block footer %}
   {% if request.user.is_authenticated %}

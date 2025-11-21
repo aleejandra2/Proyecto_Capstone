@@ -185,29 +185,34 @@ class Recompensa(models.Model):
         ("OTRO", "Otro"),
     ]
 
+    SLUGS_ESPECIALES = [
+        "maestro-matematicas",
+        "guardian-palabras",
+        "cronista-tiempo",
+        "cientifico-estrella",
+        "primer-paso-matematicas",
+        "primer-cuento-lenguaje",
+        "primer-viaje-historia",
+        "primer-experimento-ciencias",
+        "respuesta-perfecta",
+        "racha-genio",
+        "bienvenido-levelup",
+    ]
+
     nombre = models.CharField(max_length=100)
     slug = models.SlugField(unique=True)
     descripcion = models.TextField(blank=True)
-
-    # Texto que explica la condición (para mostrar al alumno)
-    # Ej: "Consigue 10000 puntos en Matemáticas en un mes"
     condicion_texto = models.CharField(max_length=255, blank=True)
-
     icono = models.CharField(
         max_length=255,
         blank=True,
         help_text="Ruta estática opcional, ej: 'LevelUp/img/recompensas/medalla_math.png'",
     )
-
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default="LOGRO")
 
-    # Condiciones básicas de desbloqueo
     nivel_requerido = models.PositiveIntegerField(default=0)
     xp_requerida = models.PositiveIntegerField(default=0)
-    actividades_requeridas = models.PositiveIntegerField(
-        default=0,
-        help_text="Número de actividades completadas necesarias."
-    )
+    actividades_requeridas = models.PositiveIntegerField(default=0)
 
     class Meta:
         verbose_name = "Recompensa"
@@ -219,20 +224,22 @@ class Recompensa(models.Model):
     @staticmethod
     def desbloquear_para_perfil(perfil: "PerfilGamificacion"):
         """
-        Devuelve una lista de RecompensaUsuario recién creados
-        (las recompensas que el perfil acaba de desbloquear).
-        Tiene en cuenta nivel, XP total y actividades completadas.
+        Desbloqueo genérico por nivel / XP / actividades.
+        NO incluye los logros especiales (que se manejan aparte).
         """
-        # Candidatas que cumplen las condiciones
-        disponibles = Recompensa.objects.filter(
-            nivel_requerido__lte=perfil.nivel,
-            xp_requerida__lte=perfil.xp_total,
-            actividades_requeridas__lte=perfil.actividades_completadas,
+        disponibles = (
+            Recompensa.objects
+            .filter(
+                nivel_requerido__lte=perfil.nivel,
+                xp_requerida__lte=perfil.xp_total,
+                actividades_requeridas__lte=perfil.actividades_completadas,
+            )
+            .exclude(slug__in=Recompensa.SLUGS_ESPECIALES) 
         )
 
-        # IDs de recompensas que YA tiene el usuario
         ya_tiene_ids = set(
-            RecompensaUsuario.objects.filter(perfil=perfil)
+            RecompensaUsuario.objects
+            .filter(perfil=perfil)
             .values_list("recompensa_id", flat=True)
         )
 
@@ -247,7 +254,6 @@ class Recompensa(models.Model):
                 )
             )
         return nuevas
-
 
 class RecompensaUsuario(models.Model):
     perfil = models.ForeignKey(

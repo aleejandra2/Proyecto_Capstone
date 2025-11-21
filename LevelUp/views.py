@@ -28,6 +28,13 @@ from gamificacion.services import registrar_actividad_completada
 from gamificacion.services import obtener_o_crear_perfil
 from gamificacion.models import PerfilGamificacion
 
+from gamificacion.models import Recompensa, RecompensaUsuario
+
+from gamificacion.services import evaluar_logros_por_actividad
+
+from django.db.models import Case, When, IntegerField
+
+
 # Modelos
 from .models import (
     Usuario, Asignatura, Estudiante, Docente, Actividad, AsignacionActividad,
@@ -64,11 +71,7 @@ def actividades_view(request):
 
 @login_required
 def ranking_view(request):
-    """
-    Ranking por:
-    1) rango_numero (4 = Héroe, 1 = Explorador)
-    2) actividades_completadas (más actividades primero)
-    """
+
     perfiles_qs = (
         PerfilGamificacion.objects
         .select_related("usuario")
@@ -123,6 +126,84 @@ def reportes_docente_view(request):
         "total_estudiantes": total_estudiantes,
         "total_actividades": total_actividades
     })
+    
+@login_required
+def recompensas_view(request):
+    # Perfil del usuario
+    perfil = obtener_o_crear_perfil(request.user)
+
+    # Traer todas las recompensas
+    recompensas_qs = Recompensa.objects.all()
+
+    recompensas = sorted(
+        recompensas_qs,
+        key=lambda r: (0 if r.slug == "bienvenido-levelup" else 1, r.nombre)
+    )
+
+    # IDs desbloqueadas para este perfil
+    desbloqueadas_ids = set(
+        RecompensaUsuario.objects
+        .filter(perfil=perfil)
+        .values_list("recompensa_id", flat=True)
+    )
+
+    context = {
+        "perfil": perfil,
+        "recompensas": recompensas,
+        "desbloqueadas_ids": desbloqueadas_ids,
+    }
+    return render(request, "LevelUp/gamificacion/recompensas.html", context)
+
+@login_required
+def rangos_view(request):
+    """
+    Muestra todos los rangos de Timo con su descripción, detalle e imagen.
+    """
+    rangos = [
+        {
+            "codigo": "explorador",
+            "nombre": "Timo Explorador",
+            "descripcion": "Estás dando tus primeros pasos con Timo.",
+            "detalle": "Ideal para quienes recién comienzan a completar actividades.",
+            "imagen": "Timo_explorador.png",
+        },
+        {
+            "codigo": "guardian",
+            "nombre": "Timo Guardián",
+            "descripcion": "Proteges el conocimiento junto a Timo.",
+            "detalle": "Para estudiantes con muchas actividades resueltas.",
+            "imagen": "Timo_guardian.png",
+        },
+        {
+            "codigo": "guerrero",
+            "nombre": "Timo Guerrero",
+            "descripcion": "Ya conoces bien el mundo de LevelUp.",
+            "detalle": "Para estudiantes que completan actividades con constancia.",
+            "imagen": "Timo_Guerrero.png",
+        },
+        {
+            "codigo": "legendario",
+            "nombre": "Timo Héroe Legendario",
+            "descripcion": "El rango más alto de LevelUp.",
+            "detalle": "Solo para quienes han completado una gran cantidad de actividades.",
+            "imagen": "Timo_legendario.png",
+        },
+    ]
+
+    perfil = None
+    if request.user.is_authenticated:
+        try:
+            perfil = obtener_o_crear_perfil(request.user)
+        except Exception:
+            perfil = None
+
+    context = {
+        "perfil": perfil,
+        "rangos": rangos,
+    }
+    return render(request, "LevelUp/gamificacion/rangos.html", context)
+
+
 
 # -------------------------------------------------------------------
 # Auth
@@ -1705,19 +1786,35 @@ def api_item_answer(request, pk, item_id):
         sub.save()
         print(f"✅ Submission finalizado")
 
-        # 👇 Aquí SOLO contamos la actividad para el rango Timo
         try:
-            registrar_actividad_completada(
-                request.user,
-                xp_ganada=0,           # XP la sumamos abajo con compute_rewards
-                origen="actividad",
-                referencia_id=pk,
+            nuevos_logros = evaluar_logros_por_actividad(
+                estudiante=estudiante,
+                actividad=actividad,
+                submission=sub,
             )
-            print("🐾 Conteo de actividad registrado en PerfilGamificacion.")
-        except Exception as e:
-            print(f"⚠️ Error registrando actividad completada en gamificación: {e}")
+            if nuevos_logros:
+                print("🎖 Logros desbloqueados ahora:",
+                      [ru.recompensa.slug for ru in nuevos_logros])
+                nombres = [ru.recompensa.nombre for ru in nuevos_logros]
 
-        return JsonResponse({"ok": True, "message": "Intento finalizado"})
+                # 🔔 NUEVO: guardar IDs en la sesión para el popup global
+                nuevas_ids = [ru.recompensa_id for ru in nuevos_logros]
+                ya_guardadas = request.session.get("nuevas_recompensas_ids", [])
+                # unimos sin duplicados
+                merged = list({*ya_guardadas, *nuevas_ids})
+                request.session["nuevas_recompensas_ids"] = merged
+                print(f"💾 nuevas_recompensas_ids en sesión: {merged}")
+            else:
+                nombres = []
+        except Exception as e:
+            print(f"⚠️ Error evaluando logros especiales: {e}")
+            nombres = []
+
+        return JsonResponse({
+            "ok": True,
+            "message": "Intento finalizado",
+            "logros_nuevos": nombres, 
+        })
 
     # -----------------------------
     # ITEM INDIVIDUAL
@@ -1813,6 +1910,7 @@ def api_item_answer(request, pk, item_id):
     })
 
 
+
 @require_POST
 @login_required
 def api_item_hint(request, pk, item_id):
@@ -1846,7 +1944,7 @@ def _nombre_docente(obj):
 @login_required
 def portal_estudiante(request):
     u = request.user
-
+    perfil = obtener_o_crear_perfil(request.user)
     matricula = (Matricula.objects.select_related("curso").filter(estudiante=u).order_by("-fecha").first())
 
     curso_str = None
