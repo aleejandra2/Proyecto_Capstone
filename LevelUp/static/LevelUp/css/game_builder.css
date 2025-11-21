@@ -1,15 +1,237 @@
-/* Estilos mínimos para el constructor visual */
-.gbuilder { border: 1px dashed #e5e7eb; border-radius: .5rem; padding: .75rem; background: #fafafa; }
-.gb-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .5rem; }
-.gb-table { width: 100%; }
-.gb-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: .5rem; margin-bottom: .5rem; }
-.gb-row-h { font-weight: 700; color: #6b7280; }
-.gb-cell { display: flex; align-items: center; }
-.gb-cell-min { display: flex; align-items: center; justify-content: flex-end; }
+/* ===============================
+   ESTILOS GENERALES CONSTRUCTOR
+   =============================== */
 
-.gb-q-list { display: grid; gap: .75rem; }
-.gb-q-card { background: #fff; border: 1px solid #e5e7eb; border-radius: .5rem; padding: .75rem; }
-.gb-opts { display: grid; gap: .5rem; margin-top: .5rem; }
-.gb-opt-row { display: grid; grid-template-columns: 24px 1fr auto; gap: .5rem; align-items: center; }
+.gbuilder {
+    border: 1px dashed #e5e7eb;
+    border-radius: .75rem;
+    padding: .75rem;
+    background: #fafafa;
+}
 
-.gb-raw textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+.gb-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: .5rem;
+}
+
+.gb-table {
+    width: 100%;
+}
+
+.gb-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: .5rem;
+    margin-bottom: .5rem;
+}
+
+.gb-row-h {
+    font-weight: 700;
+    color: #6b7280;
+}
+
+.gb-cell {
+    display: flex;
+    align-items: center;
+}
+
+.gb-cell-min {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.gb-q-list {
+    display: grid;
+    gap: .75rem;
+}
+
+.gb-q-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: .75rem;
+    padding: .75rem;
+}
+
+.gb-opts {
+    display: grid;
+    gap: .5rem;
+    margin-top: .5rem;
+}
+
+.gb-opt-row {
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    gap: .5rem;
+    align-items: center;
+}
+
+.gb-raw textarea {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+}
+
+/* ===============================
+   CLOZE PREVIEW DENTRO DEL BUILDER
+   (para que no tome estilos gigantes del juego)
+   =============================== */
+
+.gbuilder .cloze-preview {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: .25rem;
+}
+
+.gbuilder .cloze-word {
+    background: transparent;
+    color: inherit;
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin: 0 2px 2px 0;
+    font-size: .95rem;
+    font-weight: 400;
+    box-shadow: none;
+    border: none;
+    cursor: pointer;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.gbuilder .cloze-word.marked {
+    background: #ffe066;
+    font-weight: 700;
+}
+
+.gbuilder .card .cloze-preview {
+    max-width: 100%;
+    overflow-wrap: break-word;
+}
+
+/* ===============================
+   ORDENAR PASOS – constructor
+   =============================== */
+
+.gb-ordering-list .gb-order-item .d-flex {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.gb-ordering-list .gb-order-item input.form-control {
+    min-width: 0;
+}
+
+/* ===============================
+   RESPONSIVE (TABLET / MOBILE)
+   =============================== */
+
+@media (max-width: 768px) {
+
+    /* Fila principal de conteo, etc. */
+    .gb-row {
+        grid-template-columns: 1fr;
+    }
+
+    .gb-cell-min {
+        justify-content: flex-start;
+    }
+
+    /* Filas internas genéricas (trivia, etc.) */
+    .gb-opt-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ===============================
+   RESPONSIVE ESPECÍFICO PARA CADA TIPO
+   - VF
+   - CLASIFICAR (items)
+   - PARES (dragmatch / memory)
+   - ORDENAR
+   =============================== */
+
+@media (max-width: 768px) {
+
+    /* -------- Verdadero/Falso -------- */
+    .gb-vf-list .card .row {
+        flex-wrap: wrap;
+    }
+
+    .gb-vf-list .card .col,
+    .gb-vf-list .card .col-auto {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    .gb-vf-list .card .form-select,
+    .gb-vf-list .card .btn {
+        width: 100%;
+    }
+
+    /* -------- Clasificar: elementos -------- */
+    .gb-items-list .card .row {
+        flex-wrap: wrap;
+    }
+
+    .gb-items-list .card .col,
+    .gb-items-list .card .col-auto {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    .gb-items-list .card .form-select,
+    .gb-items-list .card .btn {
+        width: 100%;
+    }
+
+    /* -------- PARES (dragmatch / memory) -------- */
+    .gb-pairs-list .gb-pair-row .row {
+        flex-wrap: wrap;
+    }
+
+    .gb-pairs-list .gb-pair-row .col,
+    .gb-pairs-list .gb-pair-row .col-auto {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    .gb-pairs-list .gb-pair-row .form-select,
+    .gb-pairs-list .gb-pair-row .btn {
+        width: 100%;
+    }
+
+    /* -------- Ordenar pasos -------- */
+    .gb-ordering-list .gb-order-item .d-flex {
+        flex-wrap: wrap;
+    }
+
+    .gb-ordering-list .gb-order-item .gb-handle {
+        margin-bottom: .25rem;
+    }
+
+    .gb-ordering-list .gb-order-item input.form-control {
+        flex: 1 1 100%;
+    }
+
+    .gb-ordering-list .gb-order-item .btn-remove-step {
+        width: 100%;
+    }
+
+    /* -------- Categorías de clasificar (input-group) -------- */
+    .gb-cats-list .input-group {
+        flex-wrap: wrap;
+    }
+
+    .gb-cats-list .input-group .form-control {
+        min-width: 0;
+        flex: 1 1 100%;
+    }
+
+    .gb-cats-list .input-group .btn {
+        margin-top: .25rem;
+    }
+}
+

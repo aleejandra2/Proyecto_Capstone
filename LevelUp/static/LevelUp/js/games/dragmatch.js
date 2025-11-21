@@ -1,3 +1,4 @@
+// static/LevelUp/js/games/dragmatch.js
 import { shuffle, playSound } from './core.js';
 
 console.log('🎮 [DRAGMATCH] Módulo cargado');
@@ -13,6 +14,16 @@ export default async function init(host, cfg) {
   }
 
   let matched = 0;
+
+  // TAP (mobile): chip seleccionado
+  let selectedChip = null;
+
+  function clearSelectedChip() {
+    if (selectedChip) {
+      selectedChip.classList.remove('dm-chip-selected');
+      selectedChip = null;
+    }
+  }
 
   // Limpiar host
   host.innerHTML = '';
@@ -45,7 +56,7 @@ export default async function init(host, cfg) {
       </div>
     </div>
     <div style="color: rgba(255,255,255,0.95); font-size: 1.1rem; font-weight: 600; margin-bottom: 1.5rem;">
-          🔗 Arrastra cada elemento a su pareja correcta
+      🔗 Arrastra cada elemento a su pareja correcta
     </div>
     <div style="background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); padding: 0.75rem 1.5rem; border-radius: 12px; display: inline-block;">
       <div style="color: rgba(255,255,255,0.8); font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem;">Emparejadas</div>
@@ -108,7 +119,7 @@ export default async function init(host, cfg) {
   // Crear elementos arrastrables
   const leftItems = shuffle(pairs.map((p, i) => ({ text: p[0], pairId: i })));
 
-  leftItems.forEach(item => {
+  leftItems.forEach((item) => {
     const chip = document.createElement('div');
     chip.className = 'dm-chip';
     chip.draggable = true;
@@ -129,12 +140,12 @@ export default async function init(host, cfg) {
     `;
 
     chip.addEventListener('dragstart', (e) => {
-      console.log(`🖱️ [DRAGMATCH] Inicio arrastre:`, item.text);
+      console.log('🖱️ [DRAGMATCH] Inicio arrastre:', item.text);
       chip.classList.add('dragging');
       chip.style.opacity = '0.5';
       chip.style.transform = 'scale(0.95)';
       e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', item.pairId);
+      e.dataTransfer.setData('text/plain', String(item.pairId));
     });
 
     chip.addEventListener('dragend', () => {
@@ -143,16 +154,34 @@ export default async function init(host, cfg) {
       chip.style.transform = '';
     });
 
-    // Hover effect
+    // Hover effect (desktop)
     chip.addEventListener('mouseenter', () => {
       chip.style.transform = 'translateY(-6px) scale(1.05)';
       chip.style.boxShadow = '0 12px 32px rgba(255, 212, 59, 0.5)';
     });
 
     chip.addEventListener('mouseleave', () => {
-      if (!chip.classList.contains('dragging')) {
+      if (!chip.classList.contains('dragging') && chip !== selectedChip) {
         chip.style.transform = '';
         chip.style.boxShadow = '0 6px 20px rgba(255, 212, 59, 0.4)';
+      }
+    });
+
+    // TAP: seleccionar chip (mobile)
+    chip.addEventListener('click', () => {
+      // Si ya está usado (ya se soltó en un slot) no hacer nada
+      if (!chip.draggable) return;
+
+      if (selectedChip === chip) {
+        // des-seleccionar
+        clearSelectedChip();
+      } else {
+        // limpiar seleccionado anterior
+        document
+          .querySelectorAll('.dm-chip-selected')
+          .forEach((c) => c.classList.remove('dm-chip-selected'));
+        selectedChip = chip;
+        chip.classList.add('dm-chip-selected');
       }
     });
 
@@ -171,6 +200,8 @@ export default async function init(host, cfg) {
       border-radius: 16px;
       flex-wrap: wrap;
       min-height: 90px;
+      width: 100%;
+      box-sizing: border-box;
     `;
 
     const label = document.createElement('div');
@@ -193,9 +224,10 @@ export default async function init(host, cfg) {
 
     const slot = document.createElement('div');
     slot.className = 'dm-slot';
-    slot.dataset.pairId = idx;
+    slot.dataset.pairId = String(idx);
     slot.style.cssText = `
-      min-width: 180px;
+      flex: 1 1 160px;
+      min-width: 0;
       min-height: 70px;
       border: 3px dashed #ced4da;
       border-radius: 14px;
@@ -214,6 +246,91 @@ export default async function init(host, cfg) {
       </div>
     `;
 
+    function resetSlotVisual() {
+      if (!slot.querySelector('.dm-chip')) {
+        slot.style.cssText = `
+          flex: 1 1 160px;
+          min-width: 0;
+          min-height: 70px;
+          border: 3px dashed #ced4da;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          background: white;
+          padding: 0.75rem;
+          box-shadow: inset 0 2px 6px rgba(0,0,0,0.05);
+        `;
+        slot.innerHTML = `
+          <div style="color: #adb5bd; font-size: 1rem; font-weight: 700; text-align: center;">
+            <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">⬇️</div>
+            Suelta aquí
+          </div>
+        `;
+      }
+    }
+
+    function handleDropOnSlot(chip) {
+      if (!chip) return;
+      // si el slot ya tiene un chip, no hacer nada
+      if (slot.querySelector('.dm-chip')) return;
+
+      const draggedPairId = parseInt(chip.dataset.pairId, 10);
+      const targetPairId = parseInt(slot.dataset.pairId, 10);
+
+      if (Number.isNaN(draggedPairId) || Number.isNaN(targetPairId)) {
+        console.warn('⚠️ [DRAGMATCH] IDs inválidos en drop/tap');
+        return;
+      }
+
+      console.log(
+        `📥 [DRAGMATCH] Intento de emparejar chip ${draggedPairId} con target ${targetPairId}`
+      );
+
+      if (draggedPairId === targetPairId) {
+        console.log('✅ [DRAGMATCH] Pareja correcta!');
+        playSound('success');
+
+        slot.innerHTML = '';
+        slot.appendChild(chip);
+        chip.draggable = false;
+        chip.style.cursor = 'default';
+        chip.style.transform = 'scale(1)';
+        chip.classList.remove('dm-chip-selected');
+
+        slot.style.cssText += `
+          background: linear-gradient(135deg, #51CF66 0%, #8ce99a 100%) !important;
+          border-color: #51CF66 !important;
+          border-style: solid !important;
+          border-width: 3px !important;
+          animation: celebrate 0.7s ease-out;
+          box-shadow: 0 8px 24px rgba(81, 207, 102, 0.5) !important;
+        `;
+
+        matched += 1;
+        const matchedEl = headerDiv.querySelector('#dm-matched');
+        if (matchedEl) matchedEl.textContent = String(matched);
+
+        if (matched === pairs.length) {
+          setTimeout(() => finish(), 1000);
+        }
+      } else {
+        console.log('❌ [DRAGMATCH] Pareja incorrecta');
+        playSound('error');
+        resetSlotVisual();
+        // Efecto de error
+        slot.style.animation = 'wiggle 0.5s ease-out';
+        targetRow.style.animation = 'wiggle 0.5s ease-out';
+        setTimeout(() => {
+          slot.style.animation = '';
+          targetRow.style.animation = '';
+        }, 500);
+      }
+
+      clearSelectedChip();
+    }
+
     slot.addEventListener('dragover', (e) => {
       e.preventDefault();
       slot.style.cssText += `
@@ -227,101 +344,30 @@ export default async function init(host, cfg) {
     });
 
     slot.addEventListener('dragleave', () => {
-      if (!slot.querySelector('.dm-chip')) {
-        slot.style.cssText = `
-          min-width: 180px;
-          min-height: 70px;
-          border: 3px dashed #ced4da;
-          border-radius: 14px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.3s;
-          background: white;
-          padding: 0.75rem;
-          box-shadow: inset 0 2px 6px rgba(0,0,0,0.05);
-        `;
-        slot.innerHTML = `
-          <div style="color: #adb5bd; font-size: 1rem; font-weight: 700; text-align: center;">
-            <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">⬇️</div>
-            Suelta aquí
-          </div>
-        `;
-      }
+      resetSlotVisual();
     });
 
+    // Drop con drag & drop (desktop)
     slot.addEventListener('drop', (e) => {
       e.preventDefault();
-
-      const draggedPairId = e.dataTransfer.getData('text/plain');
-      const targetPairId = slot.dataset.pairId;
-
-      console.log(`📥 [DRAGMATCH] Drop en target ${targetPairId}, elemento ${draggedPairId}`);
-
-      const draggedChip = pool.querySelector(`[data-pair-id="${draggedPairId}"]`);
-
-      if (!draggedChip) {
-        console.warn('⚠️ [DRAGMATCH] Chip no encontrado');
+      const draggedPairId = parseInt(e.dataTransfer.getData('text/plain'), 10);
+      if (Number.isNaN(draggedPairId)) {
+        resetSlotVisual();
         return;
       }
-
-      if (draggedPairId === targetPairId) {
-        console.log('✅ [DRAGMATCH] Pareja correcta!');
-        playSound('success');
-
-        slot.innerHTML = '';
-        slot.appendChild(draggedChip);
-        draggedChip.draggable = false;
-        draggedChip.style.cursor = 'default';
-        draggedChip.style.transform = 'scale(1)';
-
-        slot.style.cssText += `
-          background: linear-gradient(135deg, #51CF66 0%, #8ce99a 100%) !important;
-          border-color: #51CF66 !important;
-          border-style: solid !important;
-          border-width: 3px !important;
-          animation: celebrate 0.7s ease-out;
-          box-shadow: 0 8px 24px rgba(81, 207, 102, 0.5) !important;
-        `;
-
-        matched++;
-        const matchedEl = headerDiv.querySelector('#dm-matched');
-        if (matchedEl) matchedEl.textContent = matched;
-
-        if (matched === pairs.length) {
-          setTimeout(() => finish(), 1000);
-        }
-      } else {
-        console.log('❌ [DRAGMATCH] Pareja incorrecta');
-        playSound('error');
-        slot.style.cssText = `
-          min-width: 180px;
-          min-height: 70px;
-          border: 3px dashed #ced4da;
-          border-radius: 14px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.3s;
-          background: white;
-          padding: 0.75rem;
-          box-shadow: inset 0 2px 6px rgba(0,0,0,0.05);
-        `;
-        slot.innerHTML = `
-          <div style="color: #adb5bd; font-size: 1rem; font-weight: 700; text-align: center;">
-            <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">⬇️</div>
-            Suelta aquí
-          </div>
-        `;
-
-        // Efecto de error
-        slot.style.animation = 'wiggle 0.5s ease-out';
-        targetRow.style.animation = 'wiggle 0.5s ease-out';
-        setTimeout(() => {
-          slot.style.animation = '';
-          targetRow.style.animation = '';
-        }, 500);
+      const chip = pool.querySelector(`[data-pair-id="${draggedPairId}"]`);
+      if (!chip) {
+        console.warn('⚠️ [DRAGMATCH] Chip no encontrado');
+        resetSlotVisual();
+        return;
       }
+      handleDropOnSlot(chip);
+    });
+
+    // TAP: colocar chip seleccionado en este slot (mobile)
+    slot.addEventListener('click', () => {
+      if (!selectedChip) return;
+      handleDropOnSlot(selectedChip);
     });
 
     targetRow.appendChild(label);
@@ -349,8 +395,8 @@ export default async function init(host, cfg) {
 
     host.dataset.gameComplete = 'true';
     host.dataset.gameScore = '1';
-    host.dataset.gameCorrect = pairs.length;
-    host.dataset.gameTotal = pairs.length;
+    host.dataset.gameCorrect = String(pairs.length);
+    host.dataset.gameTotal = String(pairs.length);
 
     console.log('✅ [DRAGMATCH] Marcado como completado');
   }

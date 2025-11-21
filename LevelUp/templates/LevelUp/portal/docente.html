@@ -1,4 +1,5 @@
 {% extends "LevelUp/base.html" %}
+{% load static %}
 {% block title %}Portal del Docente · LevelUp{% endblock %}
 {% block body_class %}with-docente-navbar{% endblock %}
 
@@ -18,9 +19,6 @@
           <a href="{% url 'docente_lista' %}" class="btn btn-outline-light">
             <i class="bi bi-folder2-open me-2"></i>Mis actividades
           </a>
-          <a href="{% url 'reportes_docente' %}" class="btn btn-outline-light">
-            <i class="bi bi-graph-up me-2"></i>Ver reportes
-          </a>
         </div>
       </div>
     </div>
@@ -29,35 +27,35 @@
     <div class="kpi-grid">
       <div class="kpi-card kpi-students">
         <div class="kpi-icon">👥</div>
-        <div class="kpi-label">Estudiantes Activos</div>
+        <div class="kpi-label">Estudiantes activos</div>
         <div class="kpi-value">
           {{ total_estudiantes|default:0 }}
-          <span class="kpi-trend up">
-            <i class="bi bi-arrow-up-short"></i>+12%
-          </span>
         </div>
       </div>
 
       <div class="kpi-card kpi-activities">
         <div class="kpi-icon">📚</div>
-        <div class="kpi-label">Actividades Creadas</div>
+        <div class="kpi-label">Actividades creadas</div>
         <div class="kpi-value">{{ total_actividades|default:0 }}</div>
       </div>
 
       <div class="kpi-card kpi-average">
         <div class="kpi-icon">⭐</div>
-        <div class="kpi-label">Promedio General</div>
-        <div class="kpi-value">{{ promedio_general|default:"—" }}</div>
+        <div class="kpi-label">Último inicio de sesión</div>
+        <div class="kpi-value">
+          {% if request.user.last_login %}
+          {{ request.user.last_login|date:"d/m/Y H:i" }}
+          {% else %}
+          —
+          {% endif %}
+        </div>
       </div>
 
       <div class="kpi-card kpi-days">
-        <div class="kpi-icon">🔥</div>
-        <div class="kpi-label">Racha de días</div>
+        <div class="kpi-icon">📅</div>
+        <div class="kpi-label">Miembro desde</div>
         <div class="kpi-value">
-          {{ dias_activos|default:0 }}
-          <span class="kpi-trend up">
-            <i class="bi bi-fire"></i>
-          </span>
+          {{ request.user.date_joined|date:"d/m/Y" }}
         </div>
       </div>
     </div>
@@ -69,82 +67,55 @@
           <span class="emoji">👀</span>
           Actividad reciente
         </h2>
-        <a href="{% url 'reportes_docente' %}" class="section-link">
+        <!-- <a href="{% url 'docente_lista' %}" class="section-link">
           Ver todo <i class="bi bi-arrow-right"></i>
-        </a>
+        </a> -->
       </div>
 
+      {% if actividad_reciente %}
       <div class="activity-timeline">
+        {% for evento in actividad_reciente %}
         <div class="activity-item">
-          <div class="activity-avatar purple">AV</div>
+          <div class="activity-avatar purple">
+            {{ evento.iniciales }}
+          </div>
           <div class="activity-content">
             <div class="activity-text">
-              <strong>Ana Vargas</strong> completó <span class="highlight">"Fracciones Básicas"</span>
+              <strong>{{ evento.estudiante_nombre }}</strong>
+              {{ evento.descripcion }}
+              {% if evento.actividad_titulo %}
+              <span class="highlight">"{{ evento.actividad_titulo }}"</span>
+              {% endif %}
             </div>
             <div class="activity-meta">
-              <i class="bi bi-clock"></i> Hace 5 minutos
+              <i class="bi bi-clock"></i> {{ evento.hace }}
             </div>
           </div>
-          <span class="activity-badge points">
-            <i class="bi bi-star-fill"></i> +150 pts
-          </span>
-        </div>
 
-        <div class="activity-item">
-          <div class="activity-avatar orange">LR</div>
-          <div class="activity-content">
-            <div class="activity-text">
-              <strong>Luis Ramírez</strong> alcanzó el <span class="highlight">Nivel 4</span>
-            </div>
-            <div class="activity-meta">
-              <i class="bi bi-clock"></i> Hace 12 minutos
-            </div>
-          </div>
+          {% if evento.badge_tipo == "puntos" %}
+          <span class="activity-badge points">
+            <i class="bi bi-star-fill"></i> +{{ evento.puntos }} pts
+          </span>
+          {% elif evento.badge_tipo == "nivel" %}
           <span class="activity-badge level-up">
-            <i class="bi bi-trophy-fill"></i> ¡Nivel Up!
+            <i class="bi bi-trophy-fill"></i> {{ evento.badge_texto }}
           </span>
-        </div>
-
-        <div class="activity-item">
-          <div class="activity-avatar blue">MC</div>
-          <div class="activity-content">
-            <div class="activity-text">
-              <strong>María Castro</strong> entregó <span class="highlight">"Ecuaciones Lineales"</span>
-            </div>
-            <div class="activity-meta">
-              <i class="bi bi-clock"></i> Hace 25 minutos
-            </div>
-          </div>
+          {% elif evento.badge_tipo == "completado" %}
           <span class="activity-badge completed">
-            <i class="bi bi-check-circle-fill"></i> Completado
+            <i class="bi bi-check-circle-fill"></i> {{ evento.badge_texto }}
           </span>
+          {% endif %}
         </div>
-
-        <div class="activity-item">
-          <div class="activity-avatar green">JP</div>
-          <div class="activity-content">
-            <div class="activity-text">
-              <strong>Jorge Pérez</strong> obtuvo 95% en <span class="highlight">"Quiz de Geometría"</span>
-            </div>
-            <div class="activity-meta">
-              <i class="bi bi-clock"></i> Hace 1 hora
-            </div>
-          </div>
-          <span class="activity-badge points">
-            <i class="bi bi-star-fill"></i> +200 pts
-          </span>
-        </div>
+        {% endfor %}
       </div>
-
-      <!-- Estado vacío (mostrar si no hay actividades) -->
-      <!-- 
+      {% else %}
       <div class="empty-state">
         <div class="empty-state-icon">📭</div>
         <div class="empty-state-text">
-          Aún no hay actividad reciente de tus estudiantes
+          Aún no hay actividad reciente de tus estudiantes.
         </div>
       </div>
-      -->
+      {% endif %}
     </div>
 
     <!-- ACCIONES RÁPIDAS -->
@@ -159,7 +130,7 @@
       <div class="quick-actions-grid">
         <a href="{% url 'crear' %}" class="action-card primary">
           <div class="action-icon">📝</div>
-          <div class="action-title">Crear Actividad</div>
+          <div class="action-title">Crear actividad</div>
           <div class="action-description">
             Diseña nuevas actividades y desafíos para tus estudiantes
           </div>
@@ -167,25 +138,9 @@
 
         <a href="{% url 'docente_lista' %}" class="action-card secondary">
           <div class="action-icon">📚</div>
-          <div class="action-title">Mis Actividades</div>
+          <div class="action-title">Mis actividades</div>
           <div class="action-description">
             Revisa y administra todas tus actividades creadas
-          </div>
-        </a>
-
-        <a href="/admin/LevelUp/asignacionactividad/add/" target="_blank" class="action-card success">
-          <div class="action-icon">🎯</div>
-          <div class="action-title">Asignar Actividad</div>
-          <div class="action-description">
-            Asigna actividades a grupos o estudiantes específicos
-          </div>
-        </a>
-
-        <a href="{% url 'reportes_docente' %}" class="action-card warning">
-          <div class="action-icon">📊</div>
-          <div class="action-title">Ver Reportes</div>
-          <div class="action-description">
-            Analiza el progreso y desempeño de tus estudiantes
           </div>
         </a>
       </div>
@@ -193,4 +148,5 @@
 
   </div>
 </main>
+<link rel="stylesheet" href="{% static 'LevelUp/css/portal_docente.css' %}">
 {% endblock %}

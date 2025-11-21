@@ -1,6 +1,18 @@
 {% extends "LevelUp/base.html" %}
 {% load static %}
+
 {% block title %}{{ titulo|default:"Formulario" }}{% endblock %}
+
+{% block body_class %}with-admin-navbar{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'LevelUp/css/navbar_admin.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include "LevelUp/partials/navbar_admin.html" %}
+{% endblock %}
 
 {% block content %}
 <main class="container py-3">
@@ -22,8 +34,9 @@
 
                 {% for field in form %}
                 <div class="mb-3">
-                    <label class="form-label fw-600">{{ field.label }}{% if field.field.required %} <span
-                            class="text-danger">*</span>{% endif %}</label>
+                    <label class="form-label fw-600">
+                        {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
+                    </label>
                     {{ field }}
                     {% if field.help_text %}
                     <div class="form-text">{{ field.help_text|safe }}</div>

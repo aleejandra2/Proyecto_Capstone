@@ -1,0 +1,54 @@
+/* ---------- RESPONSIVE ACTIVITY FORM ---------- */
+
+#actividad-form .card {
+    border-radius: 18px;
+}
+
+.item-form .card-header {
+    padding: 1rem !important;
+}
+
+.item-form .card-body {
+    padding: 1rem !important;
+}
+
+/* Titulos más compactos */
+.item-form h6 {
+    font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+    .nav-tabs .nav-link {
+        font-size: 0.9rem;
+        padding: 0.6rem;
+    }
+
+    .item-form .row>div {
+        margin-bottom: 0.75rem;
+    }
+
+    .item-form .card-header {
+        text-align: center;
+    }
+
+    textarea,
+    input[type="text"],
+    input[type="number"],
+    select {
+        font-size: 0.95rem;
+    }
+
+    #items-container .item-form {
+        margin-bottom: 1.5rem;
+    }
+
+    .gbuilder {
+        zoom: 0.9;
+    }
+}
+
+@media (max-width: 480px) {
+    .gbuilder {
+        zoom: 0.75;
+    }
+}

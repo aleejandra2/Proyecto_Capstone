@@ -3,10 +3,9 @@
 {% block title %}{{ actividad.titulo }}{% endblock %}
 
 {% block extra_css %}
-<!-- ÚNICO CSS necesario para los juegos -->
 <link rel="stylesheet" href="{% static 'LevelUp/css/games.css' %}">
 <style>
-  /* Estilos para asegurar márgenes correctos */
+  /* ====== TARJETAS DE ÍTEM (igual que antes) ====== */
   .item-card {
     border: none !important;
     border-radius: 24px !important;
@@ -52,12 +51,20 @@
     background: white;
   }
 
-  /* Márgenes internos para el contenido del juego */
   .game-host {
     margin: 0 !important;
     padding: 2rem !important;
     background: #f8f9fa;
     border-radius: 0 !important;
+    min-height: 260px;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  @media (max-width: 992px) {
+    .game-host {
+      padding: 1.75rem 1.25rem !important;
+    }
   }
 
   @media (max-width: 768px) {
@@ -82,6 +89,105 @@
 
     .game-host {
       padding: 1.25rem 0.75rem !important;
+      min-height: 220px;
+    }
+  }
+
+  /* ====== MODALES RESPONSIVOS ====== */
+
+  /* Que todo modal tenga margen al rededor y nunca pegue al borde */
+  .modal {
+    padding: 1.25rem;
+  }
+
+  .modal-dialog {
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
+    /* centrado horizontal */
+  }
+
+  /* Confirmación estándar */
+  #confirmModal .modal-content {
+    max-height: calc(100vh - 2.5rem);
+    display: flex;
+    flex-direction: column;
+  }
+
+  #confirmModal .modal-body {
+    overflow-y: auto;
+  }
+
+  #confirmModal .modal-footer {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  /* ====== MODAL DE TIMO SUPER RESPONSIVO ====== */
+
+  /* Ancho tipo tarjeta en todas las pantallas */
+  #timoModal .modal-dialog {
+    max-width: 480px;
+  }
+
+  /* Altura limitada SIEMPRE al viewport, scroll interno si hace falta */
+  #timoModal .modal-content {
+    max-height: calc(100vh - 2.5rem);
+    display: flex;
+    flex-direction: column;
+  }
+
+  #timoModal .modal-body {
+    padding: 1.5rem 1.5rem 1rem !important;
+    /* menos padding para bajar alto total */
+    overflow-y: auto;
+  }
+
+  #timoModal .modal-footer {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0 1.5rem 1.5rem !important;
+  }
+
+  /* Video de Timo: se adapta al alto de la pantalla */
+  #timoVideo {
+    width: 100%;
+    max-width: 360px;
+    /* más pequeño también en escritorio */
+    max-height: 40vh;
+    /* nunca ocupa más del 40% del alto */
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+  }
+
+  @media (max-width: 768px) {
+    .modal {
+      padding: 1rem;
+    }
+
+    .modal-dialog,
+    #timoModal .modal-dialog {
+      max-width: 100%;
+    }
+  }
+
+  @media (max-width: 576px) {
+    #timoModal .modal-body {
+      padding: 1.25rem 1rem 1rem !important;
+    }
+
+    #timoModal .modal-title {
+      font-size: 1.25rem !important;
+    }
+
+    /* Botones a ancho completo en móviles */
+    #confirmModal .modal-footer .btn,
+    #timoModal .modal-footer .btn {
+      width: 100%;
+    }
+
+    #timoModal .modal-footer {
+      padding: 0 1rem 1.25rem !important;
     }
   }
 </style>
@@ -276,7 +382,7 @@
 
 <!-- Modal de confirmación (para finalizar antes de completar todo) -->
 <div class="modal fade" id="confirmModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content" style="border-radius: 20px; border: none; overflow: hidden;">
       <div class="modal-header"
         style="border-bottom: 3px solid #e9ecef; background: linear-gradient(135deg, #f8f9fa, #e9ecef); padding: 1.5rem;">
@@ -305,7 +411,7 @@
 
 <!-- Modal de Timo celebrando (se muestra al completar todos los ítems) -->
 <div class="modal fade" id="timoModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
+  <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content" style="border-radius: 24px; border: none; overflow: hidden;">
       <div class="modal-header"
         style="border-bottom: none; background: linear-gradient(135deg, #4DABF7, #9775FA); color: white; padding: 1.5rem 1.75rem;">
@@ -331,13 +437,13 @@
       </div>
       <div class="modal-footer justify-content-center" style="border-top: none; padding-bottom: 2rem;">
         <!-- Cancelar: cierra el modal, el alumno puede luego usar el botón final -->
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+        <button type="button" class="btn btn-secondary w-100 w-md-auto" data-bs-dismiss="modal"
           style="border-radius: 20px; padding: 0.75rem 1.8rem; font-weight: 700;">
           Cancelar
         </button>
 
         <!-- Guardar y confirmar: finaliza el intento + va a resultados -->
-        <button type="button" class="btn btn-primary" id="btnEnviarDesdeTimo"
+        <button type="button" class="btn btn-primary w-100 w-md-auto" id="btnEnviarDesdeTimo"
           style="border-radius: 20px; padding: 0.9rem 2.2rem; font-weight: 800; font-size: 1.05rem; background: linear-gradient(135deg, #51CF66, #8ce99a); border: none;">
           💾 Guardar y enviar
         </button>

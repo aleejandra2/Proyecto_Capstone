@@ -11,14 +11,14 @@
     <strong>⚠️ Hay errores en el formulario:</strong>
     <ul class="mb-0 mt-2">
       {% for field in form %}
-        {% if field.errors %}
-          <li><strong>{{ field.label }}:</strong> {{ field.errors|striptags }}</li>
-        {% endif %}
+      {% if field.errors %}
+      <li><strong>{{ field.label }}:</strong> {{ field.errors|striptags }}</li>
+      {% endif %}
       {% endfor %}
       {% if formset.non_form_errors %}
-        {% for e in formset.non_form_errors %}
-          <li>{{ e }}</li>
-        {% endfor %}
+      {% for e in formset.non_form_errors %}
+      <li>{{ e }}</li>
+      {% endfor %}
       {% endif %}
     </ul>
   </div>
@@ -41,7 +41,8 @@
         </button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="tab-contenido" data-bs-toggle="tab" data-bs-target="#panel-contenido" type="button">
+        <button class="nav-link" id="tab-contenido" data-bs-toggle="tab" data-bs-target="#panel-contenido"
+          type="button">
           🎮 Contenido
         </button>
       </li>
@@ -64,7 +65,8 @@
                 <span class="text-muted small">(obligatorio)</span></label>
               {{ form.titulo }}
               <div class="invalid-feedback d-block d-none" data-client-error-for="id_titulo"></div>
-              {% if form.titulo.errors %}<div class="invalid-feedback d-block">{{ form.titulo.errors|striptags }}</div>{% endif %}
+              {% if form.titulo.errors %}<div class="invalid-feedback d-block">{{ form.titulo.errors|striptags }}</div>
+              {% endif %}
               <div class="form-text">Un nombre claro y descriptivo</div>
             </div>
 
@@ -91,50 +93,54 @@
           </div>
 
           <div class="row g-3 mb-3">
+          
+            <!-- Columna izquierda: Intentos + Ilimitado -->
             <div class="col-12 col-md-6">
-              <div class="row g-2">
-                <div class="col-6">
-                  <label class="form-label fw-bold">💰 XP total <span class="text-muted small">(opcional)</span></label>
-                  {{ form.xp_total }}
-                  {% if form.xp_total.errors %}<div class="invalid-feedback d-block">{{ form.xp_total.errors|striptags }}</div>{% endif %}
-                </div>
-
-                <div class="col-6">
-                  <label class="form-label fw-bold d-block">🔄 Intentos
-                    <span class="text-muted small">(obligatorio si no es ilimitado)</span>
-                  </label>
-
-                  <!-- input primero -->
-                  <div class="input-group">
-                    {{ form.intentos_max }}
-                    <span class="input-group-text">máx.</span>
-                  </div>
-                  <div class="form-text">1–1000 si no es ilimitado</div>
-                  <div class="invalid-feedback d-block d-none" id="err_intentos_max"></div>
-                  {% if form.intentos_max.errors %}<div class="invalid-feedback d-block">{{ form.intentos_max.errors|striptags }}</div>{% endif %}
-
-                  <!-- checkbox DEBAJO -->
-                  <div class="form-check mt-2">
-                    {{ form.intentos_ilimitados }}
-                    <label class="form-check-label ms-1" for="id_intentos_ilimitados">Ilimitado</label>
-                  </div>
-                  {% if form.intentos_ilimitados.errors %}<div class="invalid-feedback d-block">{{ form.intentos_ilimitados.errors|striptags }}</div>{% endif %}
-                </div>
+              <label class="form-label fw-bold d-block">🔄 Intentos
+                <span class="text-muted small">(obligatorio si no es ilimitado)</span>
+              </label>
+          
+              <div class="input-group">
+                {{ form.intentos_max }}
+                <span class="input-group-text">máx.</span>
               </div>
+              <div class="form-text">1–1000 si no es ilimitado</div>
+              <div class="invalid-feedback d-block d-none" id="err_intentos_max"></div>
+              {% if form.intentos_max.errors %}
+              <div class="invalid-feedback d-block">
+                {{ form.intentos_max.errors|striptags }}
+              </div>
+              {% endif %}
+          
+              <div class="form-check mt-2">
+                {{ form.intentos_ilimitados }}
+                <label class="form-check-label ms-1" for="id_intentos_ilimitados">Ilimitado</label>
+              </div>
+              {% if form.intentos_ilimitados.errors %}
+              <div class="invalid-feedback d-block">
+                {{ form.intentos_ilimitados.errors|striptags }}
+              </div>
+              {% endif %}
             </div>
-
-            <div class="col-12 col-md-4">
-              <label class="form-label fw-bold">📅 Fecha cierre <span class="text-muted small">(opcional)</span></label>
+          
+            <!-- Columna derecha: Fecha cierre + Publicada -->
+            <div class="col-12 col-md-6">
+              <label class="form-label fw-bold">📅 Fecha cierre
+                <span class="text-muted small">(opcional)</span>
+              </label>
               {{ form.fecha_cierre }}
-              {% if form.fecha_cierre.errors %}<div class="invalid-feedback d-block">{{ form.fecha_cierre.errors|striptags }}</div>{% endif %}
-            </div>
-
-            <div class="col-12 col-md-2 d-flex align-items-end">
-              <div class="form-check mb-0">
+              {% if form.fecha_cierre.errors %}
+              <div class="invalid-feedback d-block">
+                {{ form.fecha_cierre.errors|striptags }}
+              </div>
+              {% endif %}
+          
+              <div class="form-check mt-2">
                 {{ form.es_publicada }}
                 <label class="form-check-label fw-bold ms-1">✅ Publicada</label>
               </div>
             </div>
+          
           </div>
 
           <div class="d-flex justify-content-end gap-2 mt-4">
@@ -152,14 +158,10 @@
 
             <div class="alert alert-info">
               <strong>💡 Instrucciones:</strong>
-              {% if act_tipo == 'game' %}
-                Crea las preguntas que los estudiantes deberán responder en el videojuego.
-              {% else %}
-                Agrega los minijuegos que quieres incluir en esta actividad.
-              {% endif %}
+              Configura los ítems de esta actividad.
               <div class="small text-muted mt-1">
-                En cada ítem, <strong>Enunciado</strong> y <strong>Puntaje</strong> son
-                <span class="text-danger">obligatorios</span> si el ítem tiene contenido.
+                En cada ítem, el <strong>Enunciado</strong> es
+                <span class="text-danger">obligatorio</span> si el ítem tiene contenido.
               </div>
             </div>
 
@@ -167,28 +169,22 @@
 
             <div id="items-container">
               {% for f in formset.forms %}
-              <div class="item-form card mb-4 shadow-sm" data-item-id="{% if f.instance.pk %}{{ f.instance.pk }}{% endif %}">
+              <div class="item-form card mb-4 shadow-sm"
+                data-item-id="{% if f.instance.pk %}{{ f.instance.pk }}{% endif %}">
                 <div class="card-header bg-light">
                   <div class="row g-2 align-items-center">
-                    <div class="col-12 col-lg-auto">
-                      <h6 class="mb-0">🎯 Ítem #{{ forloop.counter }}</h6>
+                    <div class="col-12 col-lg-8">
+                      <div class="d-flex flex-wrap align-items-center gap-2">
+                        <h6 class="mb-0 me-2">🎯 Ítem #{{ forloop.counter }}</h6>
+                        <div class="flex-grow-1">
+                          <label class="form-label small mb-1">Tipo de actividad
+                            <span class="text-muted small">(obligatorio)</span></label>
+                          {{ f.item_kind }}
+                        </div>
+                      </div>
                     </div>
 
-                    <div class="col-12 col-md-6">
-                      <label class="form-label small mb-1">Tipo de actividad
-                        <span class="text-muted small">(obligatorio)</span></label>
-                      {{ f.item_kind }}
-                    </div>
-
-                    <div class="col-6 col-md-3">
-                      <label class="form-label small mb-1">Puntaje <span class="text-danger">*</span>
-                        <span class="text-muted small">(obligatorio si el ítem tiene contenido)</span></label>
-                      {{ f.puntaje }}
-                      <div class="invalid-feedback d-block d-none" data-client-error></div>
-                      {% if f.puntaje.errors %}<div class="invalid-feedback d-block">{{ f.puntaje.errors|striptags }}</div>{% endif %}
-                    </div>
-
-                    <div class="col-6 col-md-auto ms-auto">
+                    <div class="col-12 col-lg-auto ms-auto text-end">
                       <button type="button" class="btn btn-outline-danger btn-sm btn-remove-card">🗑 Eliminar</button>
                     </div>
                   </div>
@@ -196,11 +192,11 @@
 
                 <div class="card-body">
                   <div style="display:none">
-                    {{ f.id }} {{ f.DELETE }}
+                    {{ f.id }} {{ f.DELETE }} {{ f.puntaje }}
                   </div>
 
                   {% if f.non_field_errors %}
-                    <div class="alert alert-danger small mb-2">{{ f.non_field_errors|striptags }}</div>
+                  <div class="alert alert-danger small mb-2">{{ f.non_field_errors|striptags }}</div>
                   {% endif %}
 
                   <div class="mb-3">
@@ -208,18 +204,19 @@
                       <span class="text-muted small">(obligatorio si el ítem tiene contenido)</span></label>
                     {{ f.enunciado }}
                     <div class="invalid-feedback d-block d-none" data-client-error></div>
-                    {% if f.enunciado.errors %}<div class="invalid-feedback d-block">{{ f.enunciado.errors|striptags }}</div>{% endif %}
+                    {% if f.enunciado.errors %}<div class="invalid-feedback d-block">{{ f.enunciado.errors|striptags }}
+                    </div>{% endif %}
                     <div class="form-text">Instrucción que verá el estudiante</div>
                   </div>
 
+                  {# Tiempo oculto, se mantiene por compatibilidad #}
+                  <div style="display:none">
+                    {{ f.game_time_limit }}
+                    {% if f.game_time_limit.errors %}<div class="invalid-feedback d-block">{{ f.game_time_limit.errors|striptags }}</div>{% endif %}
+                  </div>
+
                   <div class="row g-2 align-items-center mb-3">
-                    <div class="col-12 col-md-4">
-                      <label class="form-label">⏱ Tiempo límite (segundos)
-                        <span class="text-muted small">(opcional)</span></label>
-                      {{ f.game_time_limit }}
-                      {% if f.game_time_limit.errors %}<div class="invalid-feedback d-block">{{ f.game_time_limit.errors|striptags }}</div>{% endif %}
-                    </div>
-                    <div class="col-12 col-md-8 text-end">
+                    <div class="col-12 text-end">
                       <span class="gb-counter badge bg-secondary">0 ítems</span>
                     </div>
                   </div>
@@ -244,29 +241,26 @@
               <div class="item-form card mb-4 shadow-sm" data-prefix="__prefix__">
                 <div class="card-header bg-light">
                   <div class="row g-2 align-items-center">
-                    <div class="col-12 col-lg-auto"><h6 class="mb-0">🎯 Ítem #</h6></div>
-                    <div class="col-12 col-md-6">
-                      <label class="form-label small mb-1">Tipo de actividad
-                        <span class="text-muted small">(obligatorio)</span></label>
-                      <select name="items-__prefix__-item_kind" class="form-select">
-                        <option value="dragmatch" selected>Drag & Match</option>
-                        <option value="memory">Memoria (pares)</option>
-                        <option value="trivia">Trivia (opción múltiple)</option>
-                        <option value="vf">Verdadero / Falso</option>
-                        <option value="classify">Clasificar en categorías</option>
-                        <option value="cloze">Completar (cloze)</option>
-                        <option value="ordering">Ordenar pasos</option>
-                        <option value="labyrinth">Laberinto de puertas</option>
-                        <option value="shop">Tienda (precios)</option>
-                      </select>
+                    <div class="col-12 col-lg-8">
+                      <div class="d-flex flex-wrap align-items-center gap-2">
+                        <h6 class="mb-0">🎯 Ítem #</h6>
+                        <div class="flex-grow-1">
+                          <label class="form-label small mb-1">Tipo de actividad
+                            <span class="text-muted small">(obligatorio)</span></label>
+                          <select name="items-__prefix__-item_kind" class="form-select">
+                            <option value="dragmatch" selected>Drag & Match</option>
+                            <option value="memory">Memoria (pares)</option>
+                            <option value="trivia">Trivia (opción múltiple)</option>
+                            <option value="vf">Verdadero / Falso</option>
+                            <option value="classify">Clasificar en categorías</option>
+                            <option value="cloze">Completar (cloze)</option>
+                            <option value="ordering">Ordenar pasos</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
-                    <div class="col-6 col-md-3">
-                      <label class="form-label small mb-1">Puntaje <span class="text-danger">*</span>
-                        <span class="text-muted small">(obligatorio si el ítem tiene contenido)</span></label>
-                      <input type="number" name="items-__prefix__-puntaje" class="form-control" value="10" min="0">
-                      <div class="invalid-feedback d-block d-none" data-client-error></div>
-                    </div>
-                    <div class="col-6 col-md-auto ms-auto">
+
+                    <div class="col-12 col-lg-auto ms-auto text-end">
                       <button type="button" class="btn btn-outline-danger btn-sm btn-remove-card">🗑 Eliminar</button>
                     </div>
                   </div>
@@ -275,21 +269,25 @@
                   <div class="mb-3">
                     <label class="form-label fw-bold">Enunciado / Consigna <span class="text-danger">*</span>
                       <span class="text-muted small">(obligatorio si el ítem tiene contenido)</span></label>
-                    <textarea name="items-__prefix__-enunciado" rows="2" class="form-control" placeholder="Instrucción para el estudiante..."></textarea>
+                    <textarea name="items-__prefix__-enunciado" rows="2" class="form-control"
+                      placeholder="Instrucción para el estudiante..."></textarea>
                     <div class="invalid-feedback d-block d-none" data-client-error></div>
                   </div>
+
+                  {# Tiempo oculto #}
+                  <div style="display:none">
+                    <input type="number" name="items-__prefix__-game_time_limit" class="form-control" min="5">
+                  </div>
+
                   <div class="row g-2 align-items-center mb-3">
-                    <div class="col-12 col-md-4">
-                      <label class="form-label">⏱ Tiempo límite (segundos)
-                        <span class="text-muted small">(opcional)</span></label>
-                      <input type="number" name="items-__prefix__-game_time_limit" class="form-control" min="5">
-                    </div>
-                    <div class="col-12 col-md-8 text-end">
+                    <div class="col-12 text-end">
                       <span class="gb-counter badge bg-secondary">0 ítems</span>
                     </div>
                   </div>
+
                   <div class="gbuilder"></div>
                   <textarea name="items-__prefix__-game_pairs" style="display:none"></textarea>
+                  <input type="hidden" name="items-__prefix__-puntaje" value="1">
                   <input type="hidden" name="items-__prefix__-id" value="">
                   <input type="hidden" name="items-__prefix__-DELETE" value="0">
                 </div>
@@ -320,12 +318,15 @@
               {% for curso in cursos %}
               <div class="col-6 col-md-4 col-lg-3">
                 <div class="form-check">
-                  <input class="form-check-input" type="checkbox" name="cursos" value="{{ curso.id }}" id="curso_{{ curso.id }}" {% if curso.id in cursos_asignados %}checked{% endif %}>
+                  <input class="form-check-input" type="checkbox" name="cursos" value="{{ curso.id }}"
+                    id="curso_{{ curso.id }}" {% if curso.id in cursos_asignados %}checked{% endif %}>
                   <label class="form-check-label" for="curso_{{ curso.id }}">{{ curso }}</label>
                 </div>
               </div>
               {% empty %}
-              <div class="col-12"><p class="text-muted">No hay cursos disponibles</p></div>
+              <div class="col-12">
+                <p class="text-muted">No hay cursos disponibles</p>
+              </div>
               {% endfor %}
             </div>
           </div>
@@ -336,19 +337,24 @@
             <h6 class="fw-bold mb-3">🎯 Asignar estudiantes individuales</h6>
 
             <div class="mb-3">
-              <input type="text" id="search-estudiantes" class="form-control" placeholder="🔍 Buscar estudiante por nombre...">
+              <input type="text" id="search-estudiantes" class="form-control"
+                placeholder="🔍 Buscar estudiante por nombre...">
             </div>
 
             <div id="estudiantes-list" class="row g-2" style="max-height: 400px; overflow-y: auto;">
               {% for est in estudiantes %}
-              <div class="col-6 col-md-4 col-lg-3 estudiante-item" data-nombre="{{ est.usuario.first_name }} {{ est.usuario.last_name }}">
+              <div class="col-6 col-md-4 col-lg-3 estudiante-item"
+                data-nombre="{{ est.usuario.first_name }} {{ est.usuario.last_name }}">
                 <div class="form-check">
-                  <input class="form-check-input" type="checkbox" name="alumnos" value="{{ est.usuario.id }}" id="est_{{ est.usuario.id }}" {% if est.usuario.id in asignados_usuarios %}checked{% endif %}>
+                  <input class="form-check-input" type="checkbox" name="alumnos" value="{{ est.usuario.id }}"
+                    id="est_{{ est.usuario.id }}" {% if est.usuario.id in asignados_usuarios %}checked{% endif %}>
                   <label class="form-check-label" for="est_{{ est.usuario.id }}">{{ est.usuario.get_full_name }}</label>
                 </div>
               </div>
               {% empty %}
-              <div class="col-12"><p class="text-muted">No hay estudiantes disponibles</p></div>
+              <div class="col-12">
+                <p class="text-muted">No hay estudiantes disponibles</p>
+              </div>
               {% endfor %}
             </div>
           </div>
@@ -368,18 +374,19 @@
 </div>
 
 <link rel="stylesheet" href="{% static 'LevelUp/css/game_builder.css' %}">
+<link rel="stylesheet" href="{% static 'LevelUp/css/actividad_form.css' %}">
 <script src="{% static 'LevelUp/js/actividades/game_builder_helper.js' %}"></script>
 <script src="{% static 'LevelUp/js/actividades/actividad_formset.js' %}"></script>
 
 <script>
-  function nextTab(){const a=document.querySelector('.nav-link.active');const n=a.closest('li').nextElementSibling?.querySelector('.nav-link');if(n)n.click()}
-  function prevTab(){const a=document.querySelector('.nav-link.active');const p=a.closest('li').previousElementSibling?.querySelector('.nav-link');if(p)p.click()}
+  function nextTab() { const a = document.querySelector('.nav-link.active'); const n = a.closest('li').nextElementSibling?.querySelector('.nav-link'); if (n) n.click() }
+  function prevTab() { const a = document.querySelector('.nav-link.active'); const p = a.closest('li').previousElementSibling?.querySelector('.nav-link'); if (p) p.click() }
 
   // Filtro en asignación
-  document.getElementById('search-estudiantes')?.addEventListener('input', e=>{
-    const q=e.target.value.toLowerCase();
-    document.querySelectorAll('.estudiante-item').forEach(li=>{
-      li.style.display=(li.dataset.nombre.toLowerCase().includes(q)?'':'none');
+  document.getElementById('search-estudiantes')?.addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    document.querySelectorAll('.estudiante-item').forEach(li => {
+      li.style.display = (li.dataset.nombre.toLowerCase().includes(q) ? '' : 'none');
     });
   });
 
@@ -387,83 +394,81 @@
   if ('{{ abrir_asignar }}' === 'True') document.getElementById('tab-asignar')?.click();
 
   // ======= VALIDACIÓN CLIENTE =======
-  (function(){
-    const form=document.getElementById('actividad-form');
-    if(!form) return;
+  (function () {
+    const form = document.getElementById('actividad-form');
+    if (!form) return;
 
-    const cbIlimitado=document.getElementById('id_intentos_ilimitados');
-    const inpMax=document.getElementById('id_intentos_max');
-    const errMax=document.getElementById('err_intentos_max');
+    const cbIlimitado = document.getElementById('id_intentos_ilimitados');
+    const inpMax = document.getElementById('id_intentos_max');
+    const errMax = document.getElementById('err_intentos_max');
 
-    function toggleIntentosUI(){
-      const ilimit=cbIlimitado?.checked;
-      if(!inpMax) return;
-      if(ilimit){
-        inpMax.disabled=true;
-        inpMax.required=false;
+    function toggleIntentosUI() {
+      const ilimit = cbIlimitado?.checked;
+      if (!inpMax) return;
+      if (ilimit) {
+        inpMax.disabled = true;
+        inpMax.required = false;
         inpMax.classList.remove('is-invalid');
-        if(errMax){ errMax.textContent=''; errMax.classList.add('d-none'); }
-      }else{
-        inpMax.disabled=false;
-        inpMax.required=true;
+        if (errMax) { errMax.textContent = ''; errMax.classList.add('d-none'); }
+      } else {
+        inpMax.disabled = false;
+        inpMax.required = true;
       }
     }
-    cbIlimitado?.addEventListener('change',toggleIntentosUI);
+    cbIlimitado?.addEventListener('change', toggleIntentosUI);
     toggleIntentosUI();
 
-    function putError(input,msg){
+    function putError(input, msg) {
       input.classList.add('is-invalid');
-      if(errMax && input===inpMax){ errMax.textContent=msg; errMax.classList.remove('d-none'); }
+      if (errMax && input === inpMax) { errMax.textContent = msg; errMax.classList.remove('d-none'); }
     }
-    function clearError(input){
+    function clearError(input) {
       input.classList.remove('is-invalid');
-      if(errMax && input===inpMax){ errMax.textContent=''; errMax.classList.add('d-none'); }
+      if (errMax && input === inpMax) { errMax.textContent = ''; errMax.classList.add('d-none'); }
     }
 
-    form.addEventListener('input',e=>{ if(e.target===inpMax) clearError(inpMax); });
-    form.addEventListener('change',e=>{ if(e.target===inpMax || e.target===cbIlimitado) clearError(inpMax); });
+    form.addEventListener('input', e => { if (e.target === inpMax) clearError(inpMax); });
+    form.addEventListener('change', e => { if (e.target === inpMax || e.target === cbIlimitado) clearError(inpMax); });
 
-    form.addEventListener('submit',e=>{
-      let hasErrors=false, firstError=null;
+    form.addEventListener('submit', e => {
+      let hasErrors = false, firstError = null;
 
       // Título/tipo mínimos
-      const titulo=document.getElementById('id_titulo');
-      const tipo=document.getElementById('id_tipo');
-      if(titulo && !titulo.value.trim()){ hasErrors=true; firstError=firstError||titulo; }
-      if(tipo && !tipo.value){ hasErrors=true; firstError=firstError||tipo; }
+      const titulo = document.getElementById('id_titulo');
+      const tipo = document.getElementById('id_tipo');
+      if (titulo && !titulo.value.trim()) { hasErrors = true; firstError = firstError || titulo; }
+      if (tipo && !tipo.value) { hasErrors = true; firstError = firstError || tipo; }
 
       // Intentos: si NO es ilimitado, exigir 1..1000
-      if(!cbIlimitado?.checked && inpMax){
-        const v=String(inpMax.value||'').trim();
-        const n=Number(v);
-        if(!v || !Number.isInteger(n) || n<1 || n>1000){
-          hasErrors=true; firstError=firstError||inpMax;
-          putError(inpMax,'Debe ingresar un entero entre 1 y 1000 o marcar "Ilimitado".');
+      if (!cbIlimitado?.checked && inpMax) {
+        const v = String(inpMax.value || '').trim();
+        const n = Number(v);
+        if (!v || !Number.isInteger(n) || n < 1 || n > 1000) {
+          hasErrors = true; firstError = firstError || inpMax;
+          putError(inpMax, 'Debe ingresar un entero entre 1 y 1000 o marcar "Ilimitado".');
         }
       }
 
-      // Ítems con contenido: enunciado + puntaje
-      const contenidoTab=document.getElementById('tab-contenido');
-      const panelContenido=document.getElementById('panel-contenido');
-      const items=document.querySelectorAll('#items-container .item-form:not([data-deleted="1"])');
-      items.forEach(card=>{
-        const enun=card.querySelector('[name$="-enunciado"]');
-        const punt=card.querySelector('[name$="-puntaje"]');
-        const payload=card.querySelector('textarea[name$="-game_pairs"], textarea[name$="-datos"]');
-        const enunVal=enun?enun.value.trim():'';
-        const puntVal=punt?String(punt.value).trim():'';
-        const payVal=payload?payload.value.trim():'';
-        const hasContent=!!(payVal||enunVal||puntVal);
-        if(hasContent){
-          if(enun && !enunVal){ hasErrors=true; firstError=firstError||enun; }
-          if(punt && (puntVal==='' || isNaN(Number(puntVal)))){ hasErrors=true; firstError=firstError||punt; }
+      // Ítems con contenido: enunciado obligatorio
+      const contenidoTab = document.getElementById('tab-contenido');
+      const panelContenido = document.getElementById('panel-contenido');
+      const items = document.querySelectorAll('#items-container .item-form:not([data-deleted="1"])');
+      items.forEach(card => {
+        const enun = card.querySelector('[name$="-enunciado"]');
+        const payload = card.querySelector('textarea[name$="-game_pairs"], textarea[name$="-datos"]');
+        const enunVal = enun ? enun.value.trim() : '';
+        const payVal = payload ? payload.value.trim() : '';
+        const hasContent = !!(payVal || enunVal);
+
+        if (hasContent) {
+          if (enun && !enunVal) { hasErrors = true; firstError = firstError || enun; }
         }
       });
 
-      if(hasErrors){
+      if (hasErrors) {
         e.preventDefault();
-        if(firstError && firstError.closest('#panel-contenido') && !panelContenido.classList.contains('show')) contenidoTab?.click();
-        setTimeout(()=>{ firstError?.scrollIntoView({behavior:'smooth',block:'center'}); firstError?.focus?.({preventScroll:true}); },80);
+        if (firstError && firstError.closest('#panel-contenido') && !panelContenido.classList.contains('show')) contenidoTab?.click();
+        setTimeout(() => { firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' }); firstError?.focus?.({ preventScroll: true }); }, 80);
       }
     });
   })();

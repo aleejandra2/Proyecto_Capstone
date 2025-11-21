@@ -9,10 +9,22 @@
 
         <!-- Botón principal (asignatura actual) -->
         {% if asignaturas %}
+        {% if request.session.asignatura_activa_icono and request.session.asignatura_activa_nombre %}
+        {# Si hay algo en sesión, usarlo como actual #}
+        <button type="button" class="subject-main">
+          <span class="subject-icon">
+            <img src="{% static request.session.asignatura_activa_icono %}" alt="" class="subject-main-img">
+          </span>
+          <span class="subject-name">
+            {{ request.session.asignatura_activa_nombre }}
+          </span>
+          <i class="bi bi-caret-down-fill subject-caret"></i>
+        </button>
+        {% else %}
+        {# Sin nada en sesión: usar la primera asignatura #}
         {% with asignaturas.0 as current_asig %}
         <button type="button" class="subject-main">
           <span class="subject-icon">
-            <!-- icono actual -->
             <img src="{% static current_asig.icono %}" alt="" class="subject-main-img">
           </span>
           <span class="subject-name">
@@ -21,6 +33,7 @@
           <i class="bi bi-caret-down-fill subject-caret"></i>
         </button>
         {% endwith %}
+        {% endif %}
         {% else %}
         <!-- Si no hay asignaturas, dejamos el texto por defecto -->
         <button type="button" class="subject-main">
@@ -38,15 +51,18 @@
         <div class="subject-dropdown" role="menu" aria-label="Seleccionar asignatura">
           <ul class="subject-list">
             {% for asig in asignaturas %}
+            {% with item_slug=asig.slug|default:asig.nombre|slugify %}
             <li>
-              <a href="#" class="subject-item js-subject" data-slug="{{ asig.slug|default:asig.nombre|slugify }}"
-                data-name="{{ asig.nombre }}" data-icon="{% static asig.icono %}">
+              <a href="#"
+                class="subject-item js-subject{% if request.session.asignatura_activa_slug == item_slug %} is-active{% endif %}"
+                data-slug="{{ item_slug }}" data-name="{{ asig.nombre }}" data-icon="{% static asig.icono %}">
                 <span class="subject-egg">
                   <img src="{% static asig.icono %}" alt="" class="egg-img">
                 </span>
                 <span class="subject-label">{{ asig.nombre }}</span>
               </a>
             </li>
+            {% endwith %}
             {% empty %}
             <li class="subject-empty text-muted px-3 py-2">Sin asignaturas</li>
             {% endfor %}
@@ -55,44 +71,14 @@
       </div>
     </div>
 
-    <!-- CENTRO: Rango -->
+    <!-- CENTRO: SOLO RANGO -->
     <div class="topbar-center">
       <div class="status-pill">
         <div class="status-block">
-          <!-- Rango -->
           <span class="status-text">
             Rango: {{ perfil.rango_timo|default:"Timo Explorador" }}
           </span>
-
-          <!-- <span class="status-divider"></span>
-          <span class="status-text" style="margin-left: .5rem;">
-          {{ request.user.get_full_name|default:request.user.username }}
-          </span> -->
         </div>
-        
-        <!-- <div class="status-block status-block--level">
-           Nivel + barra XP 
-           <div class="status-level-label">
-            Nivel {{ estudiante_actual.nivel|default:1 }}
-            <span class="status-info-icon" title="XP hasta el siguiente nivel">
-              <i class="bi bi-info-circle"></i>
-            </span>
-          </div>
-           {% if perfil %}
-          <div class="xp-mini-bar" style="--xp-progress: {{ perfil.progreso_porcentaje|default_if_none:0 }}%;">
-            <div class="xp-mini-fill">
-              <span class="xp-mini-thumb"></span>
-            </div>
-          </div>
-          {% endif %} 
-        </div> 
-        Puntos 
-        <span class="status-divider"></span>
-        <div class="status-block">
-          <span class="status-text">
-            {{ estudiante_actual.puntos|default:0 }} pts
-          </span>
-        </div> -->
       </div>
     </div>
 
@@ -133,14 +119,35 @@
 
     const mainImg = subjectMain.querySelector(".subject-icon img.subject-main-img");
     const mainName = subjectMain.querySelector(".subject-name");
+    const dropdown = document.querySelector(".subject-dropdown");
+    const setAsigUrl = "{% url 'estudiante_set_asignatura' %}";
+    const actividadesPath = "{% url 'estudiante_lista' %}";  // ruta Mis actividades
+
+    // Abrir/cerrar dropdown
+    subjectMain.addEventListener("click", function () {
+      if (!dropdown) return;
+      dropdown.classList.toggle("is-open");
+    });
+
+    // Cerrar dropdown al hacer click fuera
+    document.addEventListener("click", function (e) {
+      if (!dropdown) return;
+      if (!e.target.closest(".subject-selector")) {
+        dropdown.classList.remove("is-open");
+      }
+    });
 
     document.querySelectorAll(".subject-item.js-subject").forEach(function (item) {
       item.addEventListener("click", function (e) {
-        e.preventDefault(); // que no haga salto a "#"
+        e.preventDefault();
 
         const name = item.dataset.name;
         const icon = item.dataset.icon;
+        const slug = item.dataset.slug;
 
+        if (!slug) return;
+
+        // Actualizar texto/icono del botón
         if (mainName && name) {
           mainName.textContent = name;
         }
@@ -148,9 +155,37 @@
           mainImg.src = icon;
         }
 
+        // Marcar activo
         document.querySelectorAll(".subject-item.js-subject.is-active")
           .forEach(el => el.classList.remove("is-active"));
         item.classList.add("is-active");
+
+        // Guardar en sesión
+        fetch(setAsigUrl + "?slug=" + encodeURIComponent(slug), {
+          method: "GET",
+          headers: { "X-Requested-With": "XMLHttpRequest" }
+        })
+          .then(resp => resp.json().then(data => ({ status: resp.status, data })))
+          .then(({ status, data }) => {
+            if (!data.ok) {
+              console.error("No se pudo fijar la asignatura:", data.error || status);
+              return;
+            }
+
+            console.log("Asignatura activa:", data.nombre);
+
+            // Si estoy en "Mis actividades", recargo para aplicar filtro
+            if (window.location.pathname === actividadesPath) {
+              window.location.reload();
+            }
+          })
+          .catch(err => {
+            console.error("Error en la petición de asignatura:", err);
+          });
+
+        if (dropdown) {
+          dropdown.classList.remove("is-open");
+        }
       });
     });
   });

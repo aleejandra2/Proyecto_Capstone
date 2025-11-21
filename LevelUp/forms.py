@@ -252,20 +252,24 @@ class ActividadForm(forms.ModelForm):
             "id": "id_intentos_max"
         })
     )
-
+    
+    tipo = forms.ChoiceField(
+        choices=[("quiz", "Quiz")],
+        widget=forms.Select(attrs={"class": "form-select", "id": "id_tipo"})
+    )
     class Meta:
         model = Actividad
         fields = [
             "titulo", "descripcion", "tipo", "dificultad",
-            "xp_total", "intentos_ilimitados", "intentos_max",
+            "intentos_ilimitados", "intentos_max",
             "es_publicada", "fecha_cierre"
         ]
         widgets = {
             "titulo": forms.TextInput(attrs={"class": "form-control", "id": "id_titulo"}),
             "descripcion": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
-            "tipo": forms.Select(attrs={"class": "form-select", "id": "id_tipo"}),
+            #"tipo": forms.Select(attrs={"class": "form-select", "id": "id_tipo"}),
             "dificultad": forms.Select(attrs={"class": "form-select"}),
-            "xp_total": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
+            #"xp_total": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
             "es_publicada": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "fecha_cierre": forms.DateTimeInput(attrs={"class": "form-control", "type": "datetime-local"}),
         }
@@ -299,8 +303,8 @@ GAME_KIND_CHOICES = [
     ("classify",  "Clasificar en categorías"),
     ("cloze",     "Completar (cloze)"),
     ("ordering",  "Ordenar pasos"),
-    ("labyrinth", "Laberinto de puertas"),
-    ("shop",      "Tiendita (precios)"),
+    #("labyrinth", "Laberinto de puertas"),
+    #("shop",      "Tiendita (precios)"),
 ]
 
 def _norm(s): return (s or "").strip().lower()

@@ -13,6 +13,50 @@
   --game-purple: #9775FA;
   --game-radius: 20px;
 }
+/* Asegurar que los textos de los ítems se adapten al ancho */
+.game-host .tr-opt,
+.game-host .vf-btn,
+.game-host .classify-item,
+.game-host .cloze-word,
+.game-host .ordering-item,
+.game-host .memory-card {
+  max-width: 100%;
+  white-space: normal;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+/* DRAGMATCH: asegurar que el texto no se corte + selección táctil */
+.game-host .dm-chip,
+.game-host .dm-slot {
+  max-width: 100%;
+  white-space: normal;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+.dm-chip-selected {
+  outline: 4px solid rgba(77, 171, 247, 0.9);
+  box-shadow: 0 0 0 4px rgba(77, 171, 247, 0.4);
+}
+
+/* CLASSIFY: selección táctil */
+.classify-item.selected {
+  box-shadow: 0 0 0 4px rgba(77, 171, 247, 0.5) !important;
+  transform: scale(1.05) !important;
+}
+
+/* ORDERING: selección táctil */
+.ordering-item.selected {
+  border-color: #4DABF7 !important;
+  box-shadow: 0 0 0 4px rgba(77, 171, 247, 0.35) !important;
+  transform: translateX(4px) scale(1.02) !important;
+}
+
+.game-host .cloze-text {
+  word-wrap: break-word;
+  word-break: break-word;
+}
 
 /* === RESET DE BOTONES === */
 .tr-opt,

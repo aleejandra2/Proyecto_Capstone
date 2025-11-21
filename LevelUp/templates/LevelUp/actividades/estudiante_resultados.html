@@ -1,139 +1,237 @@
 ﻿{% extends "LevelUp/base.html" %}
+{% load static %}
 {% block title %}Resultados: {{ actividad.titulo }}{% endblock %}
-{% block content %}
-<div class="container py-3">
 
-    {% if messages %}
-    {% for message in messages %}
-    <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
-    {% endfor %}
-    {% endif %}
-
-    <div class="d-flex justify-content-between align-items-end">
-        <div>
-            <h1 class="h4 mb-1">Resultados: {{ actividad.titulo }}</h1>
-            <div class="small text-muted">
-                Intento {{ sub.intento }} Â· Nota: {{ sub.calificacion }}% Â· XP obtenido: {{ sub.xp_obtenido }}
-            </div>
-            <div class="small text-muted">
-                Intentos usados: {{ intentos_usados }}/{{ intentos_max }}
-            </div>
-        </div>
-        <div class="text-end">
-            {% if puede_reintentar %}
-            <a class="btn btn-primary" href="{% url 'resolver_play' actividad.pk %}">Intentar de nuevo</a>
-            {% else %}
-            <button class="btn btn-secondary" disabled>Sin intentos disponibles</button>
-            {% endif %}
-            <a class="btn btn-outline-secondary" href="{% url 'estudiante_lista' %}">Volver</a>
-        </div>
-
-    </div>
-
-    {% if intentos and intentos|length > 1 %}
-    <div class="mt-3 mb-2">
-      <div class="small text-muted mb-1">Ver otros intentos</div>
-      <div class="d-flex flex-wrap gap-2">
-        {% for s in intentos %}
-          {% if s.intento == sub.intento %}
-            <span class="badge text-bg-primary">Intento {{ s.intento }}</span>
-          {% else %}
-            <a class="badge text-bg-light" href="?intento={{ s.intento }}">Intento {{ s.intento }}</a>
-          {% endif %}
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-
-    <hr>
-
-    {% for row in items_data %}
-    {% with item=row.item d=row.detalle %}
-    <div class="mb-4">
-        <h2 class="h6 d-flex align-items-center gap-2">
-            {{ forloop.counter }}. {{ item.enunciado }}
-            {% if d.correcto %}
-            <span class="badge text-bg-success">Correcta</span>
-            {% else %}
-            <span class="badge text-bg-danger">Incorrecta</span>
-            {% endif %}
-            <span class="badge text-bg-light">Puntaje: {{ d.obtenido }}/{{ d.puntaje }}</span>
-        </h2>
-
-        {% if item.imagen %}
-        <img src="{{ item.imagen.url }}" class="img-fluid mb-2" alt="Imagen del Ã­tem">
-        {% endif %}
-
-        {% if d.tipo == 'mcq' %}
-        {% if d.multiple %}
-        <div class="small">Tus respuestas: {{ d.marcadas_letras|default:'â€”' }}</div>
-        <div class="small">Correctas: {{ d.correctas_letras }}</div>
-        <ul class="mt-2">
-            {% for op in d.opciones %}
-            {% with idx=forloop.counter0 letra=idx|add:""|slice:":0" %}
-            <li>
-                {{ forloop.counter|add:-1|add:65|stringformat:"c" }}. {{ op }}
-            </li>
-            {% endwith %}
-            {% endfor %}
-        </ul>
-        {% else %}
-        <div class="small">Tu respuesta: {{ d.marcadas_letras|default:'â€”' }}</div>
-        <div class="small">Correcta: {{ d.correctas_letras }}</div>
-        {% endif %}
-
-        {% elif d.tipo == 'tf' %}
-        <div class="small">Tu respuesta: {{ d.valor|yesno:"Verdadero,Falso" }}</div>
-        <div class="small">Correcta: {{ d.esperado|yesno:"Verdadero,Falso" }}</div>
-
-        {% elif d.tipo == 'fib' %}
-        <div class="small">Tu respuesta: <em>{{ d.texto|default:"â€”" }}</em></div>
-        <div class="small">Se acepta: {{ d.aceptadas|join:", " }}</div>
-
-        {% elif d.tipo == 'sort' %}
-        <div class="small">Tu orden: {{ d.orden_alumno|join:" â†’ " }}</div>
-        <div class="small">Orden correcto: {{ d.orden_correcto|join:" â†’ " }}</div>
-
-        {% elif d.tipo == 'match' %}
-        <div class="row">
-            <div class="col-md-6">
-                <div class="fw-bold small">Tus pares</div>
-                <ul class="small m-0 ps-3">
-                    {% for l,r in d.pares_alumno %}
-                    <li>{{ l }} â†’ {{ r }}</li>
-                    {% empty %}
-                    <li>â€”</li>
-                    {% endfor %}
-                </ul>
-            </div>
-            <div class="col-md-6">
-                <div class="fw-bold small">Pares correctos</div>
-                <ul class="small m-0 ps-3">
-                    {% for l,r in d.pares_esperados %}
-                    <li>{{ l }} â†’ {{ r }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-        </div>
-
-        {% elif d.tipo == 'text' %}
-        <div class="small">Tu respuesta:</div>
-        <div class="border rounded p-2 mb-2">{{ d.texto|linebreaksbr }}</div>
-        {% if d.palabras_clave and d.palabras_clave|length > 0 %}
-        <div class="small text-muted">Sugerencia: palabras clave esperadas: {{ d.palabras_clave|join:", " }}</div>
-        {% endif %}
-
-        {% elif d.tipo == 'interactive' or d.tipo == 'game' %}
-        <div class="small">Completado: {{ d.completado|yesno:"Sí,No" }}\n        {% if d.score %}\n        <div class="small">Puntaje parcial: {{ d.score|floatformat:2 }} ({{ d.correctas|default:"?" }}/{{ d.total|default:"?" }})</div>\n        {% endif %}</div>
-
-        {% else %}
-        <pre class="small bg-light p-2">{{ d.respuesta|default:"" }}</pre>
-        {% endif %}
-    </div>
-    <hr>
-    {% endwith %}
-    {% endfor %}
-
-</div>
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'LevelUp/css/estudiante_resultados.css' %}?v=1">
 {% endblock %}
 
+{% block content %}
+<main class="min-h-screen resultados-page">
+    <div class="container py-4">
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+
+        {# ===================== CABECERA / RESUMEN ===================== #}
+        <div class="card resultados-card-main mb-3">
+            <div class="card-body resultados-header">
+                <div class="resultados-main">
+                    <div class="resultados-pill mb-2">
+                        🌟 Resultados de la actividad
+                    </div>
+                    <h1 class="resultados-title">
+                        {{ actividad.titulo }}
+                    </h1>
+                    <p class="resultados-subtitle">
+                        Intento {{ sub.intento }}
+                        {% if sub.enviado_en %}
+                        · Enviado el {{ sub.enviado_en|date:"d/m/Y H:i" }}
+                        {% else %}
+                        · Iniciado el {{ sub.iniciado_en|date:"d/m/Y H:i" }}
+                        {% endif %}
+                    </p>
+
+                    <div class="resultados-stats-row">
+                        <div class="resultados-stat-chip">
+                            <span class="resultados-stat-label">Respuestas buenas</span>
+                            <span class="resultados-stat-value">
+                                {{ total_buenas }}/{{ total_preguntas }}
+                            </span>
+                        </div>
+                        <div class="resultados-stat-chip">
+                            <span class="resultados-stat-label">Porcentaje de aciertos</span>
+                            <span class="resultados-stat-value">
+                                {{ porcentaje_global }}%
+                            </span>
+                        </div>
+                        <div class="resultados-stat-chip">
+                            <span class="resultados-stat-label">Intentos usados</span>
+                            <span class="resultados-stat-value">
+                                {% if es_intentos_ilimitados %}
+                                {{ intentos_usados }} / ∞
+                                {% else %}
+                                {{ intentos_usados }}/{{ intentos_max }}
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="resultados-side">
+                    <div class="resultados-progress-ring" style="--pct: {{ porcentaje_global|default:0 }}">
+                        <div class="resultados-progress-inner">
+                            <div class="resultados-progress-number">
+                                {{ porcentaje_global|default:"0" }}%
+                            </div>
+                            <div class="resultados-progress-label">
+                                de aciertos
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer d-flex flex-wrap justify-content-end gap-2">
+                <div class="resultados-actions">
+                    {% if puede_reintentar %}
+                    <a class="btn btn-primary btn-sm" href="{% url 'resolver_play' actividad.pk %}">
+                        🔁 Volver a intentar
+                    </a>
+                    {% endif %}
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'estudiante_lista' %}">
+                        ← Volver a mis actividades
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {# ===================== LISTA DE INTENTOS ===================== #}
+        {% if intentos %}
+        <div class="card resultados-intentos-card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h2 class="h6 mb-0">Ver resultados por intento</h2>
+                    <span class="small text-muted">{{ intentos|length }} intento(s) finalizado(s)</span>
+                </div>
+                <div class="resultados-intentos-list">
+                    {% for s in intentos %}
+                    {% if s.intento == sub.intento %}
+                    <div class="intento-pill is-active">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="intento-pill-title">Intento {{ s.intento }}</span>
+                            {% if s.calificacion is not None %}
+                            <span class="intento-pill-score">{{ s.calificacion|floatformat:0 }}%</span>
+                            {% endif %}
+                        </div>
+                        <div class="intento-pill-meta">
+                            <span>
+                                {% if s.enviado_en %}
+                                {{ s.enviado_en|date:"d/m H:i" }}
+                                {% else %}
+                                {{ s.iniciado_en|date:"d/m H:i" }}
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <a class="intento-pill" href="?intento={{ s.intento }}&ver={{ filtro }}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="intento-pill-title">Intento {{ s.intento }}</span>
+                            {% if s.calificacion is not None %}
+                            <span class="intento-pill-score">{{ s.calificacion|floatformat:0 }}%</span>
+                            {% endif %}
+                        </div>
+                        <div class="intento-pill-meta">
+                            <span>
+                                {% if s.enviado_en %}
+                                {{ s.enviado_en|date:"d/m H:i" }}
+                                {% else %}
+                                {{ s.iniciado_en|date:"d/m H:i" }}
+                                {% endif %}
+                            </span>
+                        </div>
+                    </a>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ===================== FILTRO DE CONTENIDO ===================== #}
+        <div class="resultados-filter-row">
+            <div class="resultados-items-header">
+                <h2>Detalle de tus respuestas</h2>
+            </div>
+            <div class="resultados-filter-chips">
+                <a href="?intento={{ sub.intento }}&ver=todo"
+                    class="filter-chip {% if filtro == 'todo' %}is-active{% endif %}">
+                    <span>📋</span><span>Ver todas</span>
+                </a>
+                <a href="?intento={{ sub.intento }}&ver=solo_malas"
+                    class="filter-chip {% if filtro == 'solo_malas' %}is-active{% endif %}">
+                    <span>❌</span><span>Solo incorrectas</span>
+                </a>
+                <a href="?intento={{ sub.intento }}&ver=solo_buenas"
+                    class="filter-chip {% if filtro == 'solo_buenas' %}is-active{% endif %}">
+                    <span>✅</span><span>Solo correctas</span>
+                </a>
+            </div>
+        </div>
+
+        {# ===================== DETALLE POR ÍTEM (minijuegos) ===================== #}
+        {% if items_data %}
+        {% for row in items_data %}
+        {% with item=row.item d=row.detalle %}
+        <article class="resultados-item-card {% if d.correcto %}is-correct{% else %}is-wrong{% endif %}">
+            <div class="resultados-item-header">
+                <div class="resultados-item-title">
+                    <div class="resultados-item-numero">
+                        Juego / Ítem {{ forloop.counter }}
+                    </div>
+                    <div class="resultados-item-enunciado">
+                        {{ item.enunciado|default:"(Sin enunciado)" }}
+                    </div>
+                </div>
+                <div class="resultados-item-badges">
+                    {% if d.correcto %}
+                    <span class="badge-soft badge-soft-success">✅ Correcto</span>
+                    {% else %}
+                    <span class="badge-soft badge-soft-danger">❌ Incorrecto</span>
+                    {% endif %}
+                    {% if d.kind %}
+                    <span class="badge-soft badge-soft-kind">
+                        Tipo: {{ d.kind|title }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if item.imagen %}
+            <div class="mb-2">
+                <img src="{{ item.imagen.url }}" class="img-fluid rounded" alt="Imagen del ítem">
+            </div>
+            {% endif %}
+
+            <div class="resultados-item-body">
+                <div class="resultados-game-resumen">
+                    <span>
+                        ✅ Buenas en este juego:
+                        {% if d.correctas is not None and d.total is not None %}
+                        {{ d.correctas }} de {{ d.total }}
+                        {% elif d.correctas is not None %}
+                        {{ d.correctas }}
+                        {% elif d.total is not None %}
+                        ? de {{ d.total }}
+                        {% else %}
+                        —
+                        {% endif %}
+                    </span>
+
+                    {% if d.incorrectas is not None %}
+                    <span>❌ Incorrectas: {{ d.incorrectas }}</span>
+                    {% endif %}
+
+                    <span>
+                        🎮 Completado:
+                        {% if d.completado %}Sí{% else %}No{% endif %}
+                    </span>
+                </div>
+            </div>
+        </article>
+        {% endwith %}
+        {% endfor %}
+        {% else %}
+        <p class="text-muted small">
+            No hay juegos que mostrar con el filtro seleccionado.
+            Prueba cambiando a "Ver todas".
+        </p>
+        {% endif %}
+
+    </div>
+</main>
+{% endblock %}

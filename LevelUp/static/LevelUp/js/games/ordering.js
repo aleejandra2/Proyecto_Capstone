@@ -1,3 +1,4 @@
+// static/LevelUp/js/games/ordering.js
 import { shuffle, playSound } from './core.js';
 
 console.log('🎮 [ORDERING] Módulo cargado');
@@ -47,13 +48,45 @@ export default async function init(host, cfg) {
   // Instrucciones
   const instructionsDiv = document.createElement('div');
   instructionsDiv.className = 'ordering-instructions';
-  instructionsDiv.textContent = '📝 Arrastra los elementos para ordenarlos correctamente';
+  instructionsDiv.textContent = '📝 Arrastra o toca los elementos para ordenarlos correctamente';
   wrapper.appendChild(instructionsDiv);
 
   // Lista de items
   const list = document.createElement('div');
   list.className = 'ordering-list';
   list.id = 'ordering-list';
+
+  // TAP (mobile): ítem seleccionado para swap
+  let selectedItem = null;
+
+  function clearSelectedOrderingItem() {
+    if (selectedItem) {
+      selectedItem.classList.remove('selected');
+      selectedItem = null;
+    }
+  }
+
+  function swapItems(a, b) {
+    if (!a || !b || a === b) return;
+
+    const parent = list;
+
+    const aNext = a.nextSibling;
+    const bNext = b.nextSibling;
+
+    // Distintos casos según posición
+    if (aNext === b) {
+      parent.insertBefore(b, a);
+    } else if (bNext === a) {
+      parent.insertBefore(a, b);
+    } else {
+      parent.insertBefore(a, bNext);
+      parent.insertBefore(b, aNext);
+    }
+
+    // Actualizar numeritos
+    updateNumbers();
+  }
 
   // Mezclar items
   const shuffledItems = shuffle([...items]);
@@ -92,7 +125,7 @@ export default async function init(host, cfg) {
 
     // Drag events
     itemDiv.addEventListener('dragstart', (e) => {
-      console.log(`🖱️ [ORDERING] Inicio arrastre:`, item.text);
+      console.log('🖱️ [ORDERING] Inicio arrastre:', item.text);
       itemDiv.classList.add('dragging');
       itemDiv.style.opacity = '0.5';
       e.dataTransfer.effectAllowed = 'move';
@@ -104,6 +137,7 @@ export default async function init(host, cfg) {
       itemDiv.style.opacity = '1';
     });
 
+    // Drag over en otros items: reordenar en desktop
     itemDiv.addEventListener('dragover', (e) => {
       e.preventDefault();
       const dragging = list.querySelector('.dragging');
@@ -119,6 +153,32 @@ export default async function init(host, cfg) {
       }
 
       updateNumbers();
+    });
+
+    // TAP: seleccionar y hacer swap (mobile)
+    itemDiv.addEventListener('click', () => {
+      // Si está en medio de un drag, ignorar
+      if (itemDiv.classList.contains('dragging')) return;
+
+      // Si no hay nada seleccionado, seleccionar este
+      if (!selectedItem) {
+        selectedItem = itemDiv;
+        itemDiv.classList.add('selected');
+        return;
+      }
+
+      // Si tocas el mismo, deselecciona
+      if (selectedItem === itemDiv) {
+        clearSelectedOrderingItem();
+        return;
+      }
+
+      // Segundo ítem: hacer swap
+      const first = selectedItem;
+      const second = itemDiv;
+
+      clearSelectedOrderingItem();
+      swapItems(first, second);
     });
 
     list.appendChild(itemDiv);
@@ -157,9 +217,9 @@ export default async function init(host, cfg) {
   btnVerify.addEventListener('click', () => {
     console.log('🔍 [ORDERING] Verificando orden...');
 
-    const currentOrder = Array.from(list.querySelectorAll('.ordering-item')).map(
-      el => el.dataset.itemId
-    );
+    const currentOrder = Array.from(
+      list.querySelectorAll('.ordering-item')
+    ).map((el) => el.dataset.itemId);
 
     console.log('📊 [ORDERING] Orden actual:', currentOrder);
     console.log('✅ [ORDERING] Orden correcto:', correctOrder);
@@ -170,20 +230,20 @@ export default async function init(host, cfg) {
       console.log('✅ [ORDERING] ¡Orden correcto!');
       playSound('success');
 
-      list.querySelectorAll('.ordering-item').forEach(item => {
-        item.classList.add('correct');
-        item.draggable = false;
-        item.style.cssText += `
+      list.querySelectorAll('.ordering-item').forEach((itemEl) => {
+        itemEl.classList.add('correct');
+        itemEl.draggable = false;
+        itemEl.style.cssText += `
           background: linear-gradient(135deg, #51CF66, #8ce99a) !important;
           border-color: #51CF66 !important;
           animation: celebrate 0.7s ease-out;
           box-shadow: 0 12px 32px rgba(81, 207, 102, 0.5) !important;
           cursor: default !important;
         `;
-        item.style.color = 'white';
-        const text = item.querySelector('.ordering-text');
+        itemEl.style.color = 'white';
+        const text = itemEl.querySelector('.ordering-text');
         if (text) text.style.color = 'white';
-        const number = item.querySelector('.ordering-number');
+        const number = itemEl.querySelector('.ordering-number');
         if (number) {
           number.style.background = 'white';
           number.style.color = '#51CF66';
@@ -219,9 +279,9 @@ export default async function init(host, cfg) {
       `;
       errorMsg.textContent = '❌ El orden no es correcto. Intenta de nuevo.';
 
-      if (wrapper.querySelector('.error-msg')) {
-        wrapper.querySelector('.error-msg').remove();
-      }
+      const existing = wrapper.querySelector('.error-msg');
+      if (existing) existing.remove();
+
       errorMsg.className = 'error-msg';
       wrapper.appendChild(errorMsg);
 
@@ -236,8 +296,8 @@ export default async function init(host, cfg) {
 
   function updateNumbers() {
     const allItems = list.querySelectorAll('.ordering-item');
-    allItems.forEach((item, idx) => {
-      const numberEl = item.querySelector('.ordering-number');
+    allItems.forEach((itemEl, idx) => {
+      const numberEl = itemEl.querySelector('.ordering-number');
       if (numberEl) {
         numberEl.textContent = idx + 1;
       }

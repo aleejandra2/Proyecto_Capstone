@@ -1,0 +1,391 @@
+/* Fondo general suave, similar a play */
+.resultados-page {
+    background: linear-gradient(180deg, #f3f8ff 0%, #ffffff 60%, #fdf2ff 100%);
+}
+
+/* Tarjeta principal */
+.resultados-card-main {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(89, 125, 255, 0.18);
+    overflow: hidden;
+}
+
+.resultados-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+}
+
+.resultados-main {
+    max-width: 100%;
+}
+
+.resultados-title {
+    font-weight: 800;
+    font-size: 1.5rem;
+    margin-bottom: .3rem;
+}
+
+.resultados-subtitle {
+    font-size: .9rem;
+    color: #6c757d;
+    margin-bottom: .5rem;
+}
+
+/* Pill tipo chip, similar a cabecera de play */
+.resultados-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .2rem .75rem;
+    border-radius: 999px;
+    font-size: .75rem;
+    font-weight: 600;
+    background: rgba(77, 171, 247, 0.12);
+    color: #1c7ed6;
+}
+
+/* Stats */
+.resultados-stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    margin-top: .5rem;
+}
+
+.resultados-stat-chip {
+    padding: .55rem .9rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(222, 226, 230, 0.95);
+    display: flex;
+    flex-direction: column;
+    min-width: 120px;
+}
+
+.resultados-stat-label {
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #868e96;
+}
+
+.resultados-stat-value {
+    font-size: .95rem;
+    font-weight: 700;
+    color: #343a40;
+}
+
+/* Donita de porcentaje (usa variable --pct seteada inline) */
+.resultados-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .5rem;
+}
+
+.resultados-progress-ring {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: conic-gradient(#4dabf7 calc(var(--pct, 0) * 1%), #e9ecef 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.resultados-progress-ring::after {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border-radius: 50%;
+    background: #ffffff;
+    z-index: 0;
+}
+
+.resultados-progress-inner {
+    position: relative;
+    text-align: center;
+    z-index: 1;
+}
+
+.resultados-progress-number {
+    font-weight: 800;
+    font-size: 1.4rem;
+    color: #364fc7;
+    line-height: 1;
+}
+
+.resultados-progress-label {
+    font-size: .75rem;
+    color: #868e96;
+    margin-top: .15rem;
+}
+
+/* Footer con botones */
+.resultados-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+
+/* Tarjeta de intentos */
+.resultados-intentos-card {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 6px 20px rgba(134, 142, 150, 0.15);
+}
+
+.resultados-intentos-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+}
+
+.intento-pill {
+    text-decoration: none;
+    padding: .6rem .9rem;
+    border-radius: 12px;
+    border: 1px solid #dde2e8;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+    min-width: 140px;
+    transition: transform .1s ease, box-shadow .1s ease, border-color .1s ease, background .1s ease;
+    font-size: .8rem;
+    color: #343a40;
+}
+
+.intento-pill:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+    border-color: #4dabf7;
+}
+
+.intento-pill.is-active {
+    background: linear-gradient(135deg, #4dabf7, #9775fa);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 10px 22px rgba(76, 110, 245, 0.4);
+}
+
+.intento-pill-title {
+    font-weight: 700;
+}
+
+.intento-pill-score {
+    font-weight: 700;
+    font-size: .85rem;
+}
+
+.intento-pill-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: .5rem;
+    opacity: .85;
+}
+
+/* Filtros (chips) */
+.resultados-filter-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .75rem;
+    margin-top: 1.25rem;
+    margin-bottom: .75rem;
+}
+
+.resultados-items-header h2 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.resultados-filter-chips {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+}
+
+.filter-chip {
+    text-decoration: none;
+    border-radius: 999px;
+    font-size: .75rem;
+    padding: .25rem .8rem;
+    border: 1px solid #dee2e6;
+    background: #ffffff;
+    color: #495057;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    transition: background .1s ease, color .1s ease, box-shadow .1s ease;
+}
+
+.filter-chip span {
+    font-size: .8rem;
+}
+
+.filter-chip.is-active {
+    background: linear-gradient(135deg, #4dabf7, #9775fa);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 6px 14px rgba(76, 110, 245, 0.4);
+}
+
+/* Ítems / juegos */
+.resultados-item-card {
+    border-radius: 18px;
+    padding: 1rem 1rem 0.7rem;
+    margin-bottom: 1rem;
+    background: #ffffff;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 6px 16px rgba(134, 142, 150, 0.12);
+    position: relative;
+    overflow: hidden;
+}
+
+.resultados-item-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border-left: 6px solid transparent;
+}
+
+.resultados-item-card.is-correct::before {
+    border-left-color: #51cf66;
+}
+
+.resultados-item-card.is-wrong::before {
+    border-left-color: #ff6b6b;
+}
+
+.resultados-item-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: .5rem;
+    align-items: flex-start;
+    margin-bottom: .5rem;
+}
+
+.resultados-item-title {
+    max-width: 100%;
+}
+
+.resultados-item-numero {
+    font-size: .8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #868e96;
+    margin-bottom: .15rem;
+}
+
+.resultados-item-enunciado {
+    font-size: .95rem;
+    font-weight: 600;
+    color: #343a40;
+}
+
+/* Badges */
+.resultados-item-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .3rem;
+    justify-content: flex-end;
+}
+
+.badge-soft {
+    border-radius: 999px;
+    padding: .25rem .7rem;
+    font-size: .75rem;
+    font-weight: 600;
+}
+
+.badge-soft-success {
+    background: rgba(82, 196, 26, 0.1);
+    color: #2b8a3e;
+}
+
+.badge-soft-danger {
+    background: rgba(255, 107, 107, 0.1);
+    color: #c92a2a;
+}
+
+.badge-soft-kind {
+    background: rgba(134, 142, 150, 0.14);
+    color: #495057;
+}
+
+.resultados-item-body {
+    font-size: .85rem;
+    color: #495057;
+}
+
+.resultados-game-resumen {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    align-items: center;
+    margin-bottom: .4rem;
+}
+
+.resultados-game-resumen span {
+    padding: .2rem .5rem;
+    border-radius: 999px;
+    background: #f8f9fa;
+}
+
+/* Detalle de respuestas */
+.resultados-detail-toggle {
+    margin-top: .25rem;
+}
+
+.resultados-detail-toggle summary {
+    cursor: pointer;
+    font-size: .8rem;
+    color: #4263eb;
+    font-weight: 600;
+}
+
+.resultados-detail-toggle pre {
+    font-size: .75rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: .5rem .75rem;
+    max-height: 260px;
+    overflow: auto;
+    white-space: pre-wrap;
+}
+
+/* Responsive */
+@media (max-width: 767.98px) {
+    .resultados-header {
+        align-items: flex-start;
+    }
+
+    .resultados-progress-ring {
+        width: 100px;
+        height: 100px;
+    }
+
+    .resultados-stats-row {
+        gap: .5rem;
+    }
+
+    .resultados-stat-chip {
+        min-width: 48%;
+    }
+
+    .resultados-filter-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

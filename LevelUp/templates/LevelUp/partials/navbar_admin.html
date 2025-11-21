@@ -1,0 +1,132 @@
+{% load static %}
+
+<nav class="navbar-admin">
+    <div class="navbar-admin-inner">
+
+        <!-- BRAND -->
+        <a href="{% url 'dashboard' %}" class="navbar-admin-brand d-flex align-items-center">
+            <img src="{% static 'LevelUp/img/logo.png' %}" width="32" height="32" class="me-2"
+                style="object-fit:contain;">
+            <span class="navbar-admin-brand-text">LevelUp · Admin</span>
+        </a>
+
+        <!-- Botón hamburguesa (solo móvil) -->
+        <button class="navbar-admin-toggle" type="button" id="navbarAdminToggle"
+            aria-label="Alternar menú administrador">
+            <i class="bi bi-list"></i>
+        </button>
+
+        {% with current=request.resolver_match.url_name %}
+        <div class="navbar-admin-menu-wrapper">
+
+            <!-- MENÚ PRINCIPAL -->
+            <ul class="navbar-admin-menu list-unstyled mt-3 mb-0">
+                <li>
+                    <a href="{% url 'dashboard' %}"
+                        class="navbar-admin-link d-flex align-items-center {% if current == 'dashboard' %}is-active{% endif %}">
+                        <i class="bi bi-speedometer2 me-2"></i>
+                        <span>Panel</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="{% url 'adm_list_profesores' %}"
+                        class="navbar-admin-link d-flex align-items-center {% if current == 'adm_list_profesores' %}is-active{% endif %}">
+                        <i class="bi bi-person-badge me-2"></i>
+                        <span>Profesores</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="{% url 'adm_list_alumnos' %}"
+                        class="navbar-admin-link d-flex align-items-center {% if current == 'adm_list_alumnos' %}is-active{% endif %}">
+                        <i class="bi bi-people me-2"></i>
+                        <span>Alumnos</span>
+                    </a>
+                </li>
+
+                {# Alumnos por curso (primero se elige el curso) #}
+                <li>
+                    <a href="{% url 'adm_list_alumnos_por_curso' %}"
+                        class="navbar-admin-link d-flex align-items-center {% if current == 'adm_list_alumnos_por_curso' %}is-active{% endif %}">
+                        <i class="bi bi-search me-2"></i>
+                        <span>Alumnos por curso</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="{% url 'adm_cursos_lista' %}"
+                        class="navbar-admin-link d-flex align-items-center {% if current == 'adm_cursos_lista' %}is-active{% endif %}">
+                        <i class="bi bi-journal-bookmark me-2"></i>
+                        <span>Cursos</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="{% url 'adm_asignaturas_lista' %}"
+                        class="navbar-admin-link d-flex align-items-center {% if current == 'adm_asignaturas_lista' %}is-active{% endif %}">
+                        <i class="bi bi-book-half me-2"></i>
+                        <span>Asignaturas</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="{% url 'adm_asignaciones_lista' %}"
+                        class="navbar-admin-link d-flex align-items-center {% if current == 'adm_asignaciones_lista' %}is-active{% endif %}">
+                        <i class="bi bi-diagram-3 me-2"></i>
+                        <span>Asignaciones</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="{% url 'adm_matriculas_lista' %}"
+                        class="navbar-admin-link d-flex align-items-center {% if current == 'adm_matriculas_lista' %}is-active{% endif %}">
+                        <i class="bi bi-card-checklist me-2"></i>
+                        <span>Matrículas</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="{% url 'register' %}"
+                        class="navbar-admin-link d-flex align-items-center {% if current == 'register' %}is-active{% endif %}">
+                        <i class="bi bi-person-plus me-2"></i>
+                        <span>Crear usuario</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="{% url 'admin:index' %}" class="navbar-admin-link d-flex align-items-center"
+                        target="_blank" rel="noopener">
+                        <i class="bi bi-box-arrow-up-right me-2"></i>
+                        <span>Django Admin</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- CERRAR SESIÓN ABAJO -->
+            <div class="navbar-admin-bottom">
+                <form method="post" action="{% url 'logout' %}" class="navbar-admin-logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="navbar-admin-logout">
+                        <i class="bi bi-box-arrow-right"></i>
+                        <span>Cerrar sesión</span>
+                    </button>
+                </form>
+            </div>
+
+        </div>
+        {% endwith %}
+    </div>
+</nav>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const nav = document.querySelector('.navbar-admin');
+        const btn = document.getElementById('navbarAdminToggle');
+        if (nav && btn) {
+            btn.addEventListener('click', function () {
+                nav.classList.toggle('is-open');
+            });
+        }
+    });
+</script>

@@ -2,187 +2,170 @@
 {% load static %}
 {% block title %}Portal del Administrador · LevelUp{% endblock %}
 
+{# mismo concepto que with-docente-navbar, pero para el sidebar admin #}
+{% block body_class %}with-admin-navbar{% endblock %}
+
+{# sólo CSS del navbar admin va al <head> #}
+{% block extra_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'LevelUp/css/navbar_admin.css' %}">
+{% endblock %}
+
+{# navbar lateral del admin #}
+{% block navbar %}
+  {% include "LevelUp/partials/navbar_admin.html" %}
+{% endblock %}
+
 {% block content %}
-<main class="min-h-screen">
+<main class="portal-docente min-h-screen">
   <div class="container">
 
-    <!-- Hero -->
-    <div class="card border-0 shadow-sm mb-3 admin-hero">
-      <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
-        <div class="text-white">
-          <h1 class="h4 fw-800 mb-1">Panel de Administración 🛠️</h1>
-          <p class="mb-0 opacity-75">Gestiona usuarios, cursos, asignaturas y matrículas desde la app.</p>
-        </div>
-        <!-- Puedes dejar este acceso si quieres, no afecta a los nuevos botones -->
-        <a class="btn btn-hero" href="{% url 'admin:index' %}">Ir a Django Admin</a>
-      </div>
-    </div>
-
-    <!-- KPIs -->
-    <div class="row g-3 mb-3">
-      <div class="col-6 col-md-3">
-        <div class="kpi-card text-center">
-          <div class="kpi-icon">👩‍🎓</div>
-          <div class="kpi-label">Alumnos</div>
-          <div class="kpi-value">{{ alumnos_total|default:0 }}</div>
-        </div>
-      </div>
-      <div class="col-6 col-md-3">
-        <div class="kpi-card text-center">
-          <div class="kpi-icon">👨‍🏫</div>
-          <div class="kpi-label">Profesores</div>
-          <div class="kpi-value">{{ profesores_total|default:0 }}</div>
-        </div>
-      </div>
-      <div class="col-6 col-md-3">
-        <div class="kpi-card text-center">
-          <div class="kpi-icon">🏫</div>
-          <div class="kpi-label">Cursos</div>
-          <div class="kpi-value">{{ cursos_total|default:0 }}</div>
-        </div>
-      </div>
-      <div class="col-6 col-md-3">
-        <div class="kpi-card text-center">
-          <div class="kpi-icon">📘</div>
-          <div class="kpi-label">Asignaturas</div>
-          <div class="kpi-value">{{ asignaturas_total|default:0 }}</div>
+    {# HERO igual al del docente, pero versión admin #}
+    <div class="portal-hero">
+      <div class="portal-hero-content">
+        <h1>¡Bienvenido, Administrador! 🛠️</h1>
+        <p>Administra usuarios, cursos, asignaturas y matrículas en LevelUp.</p>
+        <div class="portal-hero-actions">
+          <a href="{% url 'adm_list_alumnos' %}" class="btn btn-light">
+            <i class="bi bi-people me-2"></i>Alumnos
+          </a>
+          <a href="{% url 'adm_list_profesores' %}" class="btn btn-outline-light">
+            <i class="bi bi-person-badge me-2"></i>Profesores
+          </a>
         </div>
       </div>
     </div>
 
-    <div class="row g-3">
-      <!-- Estado -->
-      <div class="col-lg-6">
-        <div class="card h-100 shadow-sm">
-          <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <h2 class="section-title mb-0">Estado del Sistema</h2>
-              {% if health.server.ok and health.db.ok and health.cache.ok %}
-              <span class="chip chip-success">Todo OK</span>
-              {% elif health.db.ok or health.cache.ok %}
-              <span class="chip chip-warn">Atención</span>
-              {% else %}
-              <span class="chip chip-danger">Fuera de servicio</span>
-              {% endif %}
-            </div>
+    {# KPI CARDS adaptadas a admin #}
+    <div class="kpi-grid">
+      <div class="kpi-card kpi-students">
+        <div class="kpi-icon">👩‍🎓</div>
+        <div class="kpi-label">Alumnos</div>
+        <div class="kpi-value">
+          {{ alumnos_total|default:0 }}
+        </div>
+      </div>
 
-            <ul class="list-group list-group-flush sys-list">
-              <li class="list-group-item d-flex justify-content-between align-items-start gap-3">
-                <div class="me-auto">
-                  <div class="fw-700">
-                    <span class="status-dot {% if health.server.ok %}ok{% else %}bad{% endif %}"></span>
-                    Servidor (Django)
-                  </div>
-                  <small class="text-muted d-block text-truncate">
-                    Hora servidor: {{ health.server.time|date:"d/m/Y H:i" }} · Django {{ health.server.version }}
-                  </small>
-                </div>
-                <span class="chip {% if health.server.ok %}chip-success{% else %}chip-danger{% endif %}">
-                  {% if health.server.ok %}OK{% else %}Caído{% endif %}
-                </span>
-              </li>
+      <div class="kpi-card kpi-activities">
+        <div class="kpi-icon">👨‍🏫</div>
+        <div class="kpi-label">Profesores</div>
+        <div class="kpi-value">{{ profesores_total|default:0 }}</div>
+      </div>
 
-              <li class="list-group-item d-flex justify-content-between align-items-start gap-3">
-                <div class="me-auto">
-                  <div class="fw-700">
-                    <span class="status-dot {% if health.db.ok %}ok{% else %}bad{% endif %}"></span>
-                    Base de datos
-                  </div>
-                  <small class="text-muted d-block text-truncate">
-                    {{ health.db.vendor }} · {{ health.db.name }}
-                  </small>
-                </div>
-                <span class="chip {% if health.db.ok %}chip-success{% else %}chip-danger{% endif %}">
-                  {% if health.db.ok %}Conectada{% else %}Sin conexión{% endif %}
-                </span>
-              </li>
+      <div class="kpi-card kpi-average">
+        <div class="kpi-icon">🏫</div>
+        <div class="kpi-label">Cursos</div>
+        <div class="kpi-value">{{ cursos_total|default:0 }}</div>
+      </div>
 
-              <li class="list-group-item d-flex justify-content-between align-items-start gap-3">
-                <div class="me-auto">
-                  <div class="fw-700">
-                    <span class="status-dot {% if health.cache.ok %}ok{% else %}warn{% endif %}"></span>
-                    Cache
-                  </div>
-                  <small class="text-muted d-block text-truncate">
-                    {{ health.cache.backend }} · {{ health.cache.latency_ms }} ms
-                  </small>
-                </div>
-                <span class="chip {% if health.cache.ok %}chip-success{% else %}chip-warn{% endif %}">
-                  {% if health.cache.ok %}OK{% else %}Fallo/Off{% endif %}
-                </span>
-              </li>
-            </ul>
+      <div class="kpi-card kpi-days">
+        <div class="kpi-icon">📘</div>
+        <div class="kpi-label">Asignaturas</div>
+        <div class="kpi-value">{{ asignaturas_total|default:0 }}</div>
+      </div>
+    </div>
+
+    {# ESTADO DEL SISTEMA en lugar de "Actividad reciente" #}
+    <div class="activity-section">
+      <div class="section-header">
+        <h2 class="section-title">
+          <span class="emoji">🖥️</span>
+          Estado del sistema
+        </h2>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <ul class="list-group list-group-flush sys-list">
+            <li class="list-group-item d-flex justify-content-between align-items-start gap-3">
+              <div class="me-auto">
+                <div class="fw-700">Servidor (Django)</div>
+                <small class="text-muted d-block text-truncate">
+                  Hora servidor: {{ health.server.time|date:"d/m/Y H:i" }} · Django {{ health.server.version }}
+                </small>
+              </div>
+              <span class="badge rounded-pill {% if health.server.ok %}bg-success{% else %}bg-danger{% endif %}">
+                {% if health.server.ok %}OK{% else %}Caído{% endif %}
+              </span>
+            </li>
+
+            <li class="list-group-item d-flex justify-content-between align-items-start gap-3">
+              <div class="me-auto">
+                <div class="fw-700">Base de datos</div>
+                <small class="text-muted d-block text-truncate">
+                  {{ health.db.vendor }} · {{ health.db.name }}
+                </small>
+              </div>
+              <span class="badge rounded-pill {% if health.db.ok %}bg-success{% else %}bg-danger{% endif %}">
+                {% if health.db.ok %}Conectada{% else %}Sin conexión{% endif %}
+              </span>
+            </li>
+
+            <li class="list-group-item d-flex justify-content-between align-items-start gap-3">
+              <div class="me-auto">
+                <div class="fw-700">Cache</div>
+                <small class="text-muted d-block text-truncate">
+                  {{ health.cache.backend }} · {{ health.cache.latency_ms }} ms
+                </small>
+              </div>
+              <span class="badge rounded-pill {% if health.cache.ok %}bg-success{% else %}bg-warning{% endif %}">
+                {% if health.cache.ok %}OK{% else %}Fallo / Off{% endif %}
+              </span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    {# ACCIONES RÁPIDAS igual layout que docente, pero con acciones de admin #}
+    <div class="activity-section">
+      <div class="section-header">
+        <h2 class="section-title">
+          <span class="emoji">⚡</span>
+          Acciones rápidas
+        </h2>
+      </div>
+
+      <div class="quick-actions-grid">
+
+        <a href="{% url 'register' %}" class="action-card primary">
+          <div class="action-icon">➕</div>
+          <div class="action-title">Crear usuario</div>
+          <div class="action-description">
+            Registra nuevos alumnos o profesores en el sistema
           </div>
-        </div>
+        </a>
+
+        <a href="{% url 'adm_matriculas_nueva' %}" class="action-card secondary">
+          <div class="action-icon">📋</div>
+          <div class="action-title">Matricular alumno</div>
+          <div class="action-description">
+            Asigna un alumno a un curso existente
+          </div>
+        </a>
+
+        <a href="{% url 'adm_cursos_nuevo' %}" class="action-card secondary">
+          <div class="action-icon">🏫</div>
+          <div class="action-title">Nuevo curso</div>
+          <div class="action-description">
+            Crea un curso para asignar alumnos y profesores
+          </div>
+        </a>
+
+        <a href="{% url 'adm_asignaturas_nueva' %}" class="action-card secondary">
+          <div class="action-icon">📘</div>
+          <div class="action-title">Nueva asignatura</div>
+          <div class="action-description">
+            Gestiona las asignaturas disponibles en LevelUp
+          </div>
+        </a>
+
       </div>
-
-      <!-- Acciones rápidas -->
-      <div class="col-lg-6">
-        <div class="card h-100 shadow-sm">
-          <div class="card-body">
-            <h3 class="section-title mb-3">Acciones rápidas</h3>
-
-            <!-- Usuarios -->
-            <div class="mb-4">
-              <div class="group-title mb-2">Usuarios</div>
-              <div class="d-grid gap-2">
-                <a class="btn btn-edu-navy btn-big" href="{% url 'register' %}" target="_blank">+ Crear usuario</a>
-                <a class="btn btn-chip btn-ghost" href="{% url 'adm_list_profesores' %}">Lista de profesores</a>
-                <a class="btn btn-chip btn-ghost" href="{% url 'adm_list_alumnos' %}">Lista de alumnos</a>
-              </div>
-            </div>
-
-            <!-- Asignaciones -->
-            <div class="mb-4">
-              <div class="group-title mb-2">Asignaciones</div>
-              <div class="d-grid gap-2">
-                <a class="btn btn-edu-navy btn-card" href="{% url 'adm_asignaciones_nueva' %}">Asignar asignatura a profesor</a>
-                <a class="btn btn-edu-navy btn-card" href="{% url 'adm_matriculas_nueva' %}">Matricular alumno en curso</a>
-                <a class="btn btn-chip btn-ghost" href="{% url 'adm_asignaciones_lista' %}">Ver asignaturas de
-                  docentes</a>
-                <a class="btn btn-chip btn-ghost" href="{% url 'adm_matriculas_lista' %}">Ver matrículas</a>
-              </div>
-            </div>
-
-            <!-- Listados -->
-            <div class="mb-4">
-              <div class="group-title mb-2">Listados</div>
-              <div class="d-flex flex-wrap gap-2 mb-2">
-                <a class="btn btn-chip" href="{% url 'adm_list_profesores' %}">Lista de profesores</a>
-                <a class="btn btn-chip" href="{% url 'adm_list_alumnos' %}">Lista de alumnos</a>
-              </div>
-              <form action="{% url 'adm_list_alumnos_por_curso' %}" method="get" class="row g-2 align-items-center">
-                <div class="col-12 col-sm">
-                  <select name="curso" class="form-select form-select-sm k-slim">
-                    {% for c in cursos_list %}
-                    <option value="{{ c.id }}">{{ c }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div class="col-auto">
-                  <button class="btn btn-chip" type="submit">Ver alumnos por curso</button>
-                </div>
-              </form>
-            </div>
-
-            <!-- Cursos y Asignaturas -->
-            <div>
-              <div class="group-title mb-2">Cursos y Asignaturas</div>
-              <div class="d-grid gap-2">
-                <a class="btn btn-edu-navy btn-big" href="{% url 'adm_cursos_nuevo' %}">+ Nuevo curso</a>
-                <a class="btn btn-edu-navy btn-big" href="{% url 'adm_asignaturas_nueva' %}">+ Nueva asignatura</a>
-              </div>
-              <div class="d-flex flex-wrap gap-2 mt-2">
-                <a class="btn btn-chip btn-ghost" href="{% url 'adm_cursos_lista' %}">Gestionar cursos</a>
-                <a class="btn btn-chip btn-ghost" href="{% url 'adm_asignaturas_lista' %}">Gestionar asignaturas</a>
-              </div>
-            </div>
-
-          </div><!-- card-body -->
-        </div>
-      </div>
-    </div><!-- row -->
+    </div>
 
   </div>
 </main>
+
+{# Igual que en docente.html: portal_docente.css se carga DESPUÉS del <main> #}
+<link rel="stylesheet" href="{% static 'LevelUp/css/portal_docente.css' %}">
 {% endblock %}

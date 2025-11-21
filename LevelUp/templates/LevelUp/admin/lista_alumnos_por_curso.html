@@ -1,5 +1,19 @@
 {% extends "LevelUp/base.html" %}
+{% load static %}
+
 {% block title %}Alumnos por curso{% endblock %}
+
+{% block body_class %}with-admin-navbar{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'LevelUp/css/navbar_admin.css' %}">
+{% endblock %}
+
+{% block navbar %}
+{% include "LevelUp/partials/navbar_admin.html" %}
+{% endblock %}
+
 {% block content %}
 <main class="container py-3">
     <form method="get" class="d-flex gap-2 align-items-end mb-3">
@@ -7,7 +21,7 @@
             <label class="form-label">Curso</label>
             <select name="curso" class="form-select">
                 {% for c in cursos %}
-                <option value="{{ c.id }}" {% if c.id == curso_id %}selected{% endif %}>
+                <option value="{{ c.id }}" {% if c.id==curso_id %}selected{% endif %}>
                     {{ c.get_nivel_display|default:c.nivel }} {{ c.letra }}
                 </option>
                 {% endfor %}

@@ -22,13 +22,11 @@
             ["classify", "Clasificar en categorías"],
             ["cloze", "Completar (cloze)"],
             ["ordering", "Ordenar pasos"],
-            ["labyrinth", "Laberinto de puertas"],
-            ["shop", "Tienda (precios)"],
+            // ["labyrinth", "Laberinto de puertas"],
+            // ["shop", "Tienda (precios)"],
         ];
         const GAME = [
             ["trivia", "Pregunta (múltiple)"],
-            ["vf", "Verdadero / Falso"],
-            ["cloze", "Completar (cloze)"],
         ];
 
         const options = mode === "game" ? GAME : QUIZ;
@@ -157,8 +155,8 @@
         else if (kind === "vf") base.items = [];
         else if (kind === "ordering") base.steps = [];
         else if (kind === "classify") { base.bins = []; base.items = []; }
-        else if (kind === "labyrinth") base.doors = [];
-        else if (kind === "shop") { base.products = []; base.budget = 1000; }
+        // else if (kind === "labyrinth") base.doors = [];
+        // else if (kind === "shop") { base.products = []; base.budget = 1000; }
         else if (kind === "cloze") base.text = "";
 
         ta.value = JSON.stringify(base, null, 2);
