@@ -43,11 +43,10 @@ def estudiante_actual(request):
         return {}
     return {"estudiante_actual": est}
 
+from gamificacion.models import RecompensaUsuario
+
 def gamificacion_context(request):
-    """
-    Inyecta 'perfil' y 'estudiante_actual' en todas las plantillas
-    cuando el usuario es ESTUDIANTE.
-    """
+
     if not request.user.is_authenticated:
         return {}
 
@@ -66,4 +65,19 @@ def gamificacion_context(request):
         ctx["estudiante_actual"] = est
         ctx["perfil"] = perfil
 
+        # 🔔 Leer de la sesión los IDs de recompensas nuevas
+        nuevas_ids = request.session.get("nuevas_recompensas_ids") or []
+        if nuevas_ids:
+            nuevas_recompensas = list(
+                RecompensaUsuario.objects
+                .filter(perfil=perfil, recompensa_id__in=nuevas_ids)
+                .select_related("recompensa")
+            )
+            ctx["nuevas_recompensas"] = nuevas_recompensas
+
+            # Limpiar para que no se repita el popup
+            request.session["nuevas_recompensas_ids"] = []
+            request.session.modified = True
+
     return ctx
+

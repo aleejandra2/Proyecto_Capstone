@@ -29,8 +29,8 @@
     <span class="emoji">🏆</span> Ranking
   </a>
 
-  <a class="sidecard sidecard--right" href="#">
-    <span class="emoji"> </span> Rangos
+  <a class="sidecard sidecard--right" href="{% url 'gamificacion_rangos' %}.">
+     <span class="emoji">🥇</span> Rangos
   </a>
 
   <!-- Acciones inferiores -->
@@ -38,7 +38,8 @@
     <a href="{% url 'estudiante_lista' %}" class="cta-pill">
       <span class="ico">🎮</span> Jugar
     </a>
-
+    <a href="{% url 'recompensas' %}" class="cta-pill"> <i class="bi bi-award"></i> Recompensas
+    </a>
     <a href="#" class="cta-pill cta-pill--lock">
       <span class="ico">⚔️</span> Retar
       <span class="lock" aria-hidden="true">🔒</span>

@@ -68,6 +68,7 @@ TEMPLATES = [
                 'LevelUp.context_processors.navbar_asignaturas',
                 'LevelUp.context_processors.estudiante_actual',
                 'LevelUp.context_processors.gamificacion_context',
+                'gamificacion.context_processors.recompensas_nuevas'
             ],
         },
     },

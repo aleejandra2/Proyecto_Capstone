@@ -4,50 +4,171 @@
 {% block title %}Recompensas · LevelUp{% endblock %}
 
 {% block content %}
-<main class="container py-3">
-  <h1 class="h4 mb-3">🎁 Recompensas</h1>
+<main class="min-h-screen rewards-page">
+  <div class="container py-4">
 
-  {% if perfil %}
-    <p class="mb-3">
-      Nivel actual: <strong>{{ perfil.nivel }}</strong> ·
-      XP total: <strong>{{ perfil.xp_total }}</strong>
-    </p>
-  {% endif %}
+    {# ================= HEADER / HERO ================= #}
+    <section class="rewards-hero mb-4">
+      <div class="rewards-hero-inner">
 
-  <div class="rewards-grid">
-    {% for r in recompensas %}
-      {% if r.id in desbloqueadas_ids %}
-        <div class="reward-card">
-          <div>
-            <div class="reward-card-icon">
-              {% if r.icono %}
-                <img src="{% static r.icono %}" alt="{{ r.nombre }}">
+        <!-- LADO IZQUIERDO: texto + tarjetas -->
+        <div class="rewards-hero-text">
+          <div class="rewards-heading">
+            <h1 class="rewards-title">
+              🎁 Tus recompensas
+            </h1>
+
+            <p class="rewards-subtitle">
+              Alumno, sigue jugando para conseguir más logros y medallas de Timo. 🐾
+            </p>
+          </div>
+
+          {% if perfil %}
+          <div class="rewards-kpi-row rewards-kpi-row--single">
+            <div class="rewards-kpi-card">
+              <div class="kpi-label">Actividades completadas</div>
+              <div class="kpi-value">
+                {{ perfil.actividades_completadas|default:0 }}
+              </div>
+              {% if perfil.actividades_para_siguiente_rango > 0 %}
+              <div class="kpi-hint">
+                Te faltan <strong>{{ perfil.actividades_para_siguiente_rango }}</strong>
+                actividad(es) para el siguiente rango.
+              </div>
               {% else %}
-                ⭐
+              <div class="kpi-hint">
+                ¡Ya estás en el rango máximo, Héroe Legendario! 🌟
+              </div>
               {% endif %}
             </div>
-            <div class="reward-card-title">{{ r.nombre }}</div>
-            {% if r.condicion_texto %}
-              <div class="reward-card-condicion">{{ r.condicion_texto }}</div>
-            {% endif %}
           </div>
+          {% else %}
+          <p class="rewards-subtitle" style="text-align:center;">
+            Juega actividades para comenzar a ganar recompensas y rangos con Timo. 🐾
+          </p>
+          {% endif %}
+
+
         </div>
-      {% else %}
-        <div class="reward-card reward-card--locked">
-          <div>
-            <div class="reward-card-icon reward-card-icon--locked">
-              🔒
+
+        <!-- LADO DERECHO: Timo -->
+        <div class="rewards-hero-illustration d-none d-md-flex">
+          <div class="timo-badge">
+
+            {% if perfil %}
+            {% if perfil.rango_numero == 1 %}
+            <img src="{% static 'LevelUp/img/timo/Timo_explorador.png' %}" alt="Timo Explorador" class="timo-badge-img">
+            {% elif perfil.rango_numero == 2 %}
+            <img src="{% static 'LevelUp/img/timo/Timo_guardian.png' %}" alt="Timo Guardián" class="timo-badge-img">
+            {% elif perfil.rango_numero == 3 %}
+            <img src="{% static 'LevelUp/img/timo/Timo_guardian.png' %}" alt="Timo Guardian" class="timo-badge-img">
+            {% else %}
+            <img src="{% static 'LevelUp/img/timo/Timo_legendario.png' %}" alt="Timo Héroe Legendario"
+              class="timo-badge-img">
+            {% endif %}
+            {% else %}
+            <img src="{% static 'LevelUp/img/timo/Timo_guardian.png' %}" alt="Timo Guardián" class="timo-badge-img">
+            {% endif %}
+
+            <div class="timo-badge-rank">
+              {% if perfil %}
+              {{ perfil.rango_timo }}
+              {% else %}
+              Timo Explorador
+              {% endif %}
             </div>
-            <div class="reward-card-title">{{ r.nombre }}</div>
-            {% if r.condicion_texto %}
-              <div class="reward-card-condicion">{{ r.condicion_texto }}</div>
-            {% endif %}
           </div>
         </div>
+
+      </div>
+    </section>
+
+    {# ================= GRID DE RECOMPENSAS ================= #}
+    <section>
+      <h2 class="h5 mb-3">
+        Tus logros y medallas
+      </h2>
+
+      {% if recompensas %}
+      <div class="rewards-grid">
+        {% for r in recompensas %}
+        {% if r.id in desbloqueadas_ids %}
+        {# -------- TARJETA DESBLOQUEADA -------- #}
+        <article class="reward-card reward-card--unlocked">
+          <div class="reward-card-inner">
+            <div class="reward-card-badge">✅ Desbloqueada</div>
+
+            <div class="reward-card-icon">
+              <img src="{% static 'LevelUp/img/icons/estrella.webp' %}" alt="{{ r.nombre }}">
+            </div>
+
+            <h3 class="reward-card-title">
+              {{ r.nombre }}
+            </h3>
+
+            {% if r.condicion_texto %}
+            <p class="reward-card-condicion">
+              {{ r.condicion_texto }}
+            </p>
+            {% endif %}
+
+            {% if r.descripcion %}
+            <p class="reward-card-descripcion">
+              {{ r.descripcion }}
+            </p>
+            {% endif %}
+
+            <div class="reward-card-tag">
+              {{ r.get_tipo_display|default:"Logro" }}
+            </div>
+          </div>
+        </article>
+
+        {% else %}
+        {# -------- TARJETA BLOQUEADA -------- #}
+        <article class="reward-card reward-card--locked">
+          <div class="reward-card-inner">
+            <div class="reward-card-badge reward-card-badge--locked">
+              🔒 Bloqueada
+            </div>
+
+            <div class="reward-card-icon reward-card-icon--locked">
+              <img src="{% static 'LevelUp/img/icons/estrella.webp' %}" alt="{{ r.nombre }}">
+            </div>
+
+            <h3 class="reward-card-title">
+              {{ r.nombre }}
+            </h3>
+
+            {% if r.condicion_texto %}
+            <p class="reward-card-condicion">
+              {{ r.condicion_texto }}
+            </p>
+            {% endif %}
+
+            <div class="reward-card-locked-hint">
+              Completa las actividades necesarias para desbloquear este logro.
+            </div>
+
+            <div class="reward-card-tag reward-card-tag--locked">
+              {{ r.get_tipo_display|default:"Logro" }}
+            </div>
+          </div>
+        </article>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center text-muted py-4">
+        Aún no hay recompensas configuradas. 💫
+      </div>
       {% endif %}
-    {% empty %}
-      <p>No hay recompensas configuradas aún.</p>
-    {% endfor %}
+    </section>
   </div>
+
+  {# Botón flotante de regreso #}
+  <a href="{% url 'dashboard' %}" class="timo-home-btn" aria-label="Volver al inicio">
+    <img src="{% static 'LevelUp/img/icons/timo_bolita.png' %}" alt="Volver al inicio">
+  </a>
 </main>
 {% endblock %}
