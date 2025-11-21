@@ -168,6 +168,8 @@ DEFAULT_FROM_EMAIL = "LevelUp <amcompanyMPH@gmail.com>"
 
 X_FRAME_OPTIONS = "SAMEORIGIN"
 
+MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
+
 import mimetypes
 
 # Algunos Windows registran .js como text/plain. Forzamos el MIME correcto:

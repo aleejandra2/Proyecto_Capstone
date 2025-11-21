@@ -1,7 +1,7 @@
 {% extends "LevelUp/base.html" %}
 {% load static %}
 
-{% block title %}Lista de alumnos{% endblock %}
+{% block title %}Alumnos por curso{% endblock %}
 
 {% block body_class %}with-admin-navbar{% endblock %}
 
@@ -16,10 +16,36 @@
 
 {% block content %}
 <main class="container py-3">
-    <h1 class="section-title mb-3">Alumnos</h1>
+    <h1 class="section-title mb-3">Alumnos por curso</h1>
 
+    {# FILTRO POR CURSO #}
+    <div class="card mb-3">
+        <div class="card-content">
+            <form method="get" action="" class="row g-2 align-items-end">
+                <div class="col-md-6">
+                    <label for="id_curso" class="form-label">Curso</label>
+                    <select name="curso" id="id_curso" class="form-select">
+                        <option value="">— Selecciona un curso —</option>
+                        {% for c in cursos %}
+                        <option value="{{ c.id }}" {% if c.id == curso_id %}selected{% endif %}>
+                            {{ c.get_nivel_display|default:c.nivel }} {{ c.letra }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-edu-navy w-100">
+                        Buscar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {# RESULTADO #}
     <div class="card">
         <div class="card-content">
+            {% if alumnos %}
             <div class="table-responsive">
                 <table class="table mb-0 align-middle">
                     <thead>
@@ -46,14 +72,15 @@
                                 </a>
                             </td>
                         </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="text-muted">No hay alumnos registrados.</td>
-                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+            {% elif curso_id %}
+            <p class="text-muted mb-0">Este curso no tiene alumnos registrados.</p>
+            {% else %}
+            <p class="text-muted mb-0">Selecciona un curso y pulsa <strong>Buscar</strong>.</p>
+            {% endif %}
         </div>
     </div>
 </main>

@@ -21,7 +21,7 @@
             <label class="form-label">Curso</label>
             <select name="curso" class="form-select">
                 {% for c in cursos %}
-                <option value="{{ c.id }}" {% if c.id==curso_id %}selected{% endif %}>
+                <option value="{{ c.id }}" {% if c.id == curso_id %}selected{% endif %}>
                     {{ c.get_nivel_display|default:c.nivel }} {{ c.letra }}
                 </option>
                 {% endfor %}

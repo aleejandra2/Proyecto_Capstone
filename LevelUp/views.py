@@ -10,10 +10,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.text import slugify
+from django.utils.timesince import timesince
 import time
 from django.db import transaction, models, connection
 from django.core.cache import cache
-from django.db.models import Count, Q, Prefetch, ProtectedError, Max
+from django.db.models import Count, Q, Prefetch, ProtectedError, Max, F
+from django.db.models.functions import Coalesce
 from django.forms import inlineformset_factory, BaseInlineFormSet
 from django import get_version as django_get_version
 from django.views.decorators.http import require_POST
@@ -266,6 +269,11 @@ def login_view(request):
 
 @login_required
 def logout_view(request):
+    
+    # Limpiar asignatura activa del estudiante al cerrar sesión
+    for key in ("asignatura_activa_slug", "asignatura_activa_nombre", "asignatura_activa_icono"):
+        request.session.pop(key, None)
+
     logout(request)
     return redirect("login")
 
@@ -306,11 +314,77 @@ def home_view(request):
         ctx["perfil"] = perfil 
 
     elif rol == Usuario.Rol.DOCENTE:
+        # ----- Docente actual -----
+        docente = Docente.objects.filter(usuario=request.user).first()
+
+        if docente:
+            actividades_docente = Actividad.objects.filter(docente=docente)
+        else:
+            actividades_docente = Actividad.objects.none()
+
+        total_actividades = actividades_docente.count()
+
+        subs_qs = (
+            Submission.objects
+            .filter(
+                actividad__in=actividades_docente,
+                finalizado=True,
+                actividad__asignacionactividad__estudiante=F("estudiante"),
+            )
+            # usamos la fecha de envío, y si falta, la de inicio
+            .annotate(
+                fecha_evento=Coalesce("enviado_en", "iniciado_en")
+            )
+            .select_related("actividad", "estudiante__usuario")
+        )
+
+        total_estudiantes = subs_qs.values("estudiante_id").distinct().count()
+
+        # ----- Actividad reciente -----
+        # orden de más reciente a más antigua (hoy → ayer → antes de ayer…)
+        recientes = subs_qs.order_by("-fecha_evento", "-id")[:5]
+
+        actividad_reciente = []
+
+        for sub in recientes:
+            est = sub.estudiante
+            user_est = getattr(est, "usuario", None) or est
+
+            nombre = (
+                user_est.get_full_name()
+                or user_est.first_name
+                or user_est.username
+            )
+
+            # Iniciales para el avatar
+            partes = nombre.split()
+            if len(partes) >= 2:
+                iniciales = (partes[0][0] + partes[-1][0]).upper()
+            else:
+                iniciales = nombre[:2].upper()
+
+            # fecha a mostrar: enviado_en si existe, si no la anotada (fecha_evento)
+            fecha_evento = sub.enviado_en or getattr(sub, "fecha_evento", None) or sub.iniciado_en
+            if fecha_evento:
+                hace_str = fecha_evento.strftime("%d/%m/%Y %H:%M hrs")
+            else:
+                hace_str = "Sin fecha"
+
+            actividad_reciente.append({
+                "iniciales": iniciales,
+                "estudiante_nombre": nombre,
+                "actividad_titulo": sub.actividad.titulo,
+                "descripcion": "completó",
+                "hace": hace_str,
+                "badge_tipo": "completado",
+                "puntos": 0,
+                "badge_texto": "Completado",
+            })
+
         ctx.update({
-            "total_estudiantes": Estudiante.objects.count(),
-            "total_actividades": Actividad.objects.count(),
-            "promedio_general": "—",
-            "dias_activos": 7,
+            "total_estudiantes": total_estudiantes,
+            "total_actividades": total_actividades,
+            "actividad_reciente": actividad_reciente,
         })
 
     elif rol == Usuario.Rol.ADMINISTRADOR:
@@ -320,9 +394,9 @@ def home_view(request):
         cursos = Curso.objects.count()
         asignaturas = Asignatura.objects.count()
 
-        # --- Salud del sistema (real) ---
+        # --- Salud del sistema ---
         # Servidor
-        server_ok = True  # si llegamos aquí, el servidor respondió
+        server_ok = True  # si se llega a aquí, el servidor respondió
         server_time = timezone.now()
         server_version = django_get_version()
 
@@ -656,9 +730,31 @@ def adm_profesor_borrar(request, pk):
 # Alumnos
 @admin_required
 def adm_list_alumnos(request):
-    alumnos = (Estudiante.objects.select_related("usuario")
-               .order_by("usuario__last_name", "usuario__first_name"))
-    return render(request, "LevelUp/admin/lista_alumnos.html", {"alumnos": alumnos})
+    curso_id = request.GET.get("curso")
+
+    # Cursos para el select
+    cursos = Curso.objects.all().order_by("nivel", "letra")
+
+    # Base: todos los alumnos
+    alumnos_qs = Estudiante.objects.select_related("usuario")
+
+    # Si viene curso en el GET y filtra
+    if curso_id:
+        alumnos_qs = alumnos_qs.filter(
+            usuario__matriculas__curso_id=curso_id
+        )
+
+    alumnos = (
+        alumnos_qs
+        .order_by("usuario__last_name", "usuario__first_name")
+        .distinct()
+    )
+
+    return render(request, "LevelUp/admin/lista_alumnos.html", {
+        "alumnos": alumnos,
+        "cursos": cursos,
+        "curso_id": int(curso_id or 0),
+    })
 
 # Alumnos por curso
 @admin_required
@@ -787,21 +883,37 @@ def normalize_tipo(raw):
 @login_required
 def actividad_crear(request):
     """
-    VERSIÓN DEFINITIVA - Procesa ítems DIRECTAMENTE desde request.POST
+    Procesa la creación de actividades.
+    - Valida el formulario principal (ActividadForm).
+    - Siempre construye un ItemFormSet para poder re-pintar la pantalla
+      aunque haya errores en el form principal.
+    - Si el form es válido, procesa los ítems directamente desde request.POST.
     """
     if not es_docente(request.user):
         raise Http404
-    
+
     docente = get_object_or_404(Docente, usuario=request.user)
-    
+
     if request.method == "POST":
         form = ActividadForm(request.POST, request.FILES)
-        
-        print("\n" + "="*60)
-        print(f"➕ CREAR ACTIVIDAD")
+
+        # Siempre construimos un formset para re-renderizar la página,
+        # aunque NO lo usemos para guardar en BD.
+        tipo_norm = normalize_tipo(request.POST.get("tipo"))
+        temp_act = Actividad(docente=docente)
+        formset = ItemFormSet(
+            request.POST,
+            request.FILES,
+            instance=temp_act,
+            prefix="items",
+            actividad_tipo=tipo_norm,
+        )
+
+        print("\n" + "=" * 60)
+        print("➕ CREAR ACTIVIDAD")
         print(f"   request.POST.get('items-TOTAL_FORMS'): {request.POST.get('items-TOTAL_FORMS')}")
-        print("="*60)
-        
+        print("=" * 60)
+
         if form.is_valid():
             with transaction.atomic():
                 # 1) Crear actividad
@@ -811,21 +923,21 @@ def actividad_crear(request):
                     act.fecha_publicacion = timezone.now()
                 act.save()
                 form.save_m2m()
-                
+
                 print(f"   ✅ Actividad creada (ID: {act.pk})")
 
-                # 2) Procesar ítems DIRECTAMENTE desde request.POST
+                # 2) Procesar ítems directamente desde request.POST
                 items_guardados = 0
-                
+
                 total_forms_raw = request.POST.get("items-TOTAL_FORMS", "0")
                 try:
                     total_forms = int(total_forms_raw)
-                except:
+                except Exception:
                     total_forms = 0
-                
-                print(f"\n🔄 PROCESAMIENTO DIRECTO:")
+
+                print("\n🔄 PROCESAMIENTO DIRECTO:")
                 print(f"   TOTAL_FORMS: {total_forms}")
-                
+
                 for i in range(total_forms):
                     delete_raw = request.POST.get(f"items-{i}-DELETE", "")
                     enun = request.POST.get(f"items-{i}-enunciado", "").strip()
@@ -833,51 +945,52 @@ def actividad_crear(request):
                     payload = request.POST.get(f"items-{i}-game_pairs", "").strip()
                     item_kind = request.POST.get(f"items-{i}-item_kind", "trivia").strip()
                     time_limit_raw = request.POST.get(f"items-{i}-game_time_limit", "")
-                    
+
                     print(f"\n   📋 Form {i}:")
                     print(f"      enunciado: '{enun[:30]}...'")
                     print(f"      puntaje: '{punt_raw}'")
                     print(f"      payload: {len(payload)} chars")
-                    
+
+                    # Ítem marcado para borrar → ignorar
                     if delete_raw in ("1", "true", "True", "on"):
-                        print(f"      ⏭️ Marcado DELETE, saltando")
+                        print("      ⏭️ Marcado DELETE, saltando")
                         continue
-                    
+
                     try:
                         punt = int(punt_raw) if punt_raw else 0
-                    except:
+                    except Exception:
                         punt = 0
-                    
+
                     try:
                         time_limit = int(time_limit_raw) if time_limit_raw else None
-                    except:
+                    except Exception:
                         time_limit = None
-                    
+
                     tiene_contenido = bool(payload or enun or punt)
-                    
                     if not tiene_contenido:
-                        print(f"      ⏭️ Sin contenido, saltando")
+                        print("      ⏭️ Sin contenido, saltando")
                         continue
-                    
-                    print(f"      ✅ Tiene contenido, creando ítem...")
-                    
+
+                    print("      ✅ Tiene contenido, creando ítem...")
+
                     try:
                         if payload:
-                            import json
                             datos = json.loads(payload)
                         else:
                             datos = {"kind": item_kind, "questions": []}
                     except Exception as e:
                         print(f"         ⚠️ Error parseando JSON: {e}")
                         datos = {"kind": item_kind, "questions": []}
-                    
+
                     if time_limit:
                         datos["timeLimit"] = time_limit
-                    
-                    max_orden = (ItemActividad.objects
-                               .filter(actividad=act)
-                               .aggregate(Max('orden'))['orden__max'] or 0)
-                    
+
+                    max_orden = (
+                        ItemActividad.objects
+                        .filter(actividad=act)
+                        .aggregate(Max("orden"))["orden__max"] or 0
+                    )
+
                     try:
                         item = ItemActividad.objects.create(
                             actividad=act,
@@ -885,71 +998,82 @@ def actividad_crear(request):
                             puntaje=punt,
                             datos=datos,
                             tipo="game",
-                            orden=max_orden + 1
+                            orden=max_orden + 1,
                         )
                         items_guardados += 1
                         print(f"         ✅ Ítem guardado (ID: {item.pk})")
                     except Exception as e:
                         print(f"         ❌ ERROR: {e}")
 
-                # Asignaciones
+                # 3) Asignar a cursos / alumnos (igual que antes)
                 cursos_ids = [int(x) for x in request.POST.getlist("cursos") if str(x).strip()]
                 alumnos_usuario_ids = [int(x) for x in request.POST.getlist("alumnos") if str(x).strip()]
-                
+
                 estudiantes_pks = set()
-                
+
                 if cursos_ids:
                     usuarios_de_cursos = Matricula.objects.filter(
                         curso_id__in=cursos_ids
                     ).values_list("estudiante_id", flat=True)
-                    
+
                     est_from_cursos = Estudiante.objects.filter(
                         usuario_id__in=usuarios_de_cursos
                     ).values_list("pk", flat=True)
-                    
+
                     estudiantes_pks.update(est_from_cursos)
-                
+
                 if alumnos_usuario_ids:
                     est_from_alumnos = Estudiante.objects.filter(
                         usuario_id__in=alumnos_usuario_ids
                     ).values_list("pk", flat=True)
-                    
                     estudiantes_pks.update(est_from_alumnos)
-                
+
                 creadas = 0
                 for est_pk in estudiantes_pks:
                     _, created = AsignacionActividad.objects.get_or_create(
                         actividad=act,
-                        estudiante_id=est_pk
+                        estudiante_id=est_pk,
                     )
                     if created:
                         creadas += 1
-                
-                print(f"\n💾 RESUMEN:")
+
+                print("\n💾 RESUMEN:")
                 print(f"   Ítems creados: {items_guardados}")
                 print(f"   Asignaciones: {creadas}")
-                
+
                 if estudiantes_pks:
                     if creadas > 0:
-                        messages.success(request, f"✅ Actividad '{act.titulo}' creada con {items_guardados} ítems y asignada a {creadas} estudiante(s).")
+                        messages.success(
+                            request,
+                            f"✅ Actividad '{act.titulo}' creada con {items_guardados} ítems y asignada a {creadas} estudiante(s).",
+                        )
                     else:
-                        messages.info(request, f"✅ Actividad '{act.titulo}' creada con {items_guardados} ítems.")
+                        messages.info(
+                            request,
+                            f"✅ Actividad '{act.titulo}' creada con {items_guardados} ítems.",
+                        )
                 else:
-                    messages.success(request, f"✅ Actividad '{act.titulo}' creada con {items_guardados} ítems.")
-            
+                    messages.success(
+                        request,
+                        f"✅ Actividad '{act.titulo}' creada con {items_guardados} ítems.",
+                    )
+
             return redirect("docente_lista")
-        else:
-            print(f"\n❌ Form inválido: {form.errors}")
-            messages.error(request, "Revisa los errores en el formulario.")
+
+        # Form principal inválido: mostramos errores y
+        # seguimos hasta el render final con form + formset.
+        print(f"\n❌ Form inválido: {form.errors}")
+        messages.error(request, "Revisa los errores en el formulario.")
     else:
+        # GET inicial
         form = ActividadForm()
         temp_act = Actividad(docente=docente)
         formset = ItemFormSet(
             instance=temp_act,
             prefix="items",
-            actividad_tipo="quiz"
+            actividad_tipo="quiz",
         )
-    
+
     ctx = {
         "form": form,
         "formset": formset,
@@ -1144,6 +1268,55 @@ def actividad_editar(request, pk):
                             import traceback
                             traceback.print_exc()
 
+                # 3) --- ASIGNACIONES (cursos / alumnos) -------------------
+                cursos_ids = [int(x) for x in request.POST.getlist("cursos") if str(x).strip()]
+                alumnos_usuario_ids = [int(x) for x in request.POST.getlist("alumnos") if str(x).strip()]
+
+                estudiantes_pks = set()
+
+                # Estudiantes de los cursos marcados
+                if cursos_ids:
+                    usuarios_de_cursos = Matricula.objects.filter(
+                        curso_id__in=cursos_ids
+                    ).values_list("estudiante_id", flat=True)  # ← usuario.id
+
+                    est_from_cursos = Estudiante.objects.filter(
+                        usuario_id__in=usuarios_de_cursos
+                    ).values_list("pk", flat=True)            # ← estudiante.pk
+
+                    estudiantes_pks.update(est_from_cursos)
+
+                # Estudiantes marcados individualmente
+                if alumnos_usuario_ids:
+                    est_from_alumnos = Estudiante.objects.filter(
+                        usuario_id__in=alumnos_usuario_ids
+                    ).values_list("pk", flat=True)
+
+                    estudiantes_pks.update(est_from_alumnos)
+
+                # Conjunto actual en BD
+                asig_qs = AsignacionActividad.objects.filter(actividad=obj)
+                actuales = set(asig_qs.values_list("estudiante_id", flat=True))
+
+                # Determinar altas y bajas
+                to_delete = actuales - estudiantes_pks
+                to_add = estudiantes_pks - actuales
+
+                borradas = 0
+                if to_delete:
+                    borradas, _ = asig_qs.filter(estudiante_id__in=to_delete).delete()
+                    print(f"   🗑️ Asignaciones eliminadas: {borradas}")
+
+                creadas = 0
+                for est_pk in to_add:
+                    AsignacionActividad.objects.create(
+                        actividad=obj,
+                        estudiante_id=est_pk
+                    )
+                    creadas += 1
+                print(f"   ✅ Asignaciones creadas: {creadas}")
+                # ---------------------------------------------------------
+
                 # Mensaje de éxito
                 msg_parts = [f"Actividad '{obj.titulo}' actualizada"]
                 if items_nuevos > 0:
@@ -1152,6 +1325,10 @@ def actividad_editar(request, pk):
                     msg_parts.append(f"{items_actualizados} actualizado(s)")
                 if items_eliminados > 0:
                     msg_parts.append(f"{items_eliminados} eliminado(s)")
+                if creadas > 0:
+                    msg_parts.append(f"{creadas} asignación(es) nueva(s)")
+                if borradas > 0:
+                    msg_parts.append(f"{borradas} asignación(es) quitada(s)")
                 
                 messages.success(request, "✅ " + ", ".join(msg_parts) + ".")
                 
@@ -1161,6 +1338,7 @@ def actividad_editar(request, pk):
                 print(f"   Actualizados: {items_actualizados}")
                 print(f"   Eliminados: {items_eliminados}")
                 print(f"   Ítems finales en BD: {ItemActividad.objects.filter(actividad=obj).count()}")
+                print(f"   Asignaciones finales: {AsignacionActividad.objects.filter(actividad=obj).count()}")
             
             return redirect("docente_lista")
 
@@ -1178,7 +1356,7 @@ def actividad_editar(request, pk):
             actividad_tipo=act.tipo,
         )
 
-    # Asignaciones actuales
+    # Asignaciones actuales (para pintar checkboxes)
     est_ids_asignados = set(
         AsignacionActividad.objects.filter(actividad=act).values_list("estudiante_id", flat=True)
     )
@@ -1303,29 +1481,88 @@ def _grade_game(item, POST):
 # -----------------------
 # Estudiante
 # -----------------------
+# Actividades por asignatura
+@login_required
+def estudiante_set_asignatura(request):
+    """Guarda en sesión la asignatura activa del estudiante."""
+    if not es_estudiante(request.user):
+        return JsonResponse({"ok": False, "error": "No autorizado"}, status=403)
+
+    slug = (request.GET.get("slug") or request.POST.get("slug") or "").strip()
+    if not slug:
+        return JsonResponse({"ok": False, "error": "Falta slug"}, status=400)
+
+    # 1) Buscar por slug
+    asig = Asignatura.objects.filter(slug=slug).first()
+
+    # 2) Fallback: slugify(nombre)
+    if not asig:
+        for cand in Asignatura.objects.all():
+            if slugify(cand.nombre) == slug:
+                asig = cand
+                break
+
+    if not asig:
+        return JsonResponse({"ok": False, "error": "Asignatura no encontrada"}, status=404)
+
+    session_slug = slugify(asig.nombre)
+    request.session["asignatura_activa_slug"] = session_slug
+    request.session["asignatura_activa_nombre"] = asig.nombre
+    request.session["asignatura_activa_icono"] = asig.icono  # ruta que luego usamos en el navbar
+
+    return JsonResponse({"ok": True, "nombre": asig.nombre})
+
+#Lista de actividades del estudiante
 @login_required
 def estudiante_mis_actividades(request):
     if not es_estudiante(request.user):
         raise Http404
     
     estudiante = get_object_or_404(Estudiante, usuario=request.user)
+
+    # Si no hay asignatura en sesión, fijar la primera por defecto
+    _asegurar_asignatura_por_defecto(request)
     
     print(f"🔍 Buscando actividades para: {request.user.username}")
     print(f"   Estudiante.pk: {estudiante.pk}")
     print(f"   Usuario.id: {request.user.id}")
 
-    # ⚠️ CRÍTICO: Filtrar por estudiante.pk (no por usuario)
+    # -------- Asignatura activa (desde sesión) --------
+    asig_slug = (request.session.get("asignatura_activa_slug") or "").strip()
+    asignatura_filtro = None
+
+    if asig_slug:
+        # 1) Intentar por campo slug
+        asignatura_filtro = Asignatura.objects.filter(slug=asig_slug).first()
+
+        # 2) Fallback: slugify(nombre) == asig_slug
+        if not asignatura_filtro:
+            for cand in Asignatura.objects.all():
+                if slugify(cand.nombre) == asig_slug:
+                    asignatura_filtro = cand
+                    break
+
+    if asignatura_filtro:
+        print(f"   🎯 Asignatura filtro: {asignatura_filtro.nombre} ({asig_slug})")
+    else:
+        print(f"   ⚠️ Sin filtro de asignatura. asig_slug en sesión = «{asig_slug}»")
+
+    # ⚠️ Filtrar por estudiante.pk
     act_qs = (
         Actividad.objects
         .filter(
             es_publicada=True,
-            asignacionactividad__estudiante_id=estudiante.pk  # <-- Usar .pk directamente
+            asignacionactividad__estudiante_id=estudiante.pk
         )
         .distinct()
         .select_related('docente', 'asignatura')
         .order_by("-fecha_publicacion", "-id")
     )
-    
+
+    # Aplicar filtro por asignatura si hay una activa
+    if asignatura_filtro:
+        act_qs = act_qs.filter(asignatura=asignatura_filtro)
+
     total_actividades = act_qs.count()
     print(f"   ✅ Actividades encontradas: {total_actividades}")
     
@@ -1345,7 +1582,7 @@ def estudiante_mis_actividades(request):
     )
     counts_map = {row["actividad"]: row for row in subs_counts}
 
-    # Intentos personalizados (solo >0; 0 o NULL = ilimitado)
+    # Intentos personalizados
     overrides = (
         AsignacionActividad.objects
         .filter(estudiante=estudiante, actividad__in=act_qs)
@@ -1354,7 +1591,7 @@ def estudiante_mis_actividades(request):
     ov_map = {
         r["actividad_id"]: r["intentos_permitidos"]
         for r in overrides
-        if r["intentos_permitidos"] is not None  # puede ser 0 = ilimitado
+        if r["intentos_permitidos"] is not None
     }
 
     now = timezone.now()
@@ -1369,18 +1606,15 @@ def estudiante_mis_actividades(request):
         cerrada = bool(a.fecha_cierre and now > a.fecha_cierre)
 
         # ---- lógica de intentos  ----
-
         override_raw = ov_map.get(a.id)
 
         if override_raw is not None:
-            # Override para este estudiante
             try:
                 max_for_student = int(override_raw)
             except (TypeError, ValueError):
                 max_for_student = 0
         else:
             if a.intentos_ilimitados:
-                # Si la actividad es ilimitada, no se toma en cuenta el campo intentos_max
                 max_for_student = 0  # 0 = ilimitado
             else:
                 try:
@@ -1394,7 +1628,7 @@ def estudiante_mis_actividades(request):
         tiene_abierto = abiertos > 0
         tiene_resultados = finalizados > 0
 
-        # Obtener nombre de asignatura
+        # Nombre de asignatura (para agrupar en la vista)
         try:
             if a.asignatura:
                 asignatura_nombre = a.asignatura.nombre
@@ -1430,7 +1664,9 @@ def estudiante_mis_actividades(request):
         {
             "rows": rows, 
             "actividades": [r["a"] for r in rows],
-            "grupos": [{"asignatura": k, "rows": v} for k, v in grupos.items()]
+            "grupos": [{"asignatura": k, "rows": v} for k, v in grupos.items() if v],
+            "asignatura_filtro": asignatura_filtro,
+            "asignatura_filtro_slug": asignatura_filtro.slug if asignatura_filtro else "",
         }
     )
 
@@ -1446,92 +1682,205 @@ def _letra(i):
         return "?"
     return chr(65 + i)
 
-
+# =====================================================
+# ESTUDIANTE: Resultados de actividad
+# =====================================================
 @login_required
 def actividad_resultados(request, pk):
+    """
+    Resultados para una actividad tipo QUIZ
+
+    - Sólo procesa ItemActividad con tipo="game".
+    - Usa Answer.respuesta.payload.meta.correctas / total / score.
+    - Muestra listado de intentos y permite elegir uno (?intento=N).
+    - Permite filtrar ítems: todas / solo correctas / solo incorrectas.
+    """
     if not es_estudiante(request.user):
         raise Http404
 
     estudiante = get_object_or_404(Estudiante, usuario=request.user)
-    act = get_object_or_404(Actividad, pk=pk)
+    actividad = get_object_or_404(Actividad, pk=pk)
 
-    intento_qs = Submission.objects.filter(
-        actividad=act, estudiante=estudiante, finalizado=True
-    ).order_by("-intento", "-id")
+    # ---- Intentos finalizados ----
+    intento_qs = (
+        Submission.objects
+        .filter(actividad=actividad, estudiante=estudiante, finalizado=True)
+        .order_by("-intento", "-id")
+    )
 
     if not intento_qs.exists():
-        if Submission.objects.filter(actividad=act, estudiante=estudiante, finalizado=False).exists():
-            return redirect("resolver_play", pk=act.pk)
-        messages.info(request, "Aún no has enviado esta actividad.")
-        return redirect("resolver_play", pk=act.pk)
+        # Si hay intento abierto, mandar a play
+        if Submission.objects.filter(
+            actividad=actividad,
+            estudiante=estudiante,
+            finalizado=False
+        ).exists():
+            return redirect("resolver_play", pk=actividad.pk)
 
+        messages.info(request, "Aún no has enviado esta actividad.")
+        return redirect("resolver_play", pk=actividad.pk)
+
+    # ---- Intento seleccionado ----
     intento_param = request.GET.get("intento")
-    if intento_param and str(intento_param).isdigit():
+    if intento_param and intento_param.isdigit():
         sub = intento_qs.filter(intento=int(intento_param)).first() or intento_qs.first()
     else:
         sub = intento_qs.first()
 
-    items_data = []
-    for item in act.items.all():  
-        tipo = (item.tipo or "").lower()
+    # ---- Filtro de ítems ----
+    filtro = (request.GET.get("ver") or "todo").lower()
+    if filtro not in {"todo", "solo_buenas", "solo_malas"}:
+        filtro = "todo"
+
+    items_data_all = []
+    total_buenas = 0
+    total_preguntas = 0
+
+    # Solo ítems tipo "game" 
+    items_qs = actividad.items.filter(tipo="game").order_by("orden", "id")
+
+    def _to_int_or_none(v):
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return None
+
+    for item in items_qs:
         ans = Answer.objects.filter(submission=sub, item=item).first()
         respuesta = ans.respuesta if ans else {}
-        correcto = bool(getattr(ans, "es_correcta", False)) if ans else False
 
         detalle = {
-            "tipo": tipo, "correcto": correcto,
-            "puntaje": item.puntaje, "obtenido": getattr(ans, "puntaje_obtenido", 0) if ans else 0,
+            "correcto": False,
+            "kind": None,
+            "correctas": None,
+            "total": None,
+            "incorrectas": None,
+            "completado": False,
+            "respuesta_json": json.dumps(respuesta or {}, ensure_ascii=False, indent=2),
         }
 
-        if tipo == "game":
-            comp = bool(respuesta.get("completado", True))
+        datos_item = item.datos or {}
+
+        # kind del minijuego
+        kind = None
+        if isinstance(respuesta, dict):
+            kind = respuesta.get("kind")
+        if not kind:
+            kind = datos_item.get("kind")
+        detalle["kind"] = (kind or "").lower()
+
+        # Meta (correctas / total / misses) 
+        meta = {}
+        if isinstance(respuesta, dict):
+            meta = respuesta.get("meta") or {}
+            if not isinstance(meta, dict):
+                meta = {}
+
+        # Compatibilidad por si vienen en la raíz
+        if not meta and isinstance(respuesta, dict):
+            meta = {
+                "correctas": respuesta.get("correctas"),
+                "total": respuesta.get("total"),
+                "misses": respuesta.get("incorrectas"),
+            }
+
+        corr = _to_int_or_none(meta.get("correctas"))
+        tot = _to_int_or_none(meta.get("total"))
+        misses = _to_int_or_none(meta.get("misses"))
+
+        # Score (0..1) para reconstruir correctas por si faltan
+        score = None
+        if isinstance(respuesta, dict):
             try:
-                score = float(respuesta.get("score", ""))
-            except Exception:
+                if "score" in respuesta:
+                    score = float(respuesta["score"])
+            except (TypeError, ValueError):
                 score = None
-            corr = respuesta.get("correctas")
-            tot  = respuesta.get("total")
-            inc  = (tot - corr) if (isinstance(corr, (int, float)) and isinstance(tot, (int, float))) else None
-            detalle.update({
-                "completado": comp, "score": score, "correctas": corr, "total": tot,
-                "incorrectas": inc, "kind": respuesta.get("kind"), "detail": respuesta.get("detail"),
-            })
+
+        if corr is None and tot is not None and score is not None:
+            corr = int(round(score * tot))
+
+        if misses is None and corr is not None and tot is not None:
+            misses = max(0, tot - corr)
+
+        # Correcto a nivel de ÍTEM: todas las sub-preguntas correctas
+        if corr is not None and tot is not None and tot > 0:
+            correcto_item = (corr == tot)
+            total_buenas += corr
+            total_preguntas += tot
         else:
-            detalle.update({"respuesta": respuesta})
+            # Fallback antiguo: se usa es_correcta booleano
+            correcto_item = bool(getattr(ans, "es_correcta", False)) if ans else False
+            total_preguntas += 1
+            if correcto_item:
+                total_buenas += 1
 
-        items_data.append({"item": item, "detalle": detalle})
+        detalle.update({
+            "correcto": correcto_item,
+            "correctas": corr,
+            "total": tot,
+            "incorrectas": misses,
+            "completado": bool(
+                isinstance(respuesta, dict) and respuesta.get("completado", True)
+            ),
+        })
 
-    intentos_usados = Submission.objects.filter(actividad=act, estudiante=estudiante).count()
+        items_data_all.append({"item": item, "detalle": detalle})
 
-    # ----- intentos_max -----
-    raw_max = act.intentos_max
-    if raw_max is None:
-        raw_max = 0
-    try:
-        intentos_max = int(raw_max)
-    except (TypeError, ValueError):
-        intentos_max = 0
+    # ---- Aplicar filtro (todas / solo buenas / solo malas) ----
+    if filtro == "solo_buenas":
+        items_data = [row for row in items_data_all if row["detalle"]["correcto"]]
+    elif filtro == "solo_malas":
+        items_data = [row for row in items_data_all if not row["detalle"]["correcto"]]
+    else:
+        items_data = items_data_all
+
+    # ---- Resumen global ----
+    porcentaje_global = 0
+    if total_preguntas > 0:
+        porcentaje_global = int(round(total_buenas * 100.0 / float(total_preguntas)))
+
+    # ---- Intentos y reintentos ----
+    intentos_usados = intento_qs.count()
+
+    if actividad.intentos_ilimitados:
+        intentos_max = 0  # 0 = ilimitado
+    else:
+        raw_max = actividad.intentos_max  # puede ser None
+        if raw_max is None:
+            raw_max = 0
+        try:
+            intentos_max = int(raw_max)
+        except (TypeError, ValueError):
+            intentos_max = 0
 
     es_intentos_ilimitados = (intentos_max == 0)
+    ahora = timezone.now()
 
-    now = timezone.now()
     puede_reintentar = (
-        act.es_publicada and
-        (not act.fecha_cierre or now <= act.fecha_cierre) and
-        (es_intentos_ilimitados or intentos_usados < intentos_max)
+        actividad.es_publicada
+        and (not actividad.fecha_cierre or ahora <= actividad.fecha_cierre)
+        and (es_intentos_ilimitados or intentos_usados < intentos_max)
     )
 
-    return render(request, "LevelUp/actividades/estudiante_resultados.html", {
-        "actividad": act,
+    ctx = {
+        "actividad": actividad,
         "sub": sub,
         "items_data": items_data,
+        "items_data_all": items_data_all,
+        "filtro": filtro,
         "intentos_usados": intentos_usados,
         "intentos_max": intentos_max,
         "es_intentos_ilimitados": es_intentos_ilimitados,
         "puede_reintentar": puede_reintentar,
         "intentos": list(intento_qs),
         "celebration_video_url": static("LevelUp/video/Timo_celebrando_animado.mp4"),
-    })
+        "total_buenas": total_buenas,
+        "total_preguntas": total_preguntas,
+        "porcentaje_global": porcentaje_global,
+    }
+
+    return render(request, "LevelUp/actividades/estudiante_resultados.html", ctx)
 
 # =====================================================
 # ESTUDIANTE: Jugar actividad
@@ -1827,20 +2176,57 @@ def api_item_answer(request, pk, item_id):
         return JsonResponse({"ok": False, "error": "Item no encontrado"}, status=404)
 
     # Crear o actualizar Answer
+    # ----------------------------------------------------
+    #   - Si el ítem está totalmente correcto.
+    #   - Cuántos puntos se obtienen (según item.puntaje).
+    corr = meta.get("correctas")
+    tot = meta.get("total")
+    ratio = payload.get("score")
+
+    # Normalizamos tipos
+    try:
+        if corr is not None:
+            corr = int(corr)
+    except Exception:
+        corr = None
+    try:
+        if tot is not None:
+            tot = int(tot)
+    except Exception:
+        tot = None
+
+    if not isinstance(ratio, (int, float)):
+        if corr is not None and tot not in (None, 0):
+            ratio = float(corr) / float(tot)
+        else:
+            ratio = 0.0
+    else:
+        ratio = float(ratio)
+
+    # Correcto a nivel de ítem = todas las subpreguntas buenas
+    if corr is not None and tot not in (None, 0):
+        es_correcta_item = (corr == tot)
+    else:
+        # fallback: usamos "completado"
+        es_correcta_item = completado
+
+    puntaje_max = getattr(item, "puntaje", 0) or 0
+    puntaje_item = int(round(ratio * puntaje_max))
+
     answer, created = Answer.objects.get_or_create(
         submission=sub,
         item=item,
         defaults={
-            'respuesta': payload,
-            'es_correcta': completado,
-            'puntaje_obtenido': meta.get('correctas', 0) * 10
-        }
+            "respuesta": payload,
+            "es_correcta": es_correcta_item,
+            "puntaje_obtenido": puntaje_item,
+        },
     )
-    
+
     if not created:
         answer.respuesta = payload
-        answer.es_correcta = completado
-        answer.puntaje_obtenido = meta.get('correctas', 0) * 10
+        answer.es_correcta = es_correcta_item
+        answer.puntaje_obtenido = puntaje_item
         answer.save()
         print(f"✅ Answer actualizado: #{answer.pk}")
     else:
@@ -1941,8 +2327,31 @@ def _nombre_docente(obj):
         return get_full() or getattr(obj, "username", None)
     return str(obj)
 
+def _asegurar_asignatura_por_defecto(request):
+    """
+    Si no hay asignatura activa en sesión, usa la MISMA primera asignatura
+    que el navbar (orden por nombre), para que nombre / icono / filtro coincidan.
+    """
+    # Si ya hay algo guardado en sesión, no tocar
+    if request.session.get("asignatura_activa_slug"):
+        return
+
+    # Importante: mismo orden que uses para rellenar 'asignaturas' en el navbar
+    primera = Asignatura.objects.order_by("nombre").first()
+    if not primera:
+        return
+
+    slug = primera.slug or slugify(primera.nombre)
+
+    request.session["asignatura_activa_slug"] = slug
+    request.session["asignatura_activa_nombre"] = primera.nombre
+    request.session["asignatura_activa_icono"] = primera.icono
+
 @login_required
 def portal_estudiante(request):
+    # Asegurar que haya una asignatura activa por defecto en la sesión
+    _asegurar_asignatura_por_defecto(request)
+    
     u = request.user
     perfil = obtener_o_crear_perfil(request.user)
     matricula = (Matricula.objects.select_related("curso").filter(estudiante=u).order_by("-fecha").first())

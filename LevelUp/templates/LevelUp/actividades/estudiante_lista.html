@@ -83,15 +83,23 @@
                         </div>
 
                         <div class="activity-meta">
-                          <span title="Experiencia total">🎯 XP: {{ a.xp_total }}</span>
+                          <!-- <span title="Experiencia total">🎯 XP: {{ a.xp_total }}</span> -->
                           {% if a.fecha_cierre %}
                           · <span title="Fecha de cierre">
                             ⏳ Cierra: {{ a.fecha_cierre|date:"d/m/Y H:i" }}
                           </span>
                           {% endif %}
                           · <span class="progress-wrap" title="Intentos usados">
-                            <progress value="{{ r.usados }}" max="{{ r.max }}"></progress>
-                            <small>{{ r.usados }}/{{ r.max }}</small>
+                            {# Para que el progress no tenga max=0 cuando es ilimitado #}
+                            <progress value="{{ r.usados }}" max="{% if r.max == 0 %}1{% else %}{{ r.max }}{% endif %}"></progress>
+                            <small>
+                              {{ r.usados }}/
+                              {% if r.max == 0 %}
+                              ∞
+                              {% else %}
+                              {{ r.max }}
+                              {% endif %}
+                            </small>
                           </span>
                         </div>
 

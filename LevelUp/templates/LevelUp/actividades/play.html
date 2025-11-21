@@ -241,19 +241,15 @@
                   style="color: rgba(255,255,255,0.9); font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">
                   Intento Actual
                 </div>
-                <div
-                  style="color: white; font-size: 2.5rem; font-weight: 900; line-height: 1; text-shadow: 0 4px 8px rgba(0,0,0,0.3);">
-                  {{ intento_actual }}<span style="font-size: 1.5rem; opacity: 0.8;">/{{ intentos_max }}</span>
-                </div>
-                <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 2px solid rgba(255,255,255,0.3);">
-                  <div
-                    style="color: rgba(255,255,255,0.9); font-size: 0.9rem; font-weight: 700; margin-bottom: 0.25rem;">
-                    Recompensa
-                  </div>
-                  <div
-                    style="color: #FFD43B; font-size: 1.4rem; font-weight: 900; text-shadow: 0 2px 6px rgba(0,0,0,0.3);">
-                    ⭐ {{ xp_total }} XP
-                  </div>
+                <div style="color: white; font-size: 2.5rem; font-weight: 900; line-height: 1; text-shadow: 0 4px 8px rgba(0,0,0,0.3);">
+                  {{ intento_actual }}
+                  <span style="font-size: 1.5rem; opacity: 0.8;">/
+                    {% if intentos_max == 0 %}
+                    ∞
+                    {% else %}
+                    {{ intentos_max }}
+                    {% endif %}
+                  </span>
                 </div>
               </div>
             </div>
@@ -279,10 +275,6 @@
                 completados
               </div>
             </div>
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnFinalizar"
-              style="border-radius: 12px; font-weight: 700; padding: 0.5rem 1.25rem; border-width: 2px;">
-              🏁 Finalizar
-            </button>
           </div>
           <div class="progress"
             style="height: 28px; border-radius: 14px; background: #e9ecef; box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.1);">
@@ -302,7 +294,7 @@
           <!-- Header del ítem -->
           <div class="item-header">
             <div class="row align-items-start g-3">
-              <div class="col-12 col-sm-8">
+              <div class="col-12">
                 <h3
                   style="color: white; font-weight: 800; font-size: 1.5rem; margin: 0 0 0.75rem 0; line-height: 1.3; text-shadow: 0 2px 8px rgba(0,0,0,0.2);">
                   🎮 Ítem {{ forloop.counter }} de {{ total_items }}
@@ -315,12 +307,6 @@
                   </p>
                 </div>
                 {% endif %}
-              </div>
-              <div class="col-12 col-sm-4 text-sm-end">
-                <span class="badge d-inline-block"
-                  style="background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); color: white; font-weight: 900; padding: 1rem 1.5rem; border-radius: 16px; font-size: 1.2rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); border: 2px solid rgba(255,255,255,0.3);">
-                  ⭐ {{ item.puntaje }} pts
-                </span>
               </div>
             </div>
           </div>
@@ -380,7 +366,7 @@
   </div>
 </div>
 
-<!-- Modal de confirmación (para finalizar antes de completar todo) -->
+<!-- Modal de confirmación (para enviar actividad) -->
 <div class="modal fade" id="confirmModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content" style="border-radius: 20px; border: none; overflow: hidden;">
@@ -436,7 +422,7 @@
         </div>
       </div>
       <div class="modal-footer justify-content-center" style="border-top: none; padding-bottom: 2rem;">
-        <!-- Cancelar: cierra el modal, el alumno puede luego usar el botón final -->
+        <!-- Cancelar: cierra el modal -->
         <button type="button" class="btn btn-secondary w-100 w-md-auto" data-bs-dismiss="modal"
           style="border-radius: 20px; padding: 0.75rem 1.8rem; font-weight: 700;">
           Cancelar
@@ -572,7 +558,7 @@
   }
 
   // --- Helper para finalizar intento (API) ---
- async function finalizarIntento() {
+  async function finalizarIntento() {
     if (intentoFinalizado) {
       console.log('ℹ️ [play.html] Intento ya finalizado, omitiendo llamada extra.');
       return;
@@ -665,7 +651,6 @@
     }
   }
 
-
   async function saveItemResult(itemId, host) {
     console.log(`💾 [play.html] Guardando resultado del ítem ${itemId}`);
 
@@ -704,19 +689,6 @@
       console.error('❌ [play.html] Error de red:', err);
     }
   }
-
-  // Botón finalizar (puede usarse aunque no estén todos los ítems)
-  document.getElementById('btnFinalizar').addEventListener('click', () => {
-    console.log('🏁 [play.html] Botón finalizar clickeado');
-    if (completados < total) {
-      const conf = confirm(`Solo has completado ${completados} de ${total} ítems. ¿Finalizar de todas formas?`);
-      if (!conf) {
-        console.log('  ⛔ [play.html] Cancelado por el usuario');
-        return;
-      }
-    }
-    showConfirmModal();
-  });
 
   // Botón enviar (cuando ya están todos o casi todos)
   btnSubmit.addEventListener('click', () => {

@@ -9,7 +9,7 @@ from django.contrib.auth.forms import (
 )
 from django.forms import BaseInlineFormSet
 from django.contrib.auth import get_user_model
-
+from django.utils.text import slugify
 from .models import Actividad, ItemActividad, Curso, Asignatura, AsignacionDocente, Matricula, Estudiante
 from .validators import formatear_rut_usuario
 
@@ -158,21 +158,48 @@ class CursoForm(forms.ModelForm):
 # ==============================
 # Crar Asignatura
 # ==============================
+# class AsignaturaForm(forms.ModelForm):
+#     class Meta:
+#         model = Asignatura
+#         fields = ("nombre", "slug", "icono")
+#         widgets = {
+#             "nombre": forms.TextInput(attrs={"class":"form-control"}),
+#             "codigo": forms.TextInput(attrs={"class":"form-control"}),
+#         }
+
+#     def clean_codigo(self):
+#         c = (self.cleaned_data.get("codigo") or "").strip()
+#         if Asignatura.objects.filter(codigo__iexact=c).exists():
+#             raise forms.ValidationError("Ya existe una asignatura con ese código.")
+#         return c
 class AsignaturaForm(forms.ModelForm):
     class Meta:
         model = Asignatura
-        fields = ("nombre", "slug", "icono")
+        # 👈 SOLO se muestra este campo en la plantilla
+        fields = ("nombre",)
+        labels = {
+            "nombre": "Nombre de la asignatura",
+        }
         widgets = {
-            "nombre": forms.TextInput(attrs={"class":"form-control"}),
-            "codigo": forms.TextInput(attrs={"class":"form-control"}),
+            "nombre": forms.TextInput(attrs={"class": "form-control"}),
         }
 
-    def clean_codigo(self):
-        c = (self.cleaned_data.get("codigo") or "").strip()
-        if Asignatura.objects.filter(codigo__iexact=c).exists():
-            raise forms.ValidationError("Ya existe una asignatura con ese código.")
-        return c
+    def save(self, commit=True):
+        obj = super().save(commit=False)
 
+        # Generar slug e icono automáticamente
+        base = slugify(obj.nombre)  # p.ej. "Ciencias Naturales" -> "ciencias-naturales"
+
+        if not obj.slug:
+            obj.slug = base
+
+        if not obj.icono:
+            # Puedes cambiar la ruta o extensión si usas .webp, etc.
+            obj.icono = f"LevelUp/img/asignaturas/{base}.png"
+
+        if commit:
+            obj.save()
+        return obj
 # ==============================
 # Asignar Asignatura a Docente
 # ==============================

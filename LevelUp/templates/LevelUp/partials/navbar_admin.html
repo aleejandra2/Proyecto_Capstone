@@ -29,6 +29,14 @@
                     </a>
                 </li>
 
+                <!-- <li class="mt-1">
+                    <a href="{% url 'perfil' %}"
+                        class="navbar-docente-link d-flex align-items-center {% if current == 'perfil' %}is-active{% endif %}">
+                        <i class="bi bi-person me-2"></i>
+                        <span>Perfil</span>
+                    </a>
+                </li> -->
+
                 <li>
                     <a href="{% url 'adm_list_profesores' %}"
                         class="navbar-admin-link d-flex align-items-center {% if current == 'adm_list_profesores' %}is-active{% endif %}">
@@ -45,14 +53,6 @@
                     </a>
                 </li>
 
-                {# Alumnos por curso (primero se elige el curso) #}
-                <li>
-                    <a href="{% url 'adm_list_alumnos_por_curso' %}"
-                        class="navbar-admin-link d-flex align-items-center {% if current == 'adm_list_alumnos_por_curso' %}is-active{% endif %}">
-                        <i class="bi bi-search me-2"></i>
-                        <span>Alumnos por curso</span>
-                    </a>
-                </li>
 
                 <li>
                     <a href="{% url 'adm_cursos_lista' %}"

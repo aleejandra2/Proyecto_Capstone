@@ -42,6 +42,7 @@ urlpatterns = [
     path("misiones/crear/", views.actividad_crear_mision, name="actividad_crear_mision"),
 
     # ESTUDIANTE — lista / resultados / jugar
+    path("portal/estudiante/asignatura/set/", views.estudiante_set_asignatura, name="estudiante_set_asignatura"),
     path("actividades/estudiante/", views.estudiante_mis_actividades, name="estudiante_lista"),
     path("actividades/estudiante/<int:pk>/resultado/", views.actividad_resultados, name="resolver_resultado"),
     path("actividades/estudiante/<int:pk>/play/", views.actividad_play, name="resolver_play"),

@@ -79,14 +79,14 @@
             </div>
 
             <div class="col-6 col-md-2">
-              <label class="form-label fw-bold">Dificultad <span class="text-muted small">(opcional)</span></label>
+              <label class="form-label fw-bold">Dificultad <span class="text-muted small"></span></label>
               {{ form.dificultad }}
               {% if form.dificultad.errors %}<div class="invalid-feedback d-block">{{ form.dificultad.errors|striptags }}</div>{% endif %}
             </div>
           </div>
 
           <div class="mb-3">
-            <label class="form-label fw-bold">Descripción <span class="text-muted small">(opcional)</span></label>
+            <label class="form-label fw-bold">Descripción <span class="text-muted small"></span></label>
             {{ form.descripcion }}
             {% if form.descripcion.errors %}<div class="invalid-feedback d-block">{{ form.descripcion.errors|striptags }}</div>{% endif %}
             <div class="form-text">Instrucciones para el estudiante</div>

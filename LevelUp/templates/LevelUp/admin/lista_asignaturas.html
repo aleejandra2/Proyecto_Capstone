@@ -28,7 +28,7 @@
                     <thead>
                         <tr>
                             <th>Nombre</th>
-                            <th style="width:220px">Código</th>
+                            {# <th style="width:220px">Código</th> #}
                             <th style="width:220px">Acciones</th>
                         </tr>
                     </thead>
@@ -36,7 +36,7 @@
                         {% for a in asignaturas %}
                         <tr>
                             <td>{{ a.nombre }}</td>
-                            <td><code>{{ a.codigo }}</code></td>
+                            {# <td><code>{{ a.codigo }}</code></td> #}
                             <td class="d-flex gap-2">
                                 <a class="btn btn-chip" href="{% url 'adm_asignaturas_editar' a.id %}">✎ Editar</a>
                                 <a class="btn btn-chip btn-ghost" href="{% url 'adm_asignaturas_borrar' a.id %}"
@@ -45,7 +45,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="3" class="text-muted">Sin registros.</td>
+                            <td colspan="2" class="text-muted">Sin registros.</td>
                         </tr>
                         {% endfor %}
                     </tbody>

@@ -15,6 +15,8 @@
   <link rel="stylesheet" href="{% static 'LevelUp/css/navbar/navbar.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/navbar/navbar_docente.css' %}?v=7">
   <link rel="stylesheet" href="{% static 'LevelUp/css/navbar/navbar_estudiante.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'LevelUp/css/navbar/navbar_admin.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'LevelUp/css/footer.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/footer.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/global.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/login.css' %}?v=6">
@@ -29,6 +31,9 @@
   <link rel="stylesheet" href="{% static 'LevelUp/css/game_builder.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/gamificacion.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/rangos/rangos.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'LevelUp/css/estudiante_resultados.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'LevelUp/css/actividad_form.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'LevelUp/css/portal_docente.css' %}?v=5">
   
   <!-- Fuentes / íconos -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -123,6 +128,19 @@
   <!-- Tus scripts, después del bundle -->
   <script src="{% static 'LevelUp/js/script.js' %}?v=5"></script>
   <script src="{% static 'LevelUp/js/partials/navbar.js' %}?v=5"></script>
+  
+  
+  {# Limpieza de storage al estar deslogueado (por ejemplo, tras logout) #}
+  {% if not request.user.is_authenticated %}
+  <script>
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch (e) {
+      console.warn("Error limpiando storage:", e);
+    }
+  </script>
+  {% endif %}
   {% endblock %}
 
 </body>

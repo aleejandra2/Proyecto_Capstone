@@ -15,7 +15,9 @@ export default async function init(host, cfg) {
 
   let currentQ = 0;
   let correctas = 0;
-  let lives = cfg.lives != null ? cfg.lives : 3;
+
+  // (vidas/corazones desactivados por ahora)
+  // let lives = cfg.lives != null ? cfg.lives : 3;
 
   // Limpiar host
   host.innerHTML = '';
@@ -26,7 +28,7 @@ export default async function init(host, cfg) {
   const wrapper = document.createElement('div');
   wrapper.className = 'tr-card';
 
-  // Header del juego (sin avatar)
+  // Header del juego (sin avatar, sin vidas)
   const headerDiv = document.createElement('div');
   headerDiv.style.cssText = `
     background: linear-gradient(135deg, #FF6B6B 0%, #ff8787 100%);
@@ -57,10 +59,7 @@ export default async function init(host, cfg) {
           <span id="tr-current">1</span><span style="font-size:1.1rem;opacity:0.7;">/${questions.length}</span>
         </div>
       </div>
-      <div style="background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);padding:0.75rem 1.5rem;border-radius:12px;">
-        <div style="color:rgba(255,255,255,0.8);font-size:0.9rem;font-weight:600;margin-bottom:0.25rem;">Vidas</div>
-        <div style="font-size:1.8rem;" id="tr-lives">${'❤️'.repeat(lives)}</div>
-      </div>
+      <!-- Bloque de vidas/corazones desactivado por ahora -->
     </div>
   `;
   wrapper.appendChild(headerDiv);
@@ -121,13 +120,13 @@ export default async function init(host, cfg) {
           console.log('❌ [TRIVIA] Respuesta incorrecta');
           playSound('error');
           btn.classList.add('btn-danger');
-          lives--;
 
-          // Actualizar corazones
-          const livesEl = headerDiv.querySelector('#tr-lives');
-          if (livesEl) {
-            livesEl.textContent = '❤️'.repeat(Math.max(0, lives)) || '💔';
-          }
+          // Vidas / corazones desactivados:
+          // lives--;
+          // const livesEl = headerDiv.querySelector('#tr-lives');
+          // if (livesEl) {
+          //   livesEl.textContent = '❤️'.repeat(Math.max(0, lives)) || '💔';
+          // }
 
           // Mostrar la correcta
           const correctBtn = optsDiv.querySelector(`[data-index="${correctIndex}"]`);
@@ -138,13 +137,13 @@ export default async function init(host, cfg) {
           }
         }
 
-        // Siguiente pregunta o finalizar
+        // Siguiente pregunta o finalizar (sin lógica de vidas)
         setTimeout(() => {
           currentQ++;
-          if (currentQ < questions.length && lives > 0) {
+          if (currentQ < questions.length) {
             renderQuestion();
           } else {
-            finish(lives <= 0);
+            finish(false);  // nunca por quedar sin vidas
           }
         }, 1500);
       });
@@ -160,6 +159,7 @@ export default async function init(host, cfg) {
     const score = correctas / questions.length;
 
     let icon, title, detail;
+    // Como las vidas están desactivadas, outOfLives siempre será false
     if (outOfLives) {
       icon = '😢';
       title = 'Sigue practicando';
