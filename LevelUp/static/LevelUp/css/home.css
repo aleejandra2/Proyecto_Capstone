@@ -16,7 +16,7 @@ body {
   --rosa: #ff7bac;
 }
 
-/* ======== NAVBAR ======== */
+/* ======== NAVBAR BASE ======== */
 .navbar-home {
   background-color: #ffffff;
   border-bottom: 3px solid #fffc54;
@@ -28,7 +28,7 @@ body {
   color: #000000;
 }
 
-/* Botón acceder */
+/* Botón genérico en navbar */
 .navbar-home .btn-edu {
   background-color: #9ad6a4;
   color: white;
@@ -54,9 +54,9 @@ body {
 }
 
 .landing-hero p {
-    font-family: cursive;
-    font-size: 1.2rem;
-    color: #336;
+  font-family: cursive;
+  font-size: 1.2rem;
+  color: #336;
 }
 
 .hero-illustration img {
@@ -66,6 +66,7 @@ body {
   margin: 0 auto;
 }
 
+/* Botones generales */
 .btn-edu {
   background-color: var(--celeste);
   color: white;
@@ -122,8 +123,6 @@ body {
   margin-bottom: 1rem;
 }
 
-
-
 /* ======== CTA FINAL ======== */
 .landing-cta {
   background: linear-gradient(90deg, #b8ffb5 0%, #d5f9ff 100%);
@@ -139,72 +138,147 @@ body {
   color: #333;
 }
 
-
-/* ===== Navbar Home  ===== */
-.navbar-home.navbar-home--kids{
+/* =========================================================
+   Navbar Home Kids (desktop + dropdown en mobile)
+   ========================================================= */
+.navbar-home.navbar-home--kids {
   --teal: var(--verde, #75d67a);
-
-  /* Compactación */
-  --h: 90px;  
-  --py: 8px;
-
-  /* Mantén tu gradiente */
-  min-height: var(--h);
-  padding-top: var(--py);
-  padding-bottom: var(--py);
+  background: #ffffff;
+  border-bottom: 3px solid #fffc54;
+  min-height: 72px;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
 }
 
-/* Marca compacta */
-.navbar-home--kids .navbar-brand{
-  padding:0;
-  line-height:1;
-  display:flex;
-  align-items:center;
-  gap: .75rem;
+/* Marca */
+.navbar-home--kids .navbar-brand {
+  padding: 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* Ícono pequeño (nutria redonda) */
-.navbar-home--kids .navbar-brand img.navbar-logo-icon{
+.navbar-home--kids .navbar-brand img.navbar-logo-icon {
   height: 48px;
   width: 48px;
   border-radius: 50%;
   object-fit: cover;
 }
 
-/* Logo de letras GRANDE */
-.navbar-home--kids .navbar-brand img.navbar-logo-wordmark{
-  height: 75px;
+/* Logo de letras */
+.navbar-home--kids .navbar-brand img.navbar-logo-wordmark {
+  height: 72px;
   width: auto;
   object-fit: contain;
 }
 
-.navbar-home--kids .navbar-brand span{
-  font-family: "Henny Penny", cursive;
-  font-size: 1.5rem;           
-  color: #000;
-}
-
-/* Toggler compacto y visible en fondo claro */
-.navbar-home--kids .navbar-toggler{
-  padding:.25rem .5rem; border-color: rgba(0,0,0,.1); border-radius:10px;
-}
-
-/* Botón Acceder */
-.btn-edu.pill{
-  border-radius: var(--radius);
+/* Botón tipo pill (Acceder / Menú) */
+.btn-edu.pill {
+  border-radius: 999px;
   font-weight: 800;
-  padding: .35rem .8rem;            
+  padding: 0.5rem 1.25rem;
   border: 2px solid var(--teal);
   background: var(--teal);
   color: #000000;
-  transition: transform .1s ease, background-color .15s ease, box-shadow .15s ease;
+  transition: transform 0.1s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
-.btn-edu.pill:hover{ background: #97dda0; transform: translateY(-1px); }
-.btn-edu.pill.btn-sm{ padding:.3rem .7rem; font-size:.95rem; }
 
-/* Colapso con poco aire en mobile */
-.navbar-home--kids .navbar-collapse{ padding-top:.25rem; padding-bottom:.25rem; }
+.btn-edu.pill:hover {
+  background: #97dda0;
+  transform: translateY(-1px);
+}
 
+.btn-edu.pill.btn-sm {
+  padding: 0.4rem 1rem;
+  font-size: 0.95rem;
+}
+
+/* Dropdown (mobile) */
+.navbar-home--kids .dropdown-toggle {
+  border-radius: 999px;
+  font-weight: 800;
+  border: 2px solid var(--teal);
+  background: var(--teal);
+  color: #000;
+}
+
+.navbar-home--kids .dropdown-toggle:focus {
+  box-shadow: 0 0 0 0.15rem rgba(139, 212, 142, 0.5);
+}
+
+.navbar-home--kids .dropdown-menu {
+  border-radius: 12px;
+  box-shadow: 0 5px 15px rgba(15, 23, 42, .15);
+  border: 1px solid rgba(0, 0, 0, .06);
+  font-size: 0.95rem;
+}
+
+/* ===== Tablets (>=768 y <992) ===== */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .navbar-home.navbar-home--kids {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+  }
+
+  .navbar-home--kids .navbar-brand img.navbar-logo-icon {
+    height: 44px;
+    width: 44px;
+  }
+
+  .navbar-home--kids .navbar-brand img.navbar-logo-wordmark {
+    height: 64px;
+  }
+}
+
+/* ===== Mobile (<768px) ===== */
+@media (max-width: 767.98px) {
+
+  /* El container de la navbar en una fila */
+  .navbar-home--kids .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+  }
+
+  .navbar-home--kids .navbar-brand {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* En celulares: ícono más pequeño y podemos ocultar el logo largo si aprieta */
+  .navbar-home--kids .navbar-brand img.navbar-logo-icon {
+    height: 38px;
+    width: 38px;
+  }
+
+  .navbar-home--kids .navbar-brand img.navbar-logo-wordmark {
+    display: none; /* solo se ve el ícono para que no se aplaste todo */
+  }
+
+  /* Dropdown alineado a la derecha */
+  .navbar-home--kids .dropdown-menu {
+    min-width: 100%;
+  }
+}
+
+/* Mobile muy pequeño (<400px) */
+@media (max-width: 399.98px) {
+  .navbar-home.navbar-home--kids {
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+  }
+}
+
+/* =========================================================
+   Sección "Motiva, mide y mejora"
+   ========================================================= */
 .kak-section{
   position: relative;
   padding-top: 3.5rem;
@@ -271,7 +345,7 @@ body {
   height:auto;
 }
 
-/* Responsive */
+/* Responsive sección kak */
 @media (max-width: 767.98px){
   .kak-section{ padding-top: 2.75rem; }
   .kak-section::after{ height: 200px; }
@@ -279,11 +353,11 @@ body {
   .kak-title{ font-size: clamp(1.7rem, 6vw, 2.4rem); }
 }
 
+/* =========================================================
+   Bloque "Todas las funciones"
+   ========================================================= */
 
-
-/* ===== Bloque "Todas las funciones" ===== */
-
-/* Título manuscrito + subrayados */
+/* Título manuscrito + subrayados (última versión manda) */
 .kak-title{
   font-weight: 800;
   font-size: clamp(1.9rem, 4vw, 3rem);
@@ -351,7 +425,7 @@ body {
 }
 .feat-badge img{ width: 20px; height: 20px; }
 
-/* Fondo gris claro de la sección (como en el ejemplo) */
+/* Fondo gris claro de la sección */
 .features-kids{
   background: #f5f7fb;
   border-top:1px solid rgba(0,0,0,.04);
@@ -375,8 +449,7 @@ body {
 .mini-bullets li{position:relative;padding-left:1.25rem}
 .mini-bullets li::before{content:"✓";position:absolute;left:0;color:#10b981;font-weight:900}
 
-/* ====== HERO landing ====== */
-
+/* ====== HERO landing extra ====== */
 .hero-illustration{ 
   position:relative; 
   min-height:280px; 
@@ -417,80 +490,8 @@ body {
   text-wrap: balance; 
 }
 
-/* ====== Responsivo ====== */
+/* ====== Responsivo general ====== */
 @media (max-width: 991.98px){
   .section-pad{ padding:56px 0; }
   .landing-hero{ padding:72px 0 96px; }
-}
-
-@media (max-width: 991.98px) {
-
-  /* Barra superior (logo + hamburguesa) */
-  .navbar-home.navbar-home--kids {
-    background: #ffffff;             
-    padding-top: .4rem;
-    padding-bottom: .4rem;
-  }
-
-  /* "Acceder" */
-  .navbar-home--kids .navbar-collapse {
-    background: #ffffff;  
-    padding: .5rem 0 .75rem;
-    border-bottom: 2px solid #ffda6b; 
-  }
-
-  /* Botón "Acceder" en móvil: ancho completo y centrado */
-  .navbar-home--kids .navbar-collapse .btn-edu.pill {
-    width: 100%;
-    justify-content: center;
-    margin-top: .25rem;
-  }
-}
-
-/* ===== Ajustes NAVBAR HOME en vista móvil ===== */
-@media (max-width: 767.98px) {
-
-  /* El container de la navbar NO se parte en dos filas */
-  .navbar-home--kids .container {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: nowrap;
-  }
-
-  /* La marca (nutria + logo) ocupa el espacio disponible sin saltar de línea */
-  .navbar-home--kids .navbar-brand {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  /* Reducimos un poco los tamaños en móvil para que no empujen nada hacia abajo */
-  .navbar-home--kids .navbar-brand img.navbar-logo-icon {
-    height: 40px;
-    width: 40px;
-  }
-
-  .navbar-home--kids .navbar-brand img.navbar-logo-wordmark {
-    height: 56px;
-    width: auto;
-  }
-
-  /* El botón hamburguesa se queda pegado a la derecha */
-  .navbar-home--kids .navbar-toggler {
-    margin-left: 0;
-    margin-right: 0;
-  }
-
-  /* Panel colapsado: fondo blanco y botón Acceder a lo ancho */
-  .navbar-home--kids .navbar-collapse {
-    background: #ffffff;
-    padding: 0.5rem 0 0.75rem;
-    border-bottom: 2px solid #ffda6b;
-  }
-
-  .navbar-home--kids .navbar-collapse .btn-edu.pill {
-    width: 100%;
-    justify-content: center;
-    margin-top: 0.25rem;
-  }
 }
