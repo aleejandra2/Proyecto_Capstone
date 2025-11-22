@@ -320,37 +320,60 @@
         console.log("🚀 Inicializando formset...");
 
         // Reset DELETE y cablear tarjetas existentes
-        qsa(".item-form", container).forEach((card, i) => {
-            const del = qs("input[name$='-DELETE']", card);
-            if (del) {
-                del.value = "";
-                del.checked = false;
-            }
-            delete card.dataset.deleted;
+        // Reset DELETE y cablear tarjetas existentes
+    qsa(".item-form", container).forEach((card, i) => {
+        const del = qs("input[name$='-DELETE']", card);
+        if (del) {
+            del.value = "";
+            del.checked = false;
+        }
+        delete card.dataset.deleted;
 
-            // Asegurar que ítems existentes tengan su ID
-            const anyInput = qs("input[name^='items-']", card);
-            if (anyInput) {
-                const m = anyInput.name.match(/items-(\d+)-/);
-                if (m) {
-                    const index = m[1];
-                    const idInput = qs(`input[name="items-${index}-id"]`, card);
-                    if (idInput && idInput.value) {
-                        console.log(`📦 Ítem ${i + 1} (ID: ${idInput.value}) cargado`);
-                    }
+        // Log IDs existentes
+        const anyInput = qs("input[name^='items-']", card);
+        if (anyInput) {
+            const m = anyInput.name.match(/items-(\d+)-/);
+            if (m) {
+                const index = m[1];
+                const idInput = qs(`input[name="items-${index}-id"]`, card);
+                if (idInput && idInput.value) {
+                    console.log(`📦 Ítem ${i + 1} (ID: ${idInput.value}) cargado`);
                 }
             }
+        }
 
-            wireCard(card, container);
+        wireCard(card, container);
+    });
+
+    normalizeAll(container);
+
+    // Si ya está en modo "game" y no hay ítems visibles, crear 3 por defecto
+    if (currentMode() === "game" && !qsa(".item-form:not([data-deleted='1'])", container).length) {
+        addItem(container, "game", "trivia");
+        addItem(container, "game", "trivia");
+        addItem(container, "game", "trivia");
+    }
+
+    const tipoSel = byId("id_tipo");
+    if (tipoSel) {
+        tipoSel.addEventListener("change", () => {
+            const mode = currentMode();
+            normalizeAll(container);
+
+            if (mode === "game") {
+                const visibles = qsa(".item-form:not([data-deleted='1'])", container);
+                if (!visibles.length) {
+                    // 3 preguntas, una para cada enemigo
+                    addItem(container, "game", "trivia");
+                    addItem(container, "game", "trivia");
+                    addItem(container, "game", "trivia");
+                }
+            }
         });
+    }
 
-        normalizeAll(container);
-
-        const tipoSel = byId("id_tipo");
-        if (tipoSel) tipoSel.addEventListener("change", () => normalizeAll(container));
-
-        const btnAdd = byId("btn-add-item");
-        if (btnAdd) btnAdd.addEventListener("click", () => addItem(container, currentMode()));
+    const btnAdd = byId("btn-add-item");
+    if (btnAdd) btnAdd.addEventListener("click", () => addItem(container, currentMode()));
 
         // Validación y debug al enviar
         const form = byId("actividad-form");

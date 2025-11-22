@@ -162,7 +162,7 @@ class Recompensa(models.Model):
 class Actividad(models.Model):
     class Tipo(models.TextChoices):
         QUIZ = "quiz", "Quiz"
-        JUEGO = "juego", "Juego"
+        JUEGO = "game", "Minijuego"
 
     class Dificultad(models.TextChoices):
         FACIL = "FACIL", "Fácil"

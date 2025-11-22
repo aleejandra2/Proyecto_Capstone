@@ -2407,11 +2407,77 @@ MAPS = {
     ("bosque", 1): "LevelUp/maps/escenario1.json",
 }
 
+def _fix_tileset_sources(map_data):
+    """
+    Ajusta los 'source' de los tilesets para que apunten a STATIC,
+    por ejemplo: /static/LevelUp/tilesets/bloques.xml
+    """
+    try:
+        tilesets = map_data.get("tilesets") or []
+    except AttributeError:
+        return map_data
+
+    for ts in tilesets:
+        source = (ts.get("source") or "").strip()
+        if not source:
+            continue
+
+        # Ya es absoluto (http o empieza con /static/) → lo dejamos
+        if source.startswith("http://") or source.startswith("https://") or source.startswith("/static/"):
+            continue
+
+        # Nos quedamos con el nombre de archivo, sin rutas relativas
+        filename = source.split("/")[-1]
+
+        # Construimos ruta estática absoluta
+        ts["source"] = static(f"LevelUp/tilesets/{filename}")
+
+    return map_data
+
+def _fix_image_layers(map_data):
+    """
+    Ajusta las 'image' de las capas tipo 'imagelayer'
+    para que apunten a /static/LevelUp/img/images_tiled/*.png
+    en vez de rutas relativas como 'img/images_tiled/...'
+    """
+    try:
+        layers = map_data.get("layers") or []
+    except AttributeError:
+        return map_data
+
+    for layer in layers:
+        if not isinstance(layer, dict):
+            continue
+
+        if layer.get("type") != "imagelayer":
+            continue
+
+        img = (layer.get("image") or "").strip()
+        if not img:
+            continue
+
+        # Si ya es absoluta (/static o http), no tocamos
+        if img.startswith("/static/") or img.startswith("http://") or img.startswith("https://"):
+            continue
+
+        # Nos quedamos solo con el nombre de archivo
+        filename = img.split("/")[-1]
+
+        # Construimos ruta estática absoluta
+        layer["image"] = static(f"LevelUp/img/images_tiled/{filename}")
+
+    return map_data
+
 @xframe_options_exempt
 @login_required
 def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
     """
     Devuelve el mapa Tiled enriquecido con preguntas de la actividad.
+
+    Además:
+    - Loguea info del mapa y tilesets.
+    - Corrige los 'source' de tilesets para que apunten a /static/LevelUp/tilesets/*.xml
+      evitando 404 tipo /misiones/mapa/tilesets/bloques.xml.
     """
     # Permitir ?actividad=ID si no vino por URL
     if not actividad_pk:
@@ -2422,22 +2488,46 @@ def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
             except (TypeError, ValueError):
                 actividad_pk = None
 
+    # -------- LOG INICIAL --------
+    print("\n" + "=" * 60)
+    print("🗺  misiones_mapa llamado")
+    print(f"   slug={slug!r}, nivel={nivel!r}, actividad_pk={actividad_pk!r}")
+
     # Cargar mapa base
     default_map = MAPS.get((slug, int(nivel))) if slug and nivel else next(iter(MAPS.values()))
+    print(f"   default_map (static path): {default_map!r}")
+
     base = _load_static_map(default_map)
+
+    # Logs de capas y tilesets originales
+    try:
+        layer_names = [l.get("name") for l in base.get("layers", []) if isinstance(l, dict)]
+    except Exception:
+        layer_names = []
+    try:
+        tileset_sources = [ts.get("source") for ts in base.get("tilesets", []) if isinstance(ts, dict)]
+    except Exception:
+        tileset_sources = []
+
+    print(f"   Capas: {layer_names}")
+    print(f"   Tilesets (antes de fix): {tileset_sources}")
 
     # Si viene actividad, inyectar preguntas
     if actividad_pk:
         try:
             act = Actividad.objects.get(pk=int(actividad_pk))
         except Actividad.DoesNotExist:
+            print("   ❌ Actividad no encontrada")
             return JsonResponse({"error": "Actividad no encontrada"}, status=404)
+
+        print(f"   ✅ Actividad encontrada: {act.pk} - {act.titulo!r}")
 
         # Solo ítems tipo GAME (preguntas del minijuego)
         items_qs = act.items.filter(tipo__iexact="game").order_by("orden", "id")
+        print(f"   Ítems tipo 'game' encontrados: {items_qs.count()}")
 
         questions = []
-        
+
         def _to_trivia(it):
             """
             Normaliza ItemActividad(tipo='game') a formato trivia:
@@ -2454,12 +2544,12 @@ def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
                     qtxt = (first.get("q") or it.enunciado or "Pregunta").strip()
                     opts = list(first.get("opts") or first.get("options") or [])
                     ans = first.get("ans", 0)
-                    
+
                     if not opts or len(opts) < 2:
                         opts = ["Opción 1", "Opción 2"]
                     if not isinstance(ans, int) or ans < 0 or ans >= len(opts):
                         ans = 0
-                    
+
                     return {
                         "id": it.pk,
                         "q": qtxt,
@@ -2472,12 +2562,12 @@ def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
                 qtxt = (datos.get("question") or it.enunciado or "Pregunta").strip()
                 opts = list(datos.get("options") or [])
                 ans = datos.get("answer", 0)
-                
+
                 if not opts or len(opts) < 2:
                     opts = ["Opción 1", "Opción 2"]
                 if not isinstance(ans, int) or ans < 0 or ans >= len(opts):
                     ans = 0
-                
+
                 return {
                     "id": it.pk,
                     "q": qtxt,
@@ -2494,12 +2584,77 @@ def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
             }
 
         # Construir lista de preguntas
-        for it in items_qs:
-            questions.append(_to_trivia(it))
+                # Construir lista de "paquetes" de preguntas (1 por ItemActividad)
+        questions = []
 
-        # Renumerar con id secuencial 1..N para mapear a qid
+        for it in items_qs:
+            datos = it.datos or {}
+            kind = str(datos.get("kind") or "").lower()
+
+            # Paquete de preguntas normalizado
+            paquetes = []
+
+            # ====== TRIVIA con lista "questions" (builder nuevo) ======
+            if kind == "trivia" and isinstance(datos.get("questions"), list) and datos["questions"]:
+                for sub in datos["questions"]:
+                    sub = sub or {}
+                    qtxt = (sub.get("q") or it.enunciado or "Pregunta").strip()
+                    opts = list(sub.get("opts") or sub.get("options") or [])
+                    ans = sub.get("ans", 0)
+
+                    # Sanitizar
+                    if not opts or len(opts) < 2:
+                        opts = ["Opción 1", "Opción 2"]
+                    if not isinstance(ans, int) or ans < 0 or ans >= len(opts):
+                        ans = 0
+
+                    paquetes.append({
+                        "q": qtxt,
+                        "options": opts,
+                        "correct": ans,
+                    })
+
+            # ====== TRIVIA "plana" (soporte antiguo) ======
+            elif kind == "trivia":
+                qtxt = (datos.get("question") or it.enunciado or "Pregunta").strip()
+                opts = list(datos.get("options") or [])
+                ans = datos.get("answer", 0)
+
+                if not opts or len(opts) < 2:
+                    opts = ["Opción 1", "Opción 2"]
+                if not isinstance(ans, int) or ans < 0 or ans >= len(opts):
+                    ans = 0
+
+                paquetes.append({
+                    "q": qtxt,
+                    "options": opts,
+                    "correct": ans,
+                })
+
+            # ====== FALLBACK genérico ======
+            else:
+                paquetes.append({
+                    "q": it.enunciado or "¿Pregunta?",
+                    "options": ["Opción A", "Opción B", "Opción C"],
+                    "correct": 1,
+                })
+
+            # Tomamos la primera solo como "preview" para compatibilidad
+            first = paquetes[0]
+
+            questions.append({
+                # id se asigna después
+                "item_pk": it.pk,
+                "kind": "trivia",
+                "questions": paquetes,      # 👈 todas las sub-preguntas
+                "q": first["q"],            # 👈 compatibilidad: una sola
+                "options": first["options"],
+                "correct": first["correct"],
+            })
+
+        # Renumerar con id secuencial 1..N (para mapear a qid de enemigos)
         questions = [
-            {**q, "item_pk": q.get("id"), "id": i + 1}
+            {**q, "id": i + 1}
             for i, q in enumerate(questions)
         ]
 
@@ -2511,34 +2666,124 @@ def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
         # Auto-asignar qid a enemigos sin ese property
         idx = 1
         for layer in new_map.get("layers", []) or []:
-            if layer.get("type") != "objectgroup":
+            if not isinstance(layer, dict) or layer.get("type") != "objectgroup":
                 continue
             for obj in layer.get("objects", []) or []:
+                if not isinstance(obj, dict):
+                    continue
                 name = (obj.get("name") or "").lower()
                 if name != "enemy":
                     continue
                 props_list = obj.get("properties") or []
-                has_qid = any(p.get("name") == "qid" for p in props_list)
+                has_qid = any(p.get("name") == "qid" for p in props_list if isinstance(p, dict))
                 if not has_qid:
                     props_list.append({"name": "qid", "type": "int", "value": idx})
                     obj["properties"] = props_list
                     idx += 1
 
+        # 🔧 FIX: ajustar rutas de tilesets → /static/LevelUp/tilesets/*.xml
+        _fix_tileset_sources(new_map)
+        # 🔧 FIX: ajustar imágenes de capas de fondo → /static/LevelUp/img/images_tiled/*.png
+        _fix_image_layers(new_map)
+
+        # Logs finales
+        try:
+            tileset_sources_after = [
+                ts.get("source") for ts in new_map.get("tilesets", []) if isinstance(ts, dict)
+            ]
+        except Exception:
+            tileset_sources_after = []
+
+        try:
+            img_layers_after = [
+                lyr.get("image") for lyr in new_map.get("layers", [])
+                if isinstance(lyr, dict) and lyr.get("type") == "imagelayer"
+            ]
+        except Exception:
+            img_layers_after = []
+
+        print(f"   Tilesets (después de fix): {tileset_sources_after}")
+        print(f"   Imagelayers (después de fix): {img_layers_after}")
+        print("=" * 60 + "\n")
+
         return JsonResponse(new_map, safe=False)
 
-    # Sin actividad: mapa base
-    return JsonResponse(base, safe=False)
+    # Sin actividad: mapa base con fix de tilesets también
+    new_map = _fix_tileset_sources(base)
+    new_map = _fix_image_layers(new_map)
 
+    try:
+        tileset_sources_after = [
+            ts.get("source") for ts in new_map.get("tilesets", []) if isinstance(ts, dict)
+        ]
+    except Exception:
+        tileset_sources_after = []
+
+    try:
+        img_layers_after = [
+            lyr.get("image") for lyr in new_map.get("layers", [])
+            if isinstance(lyr, dict) and lyr.get("type") == "imagelayer"
+        ]
+    except Exception:
+        img_layers_after = []
+
+    print("   (Sin actividad) Tilesets después de fix:", tileset_sources_after)
+    print("   (Sin actividad) Imagelayers después de fix:", img_layers_after)
+    print("=" * 60 + "\n")
+
+    return JsonResponse(new_map, safe=False)
+
+
+try:
+    MAPS
+except NameError:
+    MAPS = {}
 
 @xframe_options_exempt
+@login_required
 def misiones_jugar(request, slug, nivel):
+    """
+    Renderiza la plantilla jugar.html.
+    - Si viene ?actividad=ID → el mapa se obtiene desde misiones_mapa_actividad (JSON dinámico).
+    - Si no viene actividad → usa un mapa estático de fallback.
+    """
     actividad_pk = request.GET.get("actividad")
+
     if actividad_pk:
-        map_url = reverse("misiones_mapa_actividad", args=[actividad_pk])
+        # Modo normal: misión asociada a una Actividad
+        try:
+            map_url = reverse(
+                "misiones_mapa_actividad",
+                kwargs={"actividad_pk": int(actividad_pk)},
+            )
+        except Exception:
+            # Fallback seguro
+            map_url = static("LevelUp/maps/escenario1.json")
     else:
-        map_path = MAPS.get((slug, int(nivel)), "LevelUp/maps/escenario1.json")
+        # Fallback: mapa estático (por si se entra directo a /misiones/bosque/1/)
+        map_path = "LevelUp/maps/escenario1.json"
+        try:
+            default = MAPS.get((slug, int(nivel)))
+        except Exception:
+            default = None
+
+        # Soportar tanto dict como string
+        if isinstance(default, dict):
+            map_path = default.get("map", map_path)
+        elif isinstance(default, str) and default.strip():
+            map_path = default
+
         map_url = static(map_path)
-    return render(request, "LevelUp/misiones/jugar.html", {"map_url": map_url, "mundo": slug, "nivel": nivel})
+
+    return render(
+        request,
+        "LevelUp/misiones/jugar.html",
+        {
+            "map_url": map_url,
+            "mundo": slug,
+            "nivel": nivel,
+        },
+    )
 
 # -------------------------------------------------------------
 # Atajo para crear misión base y llevar al editor
@@ -2556,31 +2801,50 @@ def actividad_crear_mision(request):
             titulo="Misión sin título",
             descripcion="Videojuego con preguntas editables por el docente.",
             tipo="game",
-            dificultad="medio",      # ajusta al valor real de tu Choice
+            dificultad="medio",      # ajusta al valor real de tu ChoiceField
             docente=docente,
             es_publicada=False,
             xp_total=100,
             intentos_max=3,
         )
-        ItemActividad.objects.create(
-            actividad=act,
-            tipo="game",
-            enunciado="Pregunta de ejemplo (edítame)",
-            datos={
-                "kind": "trivia",
-                "questions": [{
-                    "q": "¿Cuánto es 12 × 12?",
-                    "opts": ["122", "124", "144", "132"],
-                    "ans": 2
-                }],
-                "timeLimit": 60
+
+        # Tres preguntas de ejemplo (una para cada enemigo)
+        ejemplos = [
+            {
+                "q": "¿Cuánto es 2 + 2?",
+                "opts": ["3", "4", "5", "6"],
+                "ans": 1,  # índice 0-based → "4"
             },
-            puntaje=10,
-        )
+            {
+                "q": "¿Cuánto es 5 × 3?",
+                "opts": ["8", "15", "20", "10"],
+                "ans": 1,  # "15"
+            },
+            {
+                "q": "¿Cuál es la mitad de 10?",
+                "opts": ["2", "4", "5", "8"],
+                "ans": 2,  # "5"
+            },
+        ]
+
+        for idx, qdata in enumerate(ejemplos, start=1):
+            ItemActividad.objects.create(
+                actividad=act,
+                tipo="game",
+                enunciado=f"Pregunta {idx} (edítame)",
+                datos={
+                    "kind": "trivia",
+                    "questions": [qdata],
+                    "timeLimit": 60,
+                },
+                puntaje=10,
+            )
 
     # si viene ?preview=1, abre el editor con la vista previa automáticamente
     open_preview = "1" if request.GET.get("preview") == "1" else "0"
-    return redirect(f"{reverse('actividad_editar', args=[act.pk])}?open_preview={open_preview}")
+    return redirect(
+        f"{reverse('actividad_editar', args=[act.pk])}?open_preview={open_preview}"
+    )
 
 # ---------------------------------------------------------------------
 # ERROR 404

@@ -281,7 +281,7 @@ class ActividadForm(forms.ModelForm):
     )
     
     tipo = forms.ChoiceField(
-        choices=[("quiz", "Quiz")],
+        choices=[("quiz", "Quiz"), ("game", "Minijuego"),],
         widget=forms.Select(attrs={"class": "form-select", "id": "id_tipo"})
     )
     class Meta:

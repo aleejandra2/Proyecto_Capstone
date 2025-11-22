@@ -206,8 +206,8 @@
 
   <script>
     /* ================== CONFIG & UTILS ================== */
-    const MAP_URL = "{% static 'LevelUp/maps/escenario1.json' %}";
-    const MAP_ABS = new URL(MAP_URL, location.href).href;
+    const MAP_URL = "{{ map_url|escapejs }}";
+    const MAP_ABS = new URL(MAP_URL, window.location.origin).toString();
     const FLIP_H = 0x80000000, FLIP_V = 0x40000000, FLIP_D = 0x20000000, GID_MASK = 0x1fffffff;
     const absUrl = (rel, base) => new URL(rel, base).href;
     const decodeGid = raw => ({ gid: raw & GID_MASK, flipH: !!(raw & FLIP_H), flipV: !!(raw & FLIP_V), flipD: !!(raw & FLIP_D) });
@@ -396,12 +396,34 @@
 
       // Entidades + preguntas
       let spawn = null; const coins = []; const enemies = [];
-      let questions = Array.isArray(map.questions) ? map.questions.map((q, i) => ({
-        id: (q && q.id != null) ? q.id : (10000 + i),
-        q: q.q || q.question || '¿Pregunta?',
-        options: Array.isArray(q.options) && q.options.length >= 2 ? q.options : [q.a1, q.a2, q.a3, q.a4].filter(Boolean),
-        correct: Number.isInteger(q.correct) ? q.correct : Math.max(0, (q.correct || 1) - 1)
-      })) : [];
+
+      // 🔸 Importante: conservar `questions` si viene como paquete (varias preguntas)
+      let questions = Array.isArray(map.questions)
+        ? map.questions.map((q, i) => {
+            const id = (q && q.id != null) ? q.id : (10000 + i);
+
+            // Si ya viene como { id, questions:[...] } lo dejamos tal cual
+            if (Array.isArray(q.questions) && q.questions.length) {
+              return { ...q, id };
+            }
+
+            // Caso simple: solo una pregunta
+            const opts = Array.isArray(q.options) && q.options.length >= 2
+              ? q.options
+              : [q.a1, q.a2, q.a3, q.a4].filter(Boolean);
+
+            const corr = Number.isInteger(q.correct)
+              ? q.correct
+              : Math.max(0, (q.correct || 1) - 1);
+
+            return {
+              id,
+              q: q.q || q.question || '¿Pregunta?',
+              options: opts,
+              correct: corr
+            };
+          })
+        : [];
 
       for (const layer of map.layers) {
         if (layer.type !== 'objectgroup') continue;
@@ -466,9 +488,9 @@
       }
 
       const ASSETS = {
-        player: "{% static 'LevelUp/img/misiones/personaje.png' %}",
+        player: "{% static 'LevelUp/img/misiones/Timo_caminando.png' %}",
         coin: "{% static 'LevelUp/img/misiones/coin.png' %}",
-        enemy1: "{% static 'LevelUp/img/misiones/enemigo1_math.png' %}"
+        enemy1: "{% static 'LevelUp/img/misiones/Timo_malvado.png' %}"
       };
 
       window.LEVEL = {
@@ -502,55 +524,152 @@
 
     /* ===== Overlay Preguntas ===== */
     const ASK = (() => {
-      const wrap = document.createElement('div'); wrap.className = 'ask';
+      const wrap = document.createElement('div');
+      wrap.className = 'ask';
       wrap.innerHTML = '<div class="ask-card"><h3 id="askQ"></h3><div class="ops" id="askOps"></div></div>';
       document.body.appendChild(wrap);
+
       function open(q, ops, correctIdx, onOk, onBad) {
         document.getElementById('askQ').textContent = q;
-        const box = document.getElementById('askOps'); box.innerHTML = '';
+        const box = document.getElementById('askOps');
+        box.innerHTML = '';
+
         ops.forEach((t, i) => {
-          const b = document.createElement('button'); b.textContent = t;
-          b.onclick = () => { if (i === correctIdx) { b.classList.add('ok'); onOk && onOk(); close(); } else { b.classList.add('bad'); onBad && onBad(); } };
+          const b = document.createElement('button');
+          b.textContent = t;
+          b.onclick = () => {
+            if (i === correctIdx) {
+              b.classList.add('ok');
+              // 👇 ahora NO cerramos aquí; decide el caller
+              onOk && onOk();
+            } else {
+              b.classList.add('bad');
+              onBad && onBad();
+            }
+          };
           box.appendChild(b);
         });
+
         wrap.classList.add('show');
       }
-      function close() { document.querySelector('.ask').classList.remove('show'); }
+
+      function close() {
+        wrap.classList.remove('show');
+      }
+
       return { open, close };
     })();
-
-    function askQuestion(qid, onOk, onBad) {
-      const level = window.LEVEL || {}; const cfg = window.LEVEL?.config || {};
+      
+        function askQuestion(qid, onEnemyOk, onEnemyBad) {
+      const level = window.LEVEL || {};
+      const cfg = level.config || {};
       const list = Array.isArray(level.questions) ? level.questions : [];
       const mapping = (cfg.mapping_mode || "id").toLowerCase();
-      let q = null;
-      if (mapping === "index") { const n = Number(qid); if (Number.isFinite(n) && n >= 1 && n <= list.length) q = list[n - 1]; }
-      else {
-        q = list.find(x => String(x?.id) === String(qid)) || null;
-        if (!q) { const n = Number(qid); if (Number.isFinite(n) && n >= 1 && n <= list.length) q = list[n - 1]; }
-      }
-      let prompt = (cfg.fallback_q && String(cfg.fallback_q).trim()) || "¿2 + 2 = ?";
-      let options = Array.isArray(cfg.fallback_opts) && cfg.fallback_opts.length >= 2 ? cfg.fallback_opts.slice(0, 6).map(String) : ["3", "4", "5"];
-      let correctIdx = Number.isInteger(cfg.fallback_correct) ? cfg.fallback_correct : 1;
 
-      if (q) {
-        const txt = q.q ?? q.question ?? q.pregunta; if (typeof txt === 'string' && txt.trim()) prompt = txt.trim();
+      // 1) buscar el "paquete" base
+      let base = null;
+      if (mapping === "index") {
+        const n = Number(qid);
+        if (Number.isFinite(n) && n >= 1 && n <= list.length) base = list[n - 1];
+      } else {
+        base = list.find(x => String(x?.id) === String(qid)) || null;
+        if (!base) {
+          const n = Number(qid);
+          if (Number.isFinite(n) && n >= 1 && n <= list.length) base = list[n - 1];
+        }
+      }
+
+      // 2) fallback
+      const fallbackPrompt =
+        (cfg.fallback_q && String(cfg.fallback_q).trim()) || "¿2 + 2 = ?";
+      const fallbackOpts =
+        Array.isArray(cfg.fallback_opts) && cfg.fallback_opts.length >= 2
+          ? cfg.fallback_opts.slice(0, 6).map(String)
+          : ["3", "4", "5"];
+      const fallbackCorrectIdx =
+        Number.isInteger(cfg.fallback_correct) ? cfg.fallback_correct : 1;
+
+      // 3) construir pack
+      let pack = [];
+      if (base && Array.isArray(base.questions) && base.questions.length) {
+        pack = base.questions.slice();
+      } else if (base) {
+        pack = [base];
+      } else {
+        pack = [{
+          q: fallbackPrompt,
+          options: fallbackOpts,
+          correct: fallbackCorrectIdx
+        }];
+      }
+
+      let idx = 0;
+
+      function showCurrent() {
+        const q = pack[idx] || {};
+        let prompt = fallbackPrompt;
+        let options = fallbackOpts.slice();
+        let correctIdx = fallbackCorrectIdx;
+
+        const txt = q.q ?? q.question ?? q.pregunta;
+        if (typeof txt === "string" && txt.trim()) prompt = txt.trim();
+
         if (Array.isArray(q.options)) options = q.options.slice();
         else if (Array.isArray(q.opts)) options = q.opts.slice();
         else if (Array.isArray(q.alternativas)) options = q.alternativas.slice();
-        else options = [q.a1, q.a2, q.a3, q.a4, q.a5, q.a6].filter(v => typeof v === 'string' && v.trim());
-        options = options.map(String).filter(Boolean).slice(0, 6); if (options.length < 2) options = ["Opción 1", "Opción 2"];
+        else {
+          const alts = [q.a1, q.a2, q.a3, q.a4, q.a5, q.a6]
+            .filter(v => typeof v === "string" && v.trim());
+          if (alts.length) options = alts;
+        }
+
+        options = options.map(String).filter(Boolean).slice(0, 6);
+        if (options.length < 2) options = ["Opción 1", "Opción 2"];
+
         if (Number.isInteger(q.correct)) correctIdx = Number(q.correct);
         else if (Number.isInteger(q.ans)) correctIdx = Number(q.ans) - 1;
         else if (Number.isInteger(q.answer)) correctIdx = Number(q.answer) - 1;
-        else if (typeof q.correctText === "string") { const pos = options.findIndex(o => o === q.correctText); if (pos >= 0) correctIdx = pos; }
+        else if (typeof q.correctText === "string") {
+          const pos = options.findIndex(o => o === q.correctText);
+          if (pos >= 0) correctIdx = pos;
+        }
+
         if (!(correctIdx >= 0 && correctIdx < options.length)) {
           const maybe1 = Number(q.correct);
-          correctIdx = (Number.isFinite(maybe1) && maybe1 >= 1 && maybe1 <= options.length) ? (maybe1 - 1) : 0;
+          correctIdx =
+            (Number.isFinite(maybe1) &&
+              maybe1 >= 1 &&
+              maybe1 <= options.length)
+              ? (maybe1 - 1)
+              : 0;
+        }
+
+        const label =
+          pack.length > 1 ? `[${idx + 1}/${pack.length}] ${prompt}` : prompt;
+
+        ASK.open(label, options, correctIdx, handleOk, handleBad);
+      }
+
+      function handleOk() {
+        if (idx < pack.length - 1) {
+          // siguiente pregunta del mismo enemigo
+          idx += 1;
+          showCurrent();
+        } else {
+          // última pregunta → ahora sí se cierra y se mata al enemigo
+          ASK.close();
+          if (typeof onEnemyOk === "function") onEnemyOk();
         }
       }
-      ASK.open(prompt, options, correctIdx, onOk, onBad);
+
+      function handleBad() {
+        // error → solo feedback al motor; la pregunta queda abierta
+        if (typeof onEnemyBad === "function") onEnemyBad();
+      }
+
+      showCurrent();
     }
+
   </script>
 
   <!-- ================== CONTROLES MÓVILES ================== -->

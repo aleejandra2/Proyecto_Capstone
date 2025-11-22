@@ -52,8 +52,8 @@ urlpatterns = [
     path("api/actividades/<int:pk>/hint/<int:item_id>/", views.api_item_hint, name="api_item_hint"),
 
     # Misiones / mapa (para jugar.html + play.js)
-    path("misiones/<slug:slug>/<int:nivel>/", views.misiones_jugar, name="misiones_jugar"),
     path("misiones/mapa/<int:actividad_pk>/", views.misiones_mapa, name="misiones_mapa_actividad"),
+    path("misiones/<slug:slug>/<int:nivel>/", views.misiones_jugar, name="misiones_jugar"),
 
     # Panel Admin (admin-app)
     # --- Cursos ---
