@@ -638,6 +638,7 @@ button.game-btn {
 
 .cloze-text {
   font-size: 1.25rem !important;
+  white-space: pre-line;
   line-height: 2.2 !important;
   padding: 2rem 1.5rem !important;
   background: white !important;

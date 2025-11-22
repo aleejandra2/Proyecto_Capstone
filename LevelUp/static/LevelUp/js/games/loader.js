@@ -167,26 +167,56 @@ function ensureDemo(kind, cfg) {
       }
       break;
 
-    case 'classify':
-      isValid = (Array.isArray(c.bins) && c.bins.length > 0 &&
-        Array.isArray(c.items) && c.items.length > 0 &&
-        c.answers && typeof c.answers === 'object');
-      console.log('🔍 Classify validation:', {
-        hasBins: Array.isArray(c.bins),
-        hasItems: Array.isArray(c.items),
-        hasAnswers: !!c.answers,
+    case 'classify': {
+      const hasBins = Array.isArray(c.bins) && c.bins.length > 0;
+      const hasItems = Array.isArray(c.items) && c.items.length > 0;
+      let hasAnswers = c.answers && typeof c.answers === 'object'
+        && Object.keys(c.answers).length > 0;
+
+      console.log('🔍 Classify validation (antes de autogen):', {
+        hasBins,
+        hasItems,
+        hasAnswers,
         binsCount: c.bins?.length,
         itemsCount: c.items?.length
       });
 
+      // Si vienen bins + items pero sin answers, los generamos desde item.bin
+      if (hasBins && hasItems && !hasAnswers) {
+        const autoAnswers = {};
+        c.items.forEach(it => {
+          if (it && it.id && it.bin) {
+            autoAnswers[it.id] = it.bin;
+          }
+        });
+
+        if (Object.keys(autoAnswers).length) {
+          c.answers = autoAnswers;
+          hasAnswers = true;
+          console.log('🛠️ Classify: answers autogenerados desde items:', autoAnswers);
+        }
+      }
+
+      hasAnswers = c.answers && typeof c.answers === 'object'
+        && Object.keys(c.answers).length > 0;
+
+      isValid = hasBins && hasItems && hasAnswers;
+
       if (!isValid) {
         console.warn('⚠️ Datos incompletos, usando demo');
-        c.bins = [{ id: 'b1', label: 'Vertebrados' }, { id: 'b2', label: 'Invertebrados' }];
-        c.items = [{ id: 'a1', text: 'Gato' }, { id: 'a2', text: 'Pulpo' }];
+        c.bins = [
+          { id: 'b1', label: 'Vertebrados' },
+          { id: 'b2', label: 'Invertebrados' }
+        ];
+        c.items = [
+          { id: 'a1', text: 'Gato' },
+          { id: 'a2', text: 'Pulpo' }
+        ];
         c.answers = { a1: 'b1', a2: 'b2' };
         isValid = true;
       }
       break;
+    }
 
     case 'cloze':
       isValid = (c.text && typeof c.text === 'string' &&

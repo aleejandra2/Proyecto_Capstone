@@ -869,145 +869,200 @@
   }
 
   // ========== COMPLETAR ESPACIOS (CLOZE) ==========
-  function mountCloze(card, root, payload) {
-    root.innerHTML = `
-      <div class="alert alert-info small mb-3">
-        <strong>💡 Instrucciones:</strong> Escribe el texto y marca las palabras que serán espacios en blanco.
-        Haz doble clic sobre una palabra para convertirla en espacio.
-      </div>`;
+function mountCloze(card, root, payload) {
+  // Instrucciones
+  root.innerHTML = `
+    <div class="alert alert-info small mb-3">
+      <strong>💡 Instrucciones:</strong> Escribe el texto y marca las palabras que serán espacios en blanco.
+      Haz doble clic sobre una palabra para convertirla en espacio.
+    </div>`;
 
-    const textArea = el("textarea", "form-control mb-3");
-    textArea.rows = 4;
-    textArea.placeholder =
-      "Escribe tu texto aquí. Ejemplo:\nLa capital de Chile es Santiago.\nEl océano más grande es el Pacífico.";
+  const textArea = el("textarea", "form-control mb-3");
+  textArea.rows = 4;
+  textArea.placeholder =
+    "Escribe tu texto aquí. Ejemplo:\nLa capital de Chile es Santiago.\nEl océano más grande es el Pacífico.";
 
-    const preview = el("div", "card p-3 mb-3 bg-light");
-    preview.innerHTML =
-      '<small class="text-muted">Vista previa: (doble clic para marcar espacios)</small><div class="cloze-preview mt-2"></div>';
+  const preview = el("div", "card p-3 mb-3 bg-light");
+  preview.innerHTML =
+    '<small class="text-muted">Vista previa: (doble clic para marcar espacios)</small><div class="cloze-preview mt-2"></div>';
 
-    const blanksSection = el("div", "mb-3");
-    blanksSection.innerHTML = `<h6 class="mb-2">Espacios en blanco detectados:</h6>`;
-    const blanksList = el("div", "gb-blanks-list small text-muted");
-    blanksSection.appendChild(blanksList);
+  const blanksSection = el("div", "mb-3");
+  blanksSection.innerHTML = `<h6 class="mb-2">Espacios en blanco detectados:</h6>`;
+  const blanksList = el("div", "gb-blanks-list small text-muted");
+  blanksSection.appendChild(blanksList);
 
-    // Estado actual de blanks (para restaurar al editar)
-    let currentBlanks = payload?.blanks || payload?.answers || {};
-    let currentTextWithPlaceholders = payload?.text || "";
+  // Caja para distractores
+  const distractorsBox = el("div", "mb-3");
+  const distractorsLabel = el("label", "form-label fw-bold", "Distractores adicionales (opcional)");
+  const distractorsHint = el(
+  "div",
+  "form-text mb-1",
+  "Escribe palabras o números separados por punto y coma (;). Puedes usar coma como decimal. Ej: 3,5; 2,75; 10; 0,5"
+  );
 
-    function updatePreview() {
-      const text = textArea.value || "";
-      const previewDiv = preview.querySelector(".cloze-preview");
-      const words = text.split(/(\s+)/);
+  const distractorsInput = el("textarea", "form-control form-control-sm");
+  distractorsInput.rows = 2;
+  distractorsInput.placeholder = "Ejemplo: Roma, París, Lima, Atlántico, Índico";
 
-      previewDiv.innerHTML = "";
-      blanksList.innerHTML = "";
+  distractorsBox.appendChild(distractorsLabel);
+  distractorsBox.appendChild(distractorsHint);
+  distractorsBox.appendChild(distractorsInput);
 
-      // cuántas veces debe marcarse cada respuesta
-      const counters = {};
-      if (currentBlanks && typeof currentBlanks === "object") {
-        Object.keys(currentBlanks).forEach((id) => {
-          const ans = (currentBlanks[id]?.answer || "").trim();
-          if (!ans) return;
-          counters[ans] = (counters[ans] || 0) + 1;
-        });
+  // Estado actual (cuando se edita)
+  let currentBlanks = payload?.blanks || payload?.answers || {};
+  let currentTextWithPlaceholders = payload?.text || "";
+  const savedDistractors = Array.isArray(payload?.distractors)
+    ? payload.distractors
+    : [];
+
+  function updatePreview() {
+    const text = textArea.value || "";
+    const previewDiv = preview.querySelector(".cloze-preview");
+    const words = text.split(/(\s+)/);
+
+    previewDiv.innerHTML = "";
+    blanksList.innerHTML = "";
+
+    // cuántas veces debe marcarse cada respuesta
+    const counters = {};
+    if (currentBlanks && typeof currentBlanks === "object") {
+      Object.keys(currentBlanks).forEach((id) => {
+        const ans = (currentBlanks[id]?.answer || "").trim();
+        if (!ans) return;
+        counters[ans] = (counters[ans] || 0) + 1;
+      });
+    }
+
+    words.forEach((word) => {
+      // espacios reales (saltos, etc.)
+      if (/^\s+$/.test(word)) {
+        previewDiv.appendChild(document.createTextNode(word));
+        return;
       }
 
-      words.forEach((word) => {
-        // espacios reales
-        if (/^\s+$/.test(word)) {
-          previewDiv.appendChild(document.createTextNode(word));
-          return;
-        }
+      const span = el("span", "cloze-word");
+      span.textContent = word;
+      span.style.cssText =
+        "cursor: pointer; padding: 4px 8px; border-radius: 8px; margin:2px; display:inline-block;";
 
-        const span = el("span", "cloze-word");
-        span.textContent = word;
-        span.style.cssText =
-          "cursor: pointer; padding: 4px 8px; border-radius: 8px; margin:2px; display:inline-block;";
+      // restaurar marcados según respuestas guardadas
+      if (counters[word] > 0) {
+        counters[word] -= 1;
+        span.classList.add("marked");
+        span.style.backgroundColor = "#ffc107";
+        span.style.fontWeight = "bold";
+      }
 
-        // restaurar marcados según respuestas guardadas
-        if (counters[word] > 0) {
-          counters[word] -= 1;
-          span.classList.add("marked");
+      // doble clic para marcar / desmarcar espacio
+      span.ondblclick = () => {
+        span.classList.toggle("marked");
+        if (span.classList.contains("marked")) {
           span.style.backgroundColor = "#ffc107";
           span.style.fontWeight = "bold";
+        } else {
+          span.style.backgroundColor = "";
+          span.style.fontWeight = "";
         }
+        sync();
+      };
 
-        span.ondblclick = () => {
-          span.classList.toggle("marked");
-          if (span.classList.contains("marked")) {
-            span.style.backgroundColor = "#ffc107";
-            span.style.fontWeight = "bold";
-          } else {
-            span.style.backgroundColor = "";
-            span.style.fontWeight = "";
-          }
-          sync();
-        };
-
-        previewDiv.appendChild(span);
-      });
-
-      const marked = $$(".cloze-word.marked", previewDiv);
-      if (marked.length === 0) {
-        blanksList.innerHTML =
-          "<em>Haz doble clic en las palabras para marcarlas como espacios</em>";
-      } else {
-        blanksList.innerHTML =
-          `<strong>${marked.length} espacios:</strong> ` +
-          marked.map((s) => s.textContent).join(", ");
-      }
-    }
-
-    function sync() {
-      const previewDiv = preview.querySelector(".cloze-preview");
-      const marked = $$(".cloze-word.marked", previewDiv);
-      const blanks = {};
-
-      let textWithBlanks = textArea.value || "";
-
-      // Reemplazar cada palabra marcada por [[n]]
-      marked.forEach((span, i) => {
-        const word = span.textContent;
-        const key = String(i + 1);
-        blanks[key] = { answer: word, options: [word] };
-        // reemplaza solo la primera ocurrencia
-        textWithBlanks = textWithBlanks.replace(word, `[[${key}]]`);
-      });
-
-      currentBlanks = blanks;
-      currentTextWithPlaceholders = textWithBlanks;
-
-      setPayload(card, {
-        kind: "cloze",
-        text: textWithBlanks,
-        blanks,
-      });
-
-      updatePreview();
-    }
-
-    // Cargar existente
-    if (currentTextWithPlaceholders) {
-      // Reemplazar [[n]] por la respuesta guardada para mostrar texto plano
-      textArea.value = currentTextWithPlaceholders.replace(
-        /\[\[(\d+)\]\]/g,
-        (match, num) => currentBlanks[num]?.answer || "___",
-      );
-    } else {
-      textArea.value =
-        "La capital de Chile es Santiago.\nEl océano más grande es el Pacífico.";
-    }
-
-    textArea.addEventListener("input", () => {
-      // Si cambia el texto, se pierde el mapeo anterior de blanks
-      currentBlanks = {};
-      currentTextWithPlaceholders = "";
-      updatePreview();
+      previewDiv.appendChild(span);
     });
 
-    root.append(textArea, preview, blanksSection);
+    const marked = $$(".cloze-word.marked", previewDiv);
+    if (marked.length === 0) {
+      blanksList.innerHTML =
+        "<em>Haz doble clic en las palabras para marcarlas como espacios</em>";
+    } else {
+      blanksList.innerHTML =
+        `<strong>${marked.length} espacios:</strong> ` +
+        marked.map((s) => s.textContent).join(", ");
+    }
+  }
+
+  function sync() {
+    const previewDiv = preview.querySelector(".cloze-preview");
+    const marked = $$(".cloze-word.marked", previewDiv);
+    const blanks = {};
+
+    let textWithBlanks = textArea.value || "";
+
+    // Reemplazar cada palabra marcada por [[n]]
+    marked.forEach((span, i) => {
+      const word = span.textContent;
+      const key = String(i + 1);
+      blanks[key] = { answer: word }; 
+      // reemplaza solo la primera ocurrencia
+      textWithBlanks = textWithBlanks.replace(word, `[[${key}]]`);
+    });
+
+    // Construir banco: respuestas correctas + distractores escritos por el docente
+    const answers = Object.values(blanks)
+      .map((b) => (b.answer || "").trim())
+      .filter(Boolean);
+
+    const answerSet = new Set(answers);
+
+    // Ahora los distractores se separan por punto y coma (;) o salto de línea
+    const extraRaw = (distractorsInput.value || "")
+      .split(/;|\n/)
+      .map((w) => w.trim())
+      .filter(Boolean);
+
+
+    // quitar duplicados y evitar repetir respuestas correctas
+    const extraUnique = [...new Set(extraRaw)].filter(
+      (w) => !answerSet.has(w)
+    );
+
+    const bank = [...new Set([...answers, ...extraUnique])];
+
+    currentBlanks = blanks;
+    currentTextWithPlaceholders = textWithBlanks;
+
+    setPayload(card, {
+      kind: "cloze",
+      text: textWithBlanks,
+      blanks,
+      bank,             // usado por cloze.js
+      distractors: extraUnique, // para poder volver a editarlos en el builder
+    });
+
     updatePreview();
   }
+
+  // Cargar existente
+  if (currentTextWithPlaceholders) {
+    // Reemplazar [[n]] por la respuesta guardada para mostrar texto plano
+    textArea.value = currentTextWithPlaceholders.replace(
+      /\[\[(\d+)\]\]/g,
+      (match, num) => currentBlanks[num]?.answer || "___",
+    );
+  } else {
+    textArea.value =
+      "La capital de Chile es Santiago.\nEl océano más grande es el Pacífico.";
+  }
+
+  if (savedDistractors.length) {
+    distractorsInput.value = savedDistractors.join("; ");
+  }
+
+  textArea.addEventListener("input", () => {
+    // Si cambia el texto, se pierde el mapeo anterior de blanks
+    currentBlanks = {};
+    currentTextWithPlaceholders = "";
+    sync()
+  });
+
+  // cuando cambian los distractores, solo recalculamos el banco
+  distractorsInput.addEventListener("input", () => {
+    sync();
+  });
+
+  // Añadir al DOM (se respeta el bloque de instrucciones inicial)
+  root.append(textArea, preview, blanksSection, distractorsBox);
+  updatePreview();
+}
 
   // ========== MONTADOR PRINCIPAL ==========
   function mountOne(card) {
