@@ -95,7 +95,6 @@
 
   /* ====== MODALES RESPONSIVOS ====== */
 
-  /* Que todo modal tenga margen al rededor y nunca pegue al borde */
   .modal {
     padding: 1.25rem;
   }
@@ -104,7 +103,6 @@
     max-width: 600px;
     width: 100%;
     margin: 0 auto;
-    /* centrado horizontal */
   }
 
   /* Confirmación estándar */
@@ -128,19 +126,24 @@
   /* Ancho tipo tarjeta en todas las pantallas */
   #timoModal .modal-dialog {
     max-width: 480px;
+    width: 100%;
+    margin: 0 auto;
   }
 
-  /* Altura limitada SIEMPRE al viewport, scroll interno si hace falta */
+  /* Altura limitada al viewport + layout flex */
   #timoModal .modal-content {
-    max-height: calc(100vh - 2.5rem);
+    max-height: calc(100vh - 2rem);
     display: flex;
     flex-direction: column;
+    overflow: hidden; /* el body hace scroll */
   }
 
+  /* El body ocupa el espacio disponible y tiene scroll vertical */
   #timoModal .modal-body {
     padding: 1.5rem 1.5rem 1rem !important;
-    /* menos padding para bajar alto total */
-    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;         
+    overflow-y: auto;       
   }
 
   #timoModal .modal-footer {
@@ -149,15 +152,16 @@
     padding: 0 1.5rem 1.5rem !important;
   }
 
-  /* Video de Timo: se adapta al alto de la pantalla */
-  #timoVideo {
+   #timoVideo {
+    display: block;
     width: 100%;
-    max-width: 360px;
-    /* más pequeño también en escritorio */
-    max-height: 40vh;
-    /* nunca ocupa más del 40% del alto */
+    max-width: 100px;   
+    height: auto;
+    max-height: 10vh;   
+    object-fit: contain;
     border-radius: 18px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+    margin: 0 auto 0.5rem auto;  
   }
 
   @media (max-width: 768px) {
@@ -165,9 +169,9 @@
       padding: 1rem;
     }
 
-    .modal-dialog,
     #timoModal .modal-dialog {
       max-width: 100%;
+      margin: 0.75rem auto;  /* centrado y con margen arriba/abajo */
     }
   }
 
@@ -208,14 +212,12 @@
       <!-- Header de la actividad -->
       <div class="card mb-4"
         style="border: none; border-radius: 24px; overflow: hidden; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15); position: relative;">
-        <!-- Gradiente superior decorativo -->
         <div
           style="height: 6px; background: linear-gradient(90deg, #FF6B6B 0%, #FFD43B 25%, #51CF66 50%, #4DABF7 75%, #9775FA 100%);">
         </div>
 
         <div
           style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2.5rem 2rem; position: relative; overflow: hidden;">
-          <!-- Patrón decorativo de fondo -->
           <div
             style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.1; background-image: repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(255,255,255,0.1) 20px, rgba(255,255,255,0.1) 40px);">
           </div>
@@ -404,7 +406,7 @@
 
 <!-- Modal de Timo celebrando (se muestra al completar todos los ítems) -->
 <div class="modal fade" id="timoModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content" style="border-radius: 24px; border: none; overflow: hidden;">
       <div class="modal-header"
         style="border-bottom: none; background: linear-gradient(135deg, #4DABF7, #9775FA); color: white; padding: 1.5rem 1.75rem;">
@@ -422,20 +424,20 @@
           <strong>{{ total_items }}</strong> ítems.
         </p>
         <div class="mb-3">
-          <video id="timoVideo" src="{% static 'LevelUp/video/Timo_celebrando_animado.mp4' %}"
-            style="max-width:480px;width:100%;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.25);" muted loop
-            playsinline>
+          <video id="timoVideo"
+                 src="{% static 'LevelUp/video/Timo_celebrando_animado.mp4' %}"
+                 muted
+                 loop
+                 playsinline>
           </video>
         </div>
       </div>
       <div class="modal-footer justify-content-center" style="border-top: none; padding-bottom: 2rem;">
-        <!-- Cancelar: cierra el modal -->
         <button type="button" class="btn btn-secondary w-100 w-md-auto" data-bs-dismiss="modal"
           style="border-radius: 20px; padding: 0.75rem 1.8rem; font-weight: 700;">
           Cancelar
         </button>
 
-        <!-- Guardar y confirmar: finaliza el intento + va a resultados -->
         <button type="button" class="btn btn-primary w-100 w-md-auto" id="btnEnviarDesdeTimo"
           style="border-radius: 20px; padding: 0.9rem 2.2rem; font-weight: 800; font-size: 1.05rem; background: linear-gradient(135deg, #51CF66, #8ce99a); border: none;">
           💾 Guardar y enviar
@@ -500,7 +502,6 @@
       const cls = el.classList;
       if (!cls) continue;
 
-      // Sonido de error
       if (
         (cls.contains('btn-danger') ||
           cls.contains('incorrect') ||
@@ -512,7 +513,6 @@
         playSound('error');
       }
 
-      // Sonido de acierto
       if (
         (cls.contains('btn-success') ||
           cls.contains('correct') ||
@@ -591,9 +591,7 @@
         })
       });
 
-      if (res.ok) {
-        console.log('✅ [play.html] Submission finalizado correctamente');
-      } else {
+      if (!res.ok) {
         console.error('❌ [play.html] Error finalizando:', res.status);
       }
     } catch (err) {
@@ -608,7 +606,7 @@
     const itemCard = host.closest('.item-card');
     const itemId = itemCard.dataset.itemId;
 
-    const observer = new MutationObserver((mutations) => {
+    const observer = new MutationObserver(() => {
       if (host.dataset.gameComplete === 'true' && !itemCard.dataset.completed) {
         console.log(`✅ [play.html] Ítem ${idx + 1} (ID: ${itemId}) completado`);
 
@@ -650,7 +648,6 @@
       btnSubmit.style.display = '';
       btnSubmit.style.animation = 'bounce-in 0.6s ease-out';
 
-      // Mostrar modal de Timo solo una vez
       if (!timoShown) {
         timoShown = true;
         showTimoCelebracion();
@@ -671,8 +668,6 @@
       }
     };
 
-    console.log('  📦 [play.html] Payload:', payload);
-
     try {
       const csrftoken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
       const res = await fetch(`/api/actividades/${ACTIVIDAD_ID}/answer/${itemId}/`, {
@@ -686,8 +681,6 @@
 
       if (!res.ok) {
         console.error('❌ [play.html] Error guardando resultado:', res.status);
-        const text = await res.text();
-        console.error('  📄 [play.html] Response:', text);
       } else {
         const data = await res.json();
         console.log('✅ [play.html] Resultado guardado:', data);
@@ -715,12 +708,9 @@
 
     const confirmModalEl = document.getElementById('confirmModal');
     const confirmModal = bootstrap.Modal.getInstance(confirmModalEl);
-    if (confirmModal) {
-      confirmModal.hide();
-    }
+    if (confirmModal) confirmModal.hide();
 
     await finalizarIntento();
-    console.log('🔄 [play.html] Redirigiendo a resultados (desde confirmModal)...');
     window.location.href = `/actividades/estudiante/${ACTIVIDAD_ID}/resultado/`;
   });
 

@@ -25,17 +25,24 @@
                     <a href="{% url 'dashboard' %}"
                         class="navbar-admin-link d-flex align-items-center {% if current == 'dashboard' %}is-active{% endif %}">
                         <i class="bi bi-speedometer2 me-2"></i>
-                        <span>Panel</span>
+                        <span> Panel</span>
                     </a>
                 </li>
 
-                <!-- <li class="mt-1">
+                <li>
                     <a href="{% url 'perfil' %}"
-                        class="navbar-docente-link d-flex align-items-center {% if current == 'perfil' %}is-active{% endif %}">
+                        class="navbar-admin-link d-flex align-items-center {% if current == 'perfil' %}is-active{% endif %}">
                         <i class="bi bi-person me-2"></i>
                         <span>Perfil</span>
                     </a>
-                </li> -->
+                </li>
+                <li >
+                    <a href="{% url 'perfil_editar' %}"
+                        class="navbar-admin-link d-flex align-items-center {% if current == 'perfil_editar' %}is-active{% endif %}">
+                        <i class="bi bi-gear me-2"></i>
+                        <span>Configuración</span>
+                    </a>
+                </li>
 
                 <li>
                     <a href="{% url 'adm_list_profesores' %}"

@@ -63,6 +63,7 @@
 .portal-hero-content {
   position: relative;
   z-index: 2;
+  font-family: 'Merienda', cursive;
 }
 
 .portal-hero h1 {

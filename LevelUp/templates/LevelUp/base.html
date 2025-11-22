@@ -50,26 +50,39 @@
   {% block extra_head %}{% endblock %}
 </head>
 
+{# ================= BODY CON CLASE SEGÚN ROL ================= #}
+<body class="{% block body_class %}
+  {% if request.user.is_authenticated %}
+    {% with rol=request.user.rol|default_if_none:''|lower %}
+      {% if rol == 'docente' or request.user.es_docente %}
+        with-docente-navbar
+      {% elif rol == 'estudiante' or request.user.es_estudiante %}
+        with-estudiante-navbar
+      {% else %}
+        with-admin-navbar
+      {% endif %}
+    {% endwith %}
+  {% endif %}
+{% endblock %}">
 
-<body class="{% block body_class %}{% if request.user.is_authenticated %}{% if request.user.rol|default_if_none:''|lower == 'docente' or request.user.es_docente %}with-docente-navbar{% elif request.user.rol|default_if_none:''|lower == 'estudiante' or request.user.es_estudiante %}with-estudiante-navbar{% endif %}{% endif %}{% endblock %}">
   {% block navbar %}
   {% if request.user.is_authenticated %}
 
-  {# === ESTUDIANTE === #}
-  {% if request.user.rol|default_if_none:''|lower == 'estudiante' or request.user.es_estudiante %}
-    {% include "LevelUp/partials/navbar_estudiante.html" %}
+    {# === ESTUDIANTE === #}
+    {% if request.user.rol|default_if_none:''|lower == 'estudiante' or request.user.es_estudiante %}
+      {% include "LevelUp/partials/navbar_estudiante.html" %}
 
-  {# === DOCENTE === #}
-  {% elif request.user.rol|default_if_none:''|lower == 'docente' or request.user.es_docente %}
-    {% include "LevelUp/partials/navbar_docente.html" %}
+    {# === DOCENTE === #}
+    {% elif request.user.rol|default_if_none:''|lower == 'docente' or request.user.es_docente %}
+      {% include "LevelUp/partials/navbar_docente.html" %}
 
-  {# === ADMIN / OTROS ROLES -> NAVBAR GENERAL === #}
+    {# === ADMIN / OTROS ROLES === #}
+    {% else %}
+      {% include "LevelUp/partials/navbar_admin.html" %}
+    {% endif %}
+
   {% else %}
-    {% include "LevelUp/partials/navbar.html" %}
-  {% endif %}
-
-  {% else %}
-  {# Usuario no autenticado: navbar general #}
+    {# Usuario no autenticado: navbar general #}
     {% include "LevelUp/partials/navbar.html" %}
   {% endif %}
   {% endblock %}
@@ -115,7 +128,7 @@
       {% elif rol == 'docente' and url_name == 'portal_docente' %}
         {# Portal del docente: sin footer #}
       {% else %}
-        {# Otras vistas: con footer #}
+        {# Otras vistas (incluye admin): con footer #}
         {% include "LevelUp/partials/footer.html" %}
       {% endif %}
     {% endwith %}
@@ -132,7 +145,6 @@
   <!-- Tus scripts, después del bundle -->
   <script src="{% static 'LevelUp/js/script.js' %}?v=5"></script>
   <script src="{% static 'LevelUp/js/partials/navbar.js' %}?v=5"></script>
-  
   
   {# Limpieza de storage al estar deslogueado (por ejemplo, tras logout) #}
   {% if not request.user.is_authenticated %}
