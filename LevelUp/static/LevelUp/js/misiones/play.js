@@ -267,23 +267,34 @@ window.Play = (function () {
 
             // enemigos
             for (const e of enemies) {
-                if (e.alive) {
-                    if (imgEnemy) {
-                        ctx.save();
-                        if (e.dir < 0) { ctx.translate(e.x + e.w, e.y); ctx.scale(-1, 1); ctx.drawImage(imgEnemy, 0, 0, e.w, e.h); }
-                        else { ctx.drawImage(imgEnemy, e.x, e.y, e.w, e.h); }
-                        ctx.restore();
-                    } else {
-                        ctx.fillStyle = '#e74c3c'; ctx.fillRect(e.x | 0, e.y | 0, e.w, e.h);
-                    }
-                } else if (e.deadT < 22) {
-                    const k = Math.max(0, 1 - e.deadT / 20);
-                    const cx = e.x + e.w / 2, cy = e.y + e.h / 2;
-                    ctx.save(); ctx.translate(cx, cy); ctx.scale(k, k);
-                    if (imgEnemy) ctx.drawImage(imgEnemy, -e.w / 2, -e.h / 2, e.w, e.h);
-                    else { ctx.fillStyle = '#e74c3c'; ctx.fillRect(-e.w / 2, -e.h / 2, e.w, e.h); }
-                    ctx.restore();
+            if (e.alive) {
+                if (imgEnemy) {
+                ctx.save();
+
+                // dir > 0 para que el enemigo camine hacia la derecha
+                if (e.dir > 0) {
+                    // caminando a la derecha -> voltear imagen
+                    ctx.translate(e.x + e.w, e.y);
+                    ctx.scale(-1, 1);
+                    ctx.drawImage(imgEnemy, 0, 0, e.w, e.h);
+                } else {
+                    // caminando a la izquierda -> es igual a la dirección de la imagen
+                    ctx.drawImage(imgEnemy, e.x, e.y, e.w, e.h);
                 }
+
+                ctx.restore();
+                } else {
+                ctx.fillStyle = '#e74c3c';
+                ctx.fillRect(e.x | 0, e.y | 0, e.w, e.h);
+                }
+            } else if (e.deadT < 22) {
+                const k = Math.max(0, 1 - e.deadT / 20);
+                const cx = e.x + e.w / 2, cy = e.y + e.h / 2;
+                ctx.save(); ctx.translate(cx, cy); ctx.scale(k, k);
+                if (imgEnemy) ctx.drawImage(imgEnemy, -e.w / 2, -e.h / 2, e.w, e.h);
+                else { ctx.fillStyle = '#e74c3c'; ctx.fillRect(-e.w / 2, -e.h / 2, e.w, e.h); }
+                ctx.restore();
+            }
             }
 
             // jugador

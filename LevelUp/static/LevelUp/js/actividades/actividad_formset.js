@@ -1,13 +1,20 @@
-// static/LevelUp/js/actividad_formset.js - VERSIÓN CORREGIDA (guardado garantizado)
+// static/LevelUp/js/actividad_formset.js - VERSIÓN con límite para minijuego
 
 (function () {
     const byId = (id) => document.getElementById(id);
     const qs = (sel, root = document) => root.querySelector(sel);
     const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
+    // 🔢 máximo de ítems en modo minijuego (se puede sobreescribir desde el template)
+    let maxGameItems = 3;
+
     function currentMode() {
         const sel = byId("id_tipo");
         return sel && sel.value === "game" ? "game" : "quiz";
+    }
+
+    function countVisible(container) {
+        return qsa(".item-form:not([data-deleted='1'])", container).length;
     }
 
     // === Opciones por modo ===
@@ -61,6 +68,35 @@
         console.log(`📊 TOTAL_FORMS actualizado a: ${allCards.length}`);
     }
 
+    // 🔔 UI especial para modo minijuego (instrucciones y botón deshabilitado)
+    function updateGameModeUI(mode, container) {
+        const help = byId("game-mode-help");
+        const addBtn = byId("btn-add-item");
+
+        const visibles = container ? countVisible(container) : 0;
+
+        if (help) {
+            const spans = help.querySelectorAll('[data-role="game-max-enemies"]');
+            spans.forEach(s => s.textContent = String(maxGameItems));
+        }
+
+        if (mode === "game") {
+            if (help) help.classList.remove("d-none");
+            if (addBtn) {
+                addBtn.disabled = visibles >= maxGameItems;
+                addBtn.title = visibles >= maxGameItems
+                    ? `Ya creaste los ${maxGameItems} ítems (uno por cada enemigo).`
+                    : "";
+            }
+        } else {
+            if (help) help.classList.add("d-none");
+            if (addBtn) {
+                addBtn.disabled = false;
+                addBtn.title = "";
+            }
+        }
+    }
+
     // === DELETE seguro ===
     function markDeleted(card, container, itemId = null) {
         const del = qs("input[name$='-DELETE']", card);
@@ -81,6 +117,7 @@
         });
 
         renumberCards(container);
+        updateGameModeUI(currentMode(), container);
         console.log(`🗑 Ítem ${itemId || 'nuevo'} marcado para eliminación`);
     }
 
@@ -202,6 +239,16 @@
 
     // === Agregar ítem ===
     function addItem(container, mode, forceKind = null) {
+        // ⛔ Límite especial para minijuego
+        if (mode === "game") {
+            const visibles = countVisible(container);
+            if (visibles >= maxGameItems) {
+                alert(`Este minijuego tiene ${maxGameItems} enemigos.\nYa creaste un ítem por cada enemigo, no puedes agregar más.`);
+                updateGameModeUI(mode, container);
+                return;
+            }
+        }
+
         const tpl = byId("empty-form-template");
         if (!tpl) {
             console.error("❌ No se encontró #empty-form-template");
@@ -235,6 +282,7 @@
 
         wireCard(card, container);
         renumberCards(container);
+        updateGameModeUI(mode, container);
 
         document.dispatchEvent(new CustomEvent("formset:item-added", { detail: { node: card, index: idx } }));
         console.log(`✅ Ítem #${idx + 1} agregado correctamente`);
@@ -319,61 +367,72 @@
 
         console.log("🚀 Inicializando formset...");
 
-        // Reset DELETE y cablear tarjetas existentes
-        // Reset DELETE y cablear tarjetas existentes
-    qsa(".item-form", container).forEach((card, i) => {
-        const del = qs("input[name$='-DELETE']", card);
-        if (del) {
-            del.value = "";
-            del.checked = false;
-        }
-        delete card.dataset.deleted;
-
-        // Log IDs existentes
-        const anyInput = qs("input[name^='items-']", card);
-        if (anyInput) {
-            const m = anyInput.name.match(/items-(\d+)-/);
-            if (m) {
-                const index = m[1];
-                const idInput = qs(`input[name="items-${index}-id"]`, card);
-                if (idInput && idInput.value) {
-                    console.log(`📦 Ítem ${i + 1} (ID: ${idInput.value}) cargado`);
-                }
+        // Leer máximo de ítems desde el data-attribute (si existe)
+        const root = byId("items-formset");
+        if (root) {
+            const fromData = parseInt(root.dataset.gameMaxItems || "3", 10);
+            if (!isNaN(fromData) && fromData > 0) {
+                maxGameItems = fromData;
             }
         }
 
-        wireCard(card, container);
-    });
+        // Reset DELETE y cablear tarjetas existentes
+        qsa(".item-form", container).forEach((card, i) => {
+            const del = qs("input[name$='-DELETE']", card);
+            if (del) {
+                del.value = "";
+                del.checked = false;
+            }
+            delete card.dataset.deleted;
 
-    normalizeAll(container);
-
-    // Si ya está en modo "game" y no hay ítems visibles, crear 3 por defecto
-    if (currentMode() === "game" && !qsa(".item-form:not([data-deleted='1'])", container).length) {
-        addItem(container, "game", "trivia");
-        addItem(container, "game", "trivia");
-        addItem(container, "game", "trivia");
-    }
-
-    const tipoSel = byId("id_tipo");
-    if (tipoSel) {
-        tipoSel.addEventListener("change", () => {
-            const mode = currentMode();
-            normalizeAll(container);
-
-            if (mode === "game") {
-                const visibles = qsa(".item-form:not([data-deleted='1'])", container);
-                if (!visibles.length) {
-                    // 3 preguntas, una para cada enemigo
-                    addItem(container, "game", "trivia");
-                    addItem(container, "game", "trivia");
-                    addItem(container, "game", "trivia");
+            // Log IDs existentes
+            const anyInput = qs("input[name^='items-']", card);
+            if (anyInput) {
+                const m = anyInput.name.match(/items-(\d+)-/);
+                if (m) {
+                    const index = m[1];
+                    const idInput = qs(`input[name="items-${index}-id"]`, card);
+                    if (idInput && idInput.value) {
+                        console.log(`📦 Ítem ${i + 1} (ID: ${idInput.value}) cargado`);
+                    }
                 }
             }
+
+            wireCard(card, container);
         });
-    }
 
-    const btnAdd = byId("btn-add-item");
-    if (btnAdd) btnAdd.addEventListener("click", () => addItem(container, currentMode()));
+        normalizeAll(container);
+
+        // Si ya está en modo "game" y no hay ítems visibles, crear 3 por defecto
+        if (currentMode() === "game" && !qsa(".item-form:not([data-deleted='1'])", container).length) {
+            addItem(container, "game", "trivia");
+            addItem(container, "game", "trivia");
+            addItem(container, "game", "trivia");
+        }
+
+        updateGameModeUI(currentMode(), container);
+
+        const tipoSel = byId("id_tipo");
+        if (tipoSel) {
+            tipoSel.addEventListener("change", () => {
+                const mode = currentMode();
+                normalizeAll(container);
+
+                if (mode === "game") {
+                    const visibles = qsa(".item-form:not([data-deleted='1'])", container);
+                    if (!visibles.length) {
+                        // 3 preguntas, una para cada enemigo
+                        addItem(container, "game", "trivia");
+                        addItem(container, "game", "trivia");
+                        addItem(container, "game", "trivia");
+                    }
+                }
+                updateGameModeUI(mode, container);
+            });
+        }
+
+        const btnAdd = byId("btn-add-item");
+        if (btnAdd) btnAdd.addEventListener("click", () => addItem(container, currentMode()));
 
         // Validación y debug al enviar
         const form = byId("actividad-form");

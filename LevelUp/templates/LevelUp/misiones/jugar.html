@@ -46,54 +46,138 @@
       display: none;
       align-items: center;
       justify-content: center;
-      background: rgba(0, 0, 0, .5);
-      z-index: 9000
+      background: radial-gradient(80% 80% at 50% 30%,
+          rgba(0, 0, 0, .25),
+          rgba(0, 0, 0, .8));
+      z-index: 9000;
     }
 
     .ask.show {
-      display: flex
+      display: flex;
     }
 
     .ask-card {
-      min-width: 280px;
-      max-width: 520px;
-      background: #fff;
-      color: #111;
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, .4);
-      font: 14px/1.35 system-ui
+      min-width: min(320px, 90vw);
+      max-width: min(540px, 92vw);
+      background:
+        radial-gradient(130% 130% at 0% 0%, #ffffff, #f1f5ff);
+      color: #111827;
+      border-radius: 24px;
+      padding: 18px 20px 16px;
+      box-shadow: 0 16px 40px rgba(15, 23, 42, .45);
+      font: 15px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      border: 2px solid rgba(59, 130, 246, .18);
+      position: relative;
+      transform: translateY(10px) scale(.94);
+      opacity: 0;
+      animation: ask-pop .18s ease-out forwards;
+    }
+
+    @keyframes ask-pop {
+      from {
+        opacity: 0;
+        transform: translateY(14px) scale(.9);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .ask-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .ask-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 30% 0%, #fef3c7, #facc15);
+      box-shadow: 0 4px 10px rgba(251, 191, 36, .6);
+      font-weight: 800;
+      color: #1f2937;
+      font-size: 20px;
+    }
+
+    .ask-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-weight: 700;
+      color: #6b7280;
+      display: block;
     }
 
     .ask-card h3 {
-      margin: 0 0 10px;
-      font-size: 18px
+      margin: 2px 0 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
     }
 
+    .ask-ops,
     .ask-card .ops {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+      gap: 10px;
     }
 
     .ask-card button {
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid #444;
-      background: #f7f7f7;
-      cursor: pointer
+      padding: 9px 11px;
+      border-radius: 999px;
+      border: none;
+      background: #e5e7eb;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, .12);
+      transition:
+        transform .08s ease-out,
+        box-shadow .08s ease-out,
+        background .12s ease-out,
+        color .12s ease-out;
+      white-space: nowrap;
+    }
+
+    .ask-card button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, .15);
+    }
+
+    .ask-card button:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, .12);
     }
 
     .ask-card button.ok {
-      background: #16a34a;
-      color: #fff;
-      border-color: #16a34a
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(22, 163, 74, .45);
     }
 
     .ask-card button.bad {
-      background: #ef4444;
-      color: #fff;
-      border-color: #ef4444
+      background: linear-gradient(135deg, #f97373, #ef4444);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(248, 113, 113, .45);
+    }
+
+    @media (max-width: 480px) {
+      .ask-card {
+        padding: 16px 14px 14px;
+        border-radius: 20px;
+      }
+
+      .ask-card h3 {
+        font-size: 16px;
+      }
     }
 
     /* Menús */
@@ -166,6 +250,11 @@
       z-index: 12000
     }
   </style>
+
+  <!-- Favicon -->
+  <link rel="icon" href="{% static 'LevelUp/img/logo.png' %}" type="image/x-icon">
+  <link rel="shortcut icon" href="{% static 'LevelUp/img/logo.png' %}" type="image/x-icon">
+
 </head>
 
 <body>
@@ -397,17 +486,15 @@
       // Entidades + preguntas
       let spawn = null; const coins = []; const enemies = [];
 
-      // 🔸 Importante: conservar `questions` si viene como paquete (varias preguntas)
       let questions = Array.isArray(map.questions)
         ? map.questions.map((q, i) => {
             const id = (q && q.id != null) ? q.id : (10000 + i);
 
-            // Si ya viene como { id, questions:[...] } lo dejamos tal cual
             if (Array.isArray(q.questions) && q.questions.length) {
               return { ...q, id };
             }
 
-            // Caso simple: solo una pregunta
+            // En caso de solo una pregunta
             const opts = Array.isArray(q.options) && q.options.length >= 2
               ? q.options
               : [q.a1, q.a2, q.a3, q.a4].filter(Boolean);
@@ -526,27 +613,46 @@
     const ASK = (() => {
       const wrap = document.createElement('div');
       wrap.className = 'ask';
-      wrap.innerHTML = '<div class="ask-card"><h3 id="askQ"></h3><div class="ops" id="askOps"></div></div>';
+
+      // Tarjeta más visual
+      wrap.innerHTML = `
+        <div class="ask-card">
+          <div class="ask-header">
+            <div class="ask-icon">?</div>
+            <div class="ask-titles">
+              <span class="ask-label">Pregunta del villano</span>
+              <h3 id="askQ"></h3>
+            </div>
+          </div>
+          <div class="ask-ops" id="askOps"></div>
+        </div>
+      `;
+
       document.body.appendChild(wrap);
 
       function open(q, ops, correctIdx, onOk, onBad) {
-        document.getElementById('askQ').textContent = q;
+        const qEl = document.getElementById('askQ');
         const box = document.getElementById('askOps');
+        if (!qEl || !box) return;
+
+        qEl.textContent = q;
         box.innerHTML = '';
 
         ops.forEach((t, i) => {
           const b = document.createElement('button');
+          b.type = 'button';
           b.textContent = t;
-          b.onclick = () => {
+
+          b.addEventListener('click', () => {
             if (i === correctIdx) {
               b.classList.add('ok');
-              // 👇 ahora NO cerramos aquí; decide el caller
               onOk && onOk();
             } else {
               b.classList.add('bad');
               onBad && onBad();
             }
-          };
+          });
+
           box.appendChild(b);
         });
 
@@ -656,14 +762,14 @@
           idx += 1;
           showCurrent();
         } else {
-          // última pregunta → ahora sí se cierra y se mata al enemigo
+          // última pregunta -> se cierra y elimina al enemigo
           ASK.close();
           if (typeof onEnemyOk === "function") onEnemyOk();
         }
       }
 
       function handleBad() {
-        // error → solo feedback al motor; la pregunta queda abierta
+        // error -> solo feedback al motor; la pregunta queda abierta
         if (typeof onEnemyBad === "function") onEnemyBad();
       }
 
@@ -686,7 +792,7 @@
       const jumpDown = () => { press('Space', ' '); press('ArrowUp', 'ArrowUp'); };
       const jumpUp = () => { release('Space', ' '); release('ArrowUp', 'ArrowUp'); };
 
-      /* ======= ESTILOS (incluye botón de salto “redondo negro + anillo dorado”) ======= */
+      /* ======= ESTILOS (incluye botón de salto) ======= */
       const style = document.createElement('style');
       style.textContent = `
         .mc-wrap{position:fixed;inset:0;pointer-events:none;z-index:12000}

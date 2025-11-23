@@ -94,7 +94,7 @@
 
           <div class="row g-3 mb-3">
           
-            <!-- Columna izquierda: Intentos + Ilimitado -->
+            <!-- Intentos + Ilimitado -->
             <div class="col-12 col-md-6">
               <label class="form-label fw-bold d-block">🔄 Intentos
                 <span class="text-muted small">(obligatorio si no es ilimitado)</span>
@@ -123,7 +123,7 @@
               {% endif %}
             </div>
           
-            <!-- Columna derecha: Fecha cierre + Publicada -->
+            <!-- Fecha cierre + Publicada -->
             <div class="col-12 col-md-6">
               <label class="form-label fw-bold">📅 Fecha cierre
                 <span class="text-muted small">(opcional)</span>
@@ -154,7 +154,10 @@
         <div class="card p-4">
 
           {% with act_tipo=form.instance.tipo %}
-          <div id="items-formset" data-actividad-tipo="{{ act_tipo|default:'quiz' }}">
+          {# 🔹 añadimos data-game-max-items (por defecto 3) #}
+          <div id="items-formset"
+               data-actividad-tipo="{{ act_tipo|default:'quiz' }}"
+               data-game-max-items="{{ game_max_enemies|default:3 }}">
 
             <div class="alert alert-info">
               <strong>💡 Instrucciones:</strong>
@@ -162,6 +165,27 @@
               <div class="small text-muted mt-1">
                 En cada ítem, el <strong>Enunciado</strong> es
                 <span class="text-danger">obligatorio</span> si el ítem tiene contenido.
+              </div>
+            </div>
+
+            {# AVISO PARA MINIJUEGO (visible solo cuando tipo = game) #}
+            <div id="game-mode-help"
+                class="alert alert-warning d-flex align-items-start gap-2 mb-3 d-none">
+              <div class="fs-4">🎮</div>
+              <div>
+                <strong>Minijuego:</strong> Este nivel tiene
+                <span data-role="game-max-enemies">{{ game_max_enemies|default:3 }}</span> enemigos.
+                <br>
+                Debes crear <strong>un ítem por cada enemigo</strong>
+                (<span data-role="game-max-enemies">{{ game_max_enemies|default:3 }}</span> ítems en total)
+                y en cada ítem puedes agregar <strong>todas las preguntas que quieras</strong>
+                para ese mismo enemigo.
+                <br>
+                El sistema no te dejará crear más de esos
+                <span data-role="game-max-enemies">{{ game_max_enemies|default:3 }}</span> ítems.
+                <br>
+                <strong>Si no agregas ningún ítem, se cargará una pregunta por defecto:
+                  “¿Cuánto es 2 + 2?”</strong>
               </div>
             </div>
 
@@ -439,7 +463,7 @@
       if (titulo && !titulo.value.trim()) { hasErrors = true; firstError = firstError || titulo; }
       if (tipo && !tipo.value) { hasErrors = true; firstError = firstError || tipo; }
 
-      // Intentos: si NO es ilimitado, exigir 1..1000
+      // Intentos: si NO es ilimitado, exigir 1-1000
       if (!cbIlimitado?.checked && inpMax) {
         const v = String(inpMax.value || '').trim();
         const n = Number(v);
