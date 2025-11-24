@@ -5,7 +5,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'LevelUp/css/games.css' %}">
 <style>
-  /* ====== TARJETAS DE ÍTEM (igual que antes) ====== */
+  /* ====== TARJETAS DE ÍTEM ====== */
   .item-card {
     border: none !important;
     border-radius: 24px !important;
@@ -93,107 +93,153 @@
     }
   }
 
-  /* ====== MODALES RESPONSIVOS ====== */
+/* ====== MODALES RESPONSIVOS ====== */
 
+/* Modal genérico */
+.modal {
+  padding: 1.25rem;
+}
+
+.modal-dialog {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* ====== MODAL CONFIRMAR ENVÍO ====== */
+
+#confirmModal .modal-content {
+  max-height: calc(100vh - 2.5rem);
+  display: flex;
+  flex-direction: column;
+}
+
+#confirmModal .modal-body {
+  overflow-y: auto;
+}
+
+#confirmModal .modal-footer {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* ====== MODAL TIMO CELEBRANDO ====== */
+
+#timoModal .modal-dialog {
+  max-width: 420px;
+  width: calc(100% - 2rem);
+  margin: 0.75rem auto;
+}
+
+#timoModal .modal-content {
+  max-height: calc(100vh - 2rem);   /* no pasa el alto de la pantalla */
+  display: flex;
+  flex-direction: column;
+}
+
+#timoModal .modal-header,
+#timoModal .modal-footer {
+  flex-shrink: 0;
+}
+
+#timoModal .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 1.5rem 1.25rem 1.25rem !important;
+  overflow-y: auto;                  /* si no cabe, scroll vertical */
+  overflow-x: hidden;
+  text-align: center;
+}
+
+#timoModal .modal-footer {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0 1.25rem 1.75rem !important;
+}
+
+/* ====== VIDEO TIMO: TAMAÑO FIJO CHIQUITO ====== */
+
+#timoVideo {
+  display: block;
+  margin: 0 auto 0.75rem auto;
+
+  width: 200px !important;
+  max-width: 70% !important;
+  height: auto !important;
+  max-height: 220px !important;
+
+  object-fit: contain;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+/* ====== BREAKPOINTS ====== */
+
+@media (max-width: 768px) {
   .modal {
-    padding: 1.25rem;
+    padding: 0.75rem;
   }
 
-  .modal-dialog {
-    max-width: 600px;
-    width: 100%;
-    margin: 0 auto;
-  }
-
-  /* Confirmación estándar */
-  #confirmModal .modal-content {
-    max-height: calc(100vh - 2.5rem);
-    display: flex;
-    flex-direction: column;
-  }
-
-  #confirmModal .modal-body {
-    overflow-y: auto;
-  }
-
-  #confirmModal .modal-footer {
-    flex-wrap: wrap;
-    gap: 0.75rem;
-  }
-
-  /* ====== MODAL DE TIMO SUPER RESPONSIVO ====== */
-
-  /* Ancho tipo tarjeta en todas las pantallas */
   #timoModal .modal-dialog {
-    max-width: 480px;
     width: 100%;
-    margin: 0 auto;
+    max-width: 100%;
+    margin: 0.5rem auto;
+  }
+}
+
+@media (max-width: 576px) {
+  #timoModal .modal-title {
+    font-size: 1.25rem !important;
   }
 
-  /* Altura limitada al viewport + layout flex */
-  #timoModal .modal-content {
-    max-height: calc(100vh - 2rem);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; /* el body hace scroll */
-  }
-
-  /* El body ocupa el espacio disponible y tiene scroll vertical */
   #timoModal .modal-body {
-    padding: 1.5rem 1.5rem 1rem !important;
-    flex: 1 1 auto;
-    min-height: 0;         
-    overflow-y: auto;       
+    padding: 1.25rem 1rem 1rem !important;
+  }
+
+  #timoModal .modal-footer .btn,
+  #confirmModal .modal-footer .btn {
+    width: 100%;
+  }
+}
+
+@media (max-height: 600px) {
+  #timoVideo {
+    width: 130px !important;
+    max-height: 140px !important;
+  }
+}
+
+/* ------- Ajustes para tablets y móviles ------- */
+@media (max-width: 768px) {
+  .modal {
+    padding: 0.75rem;
+  }
+
+  #timoModal .modal-dialog {
+    max-width: 100%;
+    margin: 0.75rem auto;
+  }
+}
+
+@media (max-width: 576px) {
+  #timoModal .modal-body {
+    padding: 1.25rem 1rem 1rem !important;
+  }
+
+  #timoModal .modal-title {
+    font-size: 1.25rem !important;
+  }
+
+  /* Botones a ancho completo en móviles */
+  #confirmModal .modal-footer .btn,
+  #timoModal .modal-footer .btn {
+    width: 100%;
   }
 
   #timoModal .modal-footer {
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    padding: 0 1.5rem 1.5rem !important;
+    padding: 0 1rem 1.25rem !important;
   }
-
-   #timoVideo {
-    display: block;
-    width: 100%;
-    max-width: 100px;   
-    height: auto;
-    max-height: 10vh;   
-    object-fit: contain;
-    border-radius: 18px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
-    margin: 0 auto 0.5rem auto;  
-  }
-
-  @media (max-width: 768px) {
-    .modal {
-      padding: 1rem;
-    }
-
-    #timoModal .modal-dialog {
-      max-width: 100%;
-      margin: 0.75rem auto;  /* centrado y con margen arriba/abajo */
-    }
-  }
-
-  @media (max-width: 576px) {
-    #timoModal .modal-body {
-      padding: 1.25rem 1rem 1rem !important;
-    }
-
-    #timoModal .modal-title {
-      font-size: 1.25rem !important;
-    }
-
-    /* Botones a ancho completo en móviles */
-    #confirmModal .modal-footer .btn,
-    #timoModal .modal-footer .btn {
-      width: 100%;
-    }
-
-    #timoModal .modal-footer {
-      padding: 0 1rem 1.25rem !important;
-    }
-  }
+}
 </style>
 {% endblock %}
 
@@ -377,7 +423,7 @@
 
 <!-- Modal de confirmación (para enviar actividad) -->
 <div class="modal fade" id="confirmModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+  <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content" style="border-radius: 20px; border: none; overflow: hidden;">
       <div class="modal-header"
         style="border-bottom: 3px solid #e9ecef; background: linear-gradient(135deg, #f8f9fa, #e9ecef); padding: 1.5rem;">
@@ -406,8 +452,8 @@
 
 <!-- Modal de Timo celebrando (se muestra al completar todos los ítems) -->
 <div class="modal fade" id="timoModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content" style="border-radius: 24px; border: none; overflow: hidden;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 24px; border: none;">
       <div class="modal-header"
         style="border-bottom: none; background: linear-gradient(135deg, #4DABF7, #9775FA); color: white; padding: 1.5rem 1.75rem;">
         <h5 class="modal-title" style="font-weight: 900; font-size: 1.5rem;">
@@ -415,7 +461,7 @@
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body text-center" style="padding: 2rem 2.5rem 1.75rem;">
+      <div class="modal-body text-center">
         <p style="font-size: 1.1rem; font-weight: 600; color: #495057; margin-bottom: 0.75rem;">
           ¡Timo está muy orgulloso de tu esfuerzo! 🦦✨
         </p>
@@ -428,7 +474,8 @@
                  src="{% static 'LevelUp/video/Timo_celebrando_animado.mp4' %}"
                  muted
                  loop
-                 playsinline>
+                 playsinline
+                 style="display:block;width:200px;max-width:70%;max-height:220px;height:auto;margin:0 auto;">
           </video>
         </div>
       </div>
