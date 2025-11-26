@@ -2119,7 +2119,7 @@ def api_item_answer(request, pk, item_id):
             actividad=actividad,
             estudiante=estudiante,
             intento=intentos_count + 1,
-            started_at=timezone.now()
+            iniciado_en=timezone.now(),
         )
         print(f"✅ Nuevo submission creado: #{sub.pk}")
     else:
@@ -2131,9 +2131,16 @@ def api_item_answer(request, pk, item_id):
     if item_id == 0 or str(item_id) == "0":
         print(f"🏁 Finalizando submission...")
         sub.finalizado = True
-        sub.finished_at = timezone.now()
+        sub.enviado_en = timezone.now()  
         sub.save()
         print(f"✅ Submission finalizado")
+
+        try:
+            perfil = obtener_o_crear_perfil(request.user)
+            perfil.registrar_actividad_completada()
+            print(f"🎯 Actividades completadas ahora: {perfil.actividades_completadas}")
+        except Exception as e:
+            print(f"⚠️ Error registrando actividad completada en gamificación: {e}")
 
         try:
             nuevos_logros = evaluar_logros_por_actividad(
@@ -2232,24 +2239,23 @@ def api_item_answer(request, pk, item_id):
     else:
         print(f"✅ Answer creado: #{answer.pk}")
 
-    # Actualizar score del submission (si tiene esos campos)
     total_correctas = meta.get('correctas', 0)
     total_incorrectas = meta.get('misses', 0)
-    
+
     if hasattr(sub, 'score'):
         sub.score = (sub.score or 0) + (total_correctas * 10)
     if hasattr(sub, 'correctas'):
         sub.correctas = (sub.correctas or 0) + total_correctas
     if hasattr(sub, 'incorrectas'):
         sub.incorrectas = (sub.incorrectas or 0) + total_incorrectas
-    
-    sub.finished_at = timezone.now()
+
+    sub.enviado_en = timezone.now()
     sub.save()
-    
+
     print(f"✅ Submission actualizado")
 
     # ----------------------------------
-    # RECOMPENSAS + XP DE GAMIFICACIÓN
+    # RECOMPENSAS 
     # ----------------------------------
     try:
         # 1) Rewards propios del minijuego (coins, etc.)
@@ -2260,19 +2266,23 @@ def api_item_answer(request, pk, item_id):
 
         # 2) XP → PerfilGamificacion (barra y nivel)
         try:
-            perfil = obtener_o_crear_perfil(request.user)
-            gamif_info = perfil.agregar_xp(
-                outcome.xp or 0,
+            gamif_info = registrar_actividad_completada(
+                request.user,
+                xp_ganada=outcome.xp or 0,
                 origen="juego",
                 referencia_id=actividad.pk,
             )
-            print(f"🆙 Gamificación: +{gamif_info['xp_ganada']} XP, niveles_subidos={gamif_info['niveles_subidos']}")
+            print(
+                f"🆙 Gamificación: +{outcome.xp or 0} XP, "
+                f"niveles_subidos={gamif_info['niveles_subidos']}, "
+                f"actividades_completadas={gamif_info['actividades_completadas']}"
+            )
         except Exception as e:
-            print(f"⚠️ Error sumando XP en gamificación: {e}")
+            print(f"⚠️ Error sumando XP / actividades en gamificación: {e}")
             gamif_info = {
-                "xp_ganada": 0,
+                "nivel_actual": 0,
                 "niveles_subidos": 0,
-                "recompensas_nuevas": [],
+                "actividades_completadas": 0,
             }
 
         reward_data = {

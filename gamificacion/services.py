@@ -182,7 +182,7 @@ def evaluar_logros_por_actividad(
                 actividad=actividad,
                 finalizado=True,
             )
-            .order_by("-finished_at")
+            .order_by("-enviado_en")
             .first()
         )
 
@@ -198,7 +198,7 @@ def evaluar_logros_por_actividad(
     ultimas = list(
         Submission.objects
         .filter(estudiante=estudiante, finalizado=True)
-        .order_by("-finished_at")[:3]
+        .order_by("-enviado_en")[:3]
     )
     if len(ultimas) == 3:
         todas_perfectas = True
