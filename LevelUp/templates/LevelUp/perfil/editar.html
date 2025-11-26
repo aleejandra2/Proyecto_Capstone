@@ -1,86 +1,602 @@
 {% extends "LevelUp/base.html" %}
 {% load form_extras %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+  :root {
+    --primary: #6366f1;
+    --primary-dark: #4f46e5;
+    --secondary: #a855f7;
+    --accent: #f973af;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+
+    --bg-card: #ffffff;
+    --bg-soft: #f3f4ff;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --border-soft: #e5e7eb;
+  }
+
+  /* Fondo blanco en toda la vista */
+  body {
+    background: #ffffff;
+  }
+
+  main {
+    background: #ffffff !important;
+  }
+
+  .edit-profile-container {
+    max-width: 900px;
+    margin: 2rem auto 3rem;
+    padding: 0 1rem 3rem;
+  }
+
+  /* Header del formulario */
+  .edit-header {
+    background: #f9f5ff;
+    border-radius: 20px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 1.5rem;
+    border: 2px solid var(--secondary);
+    /* borde de color */
+  }
+
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .header-title-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .header-icon {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    color: #fff;
+  }
+
+  .header-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .header-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0.25rem 0 0;
+  }
+
+  .btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.3rem;
+    background: #f3f4ff;
+    color: var(--primary-dark);
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+    border: 1px solid #c7d2fe;
+    font-size: 0.9rem;
+    transition: all 0.15s;
+  }
+
+  .btn-back:hover {
+    background: #e5e7ff;
+    transform: translateX(-2px);
+  }
+
+  /* CARD PRINCIPAL DEL FORMULARIO */
+  .form-card {
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 2.2rem 2.5rem 2.4rem;
+    border: 2px solid var(--primary);
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  }
+
+  .form-section {
+    margin-bottom: 2rem;
+  }
+
+  .section-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .section-icon {
+    font-size: 1.2rem;
+    color: var(--primary);
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.2rem 1.5rem;
+  }
+
+  .form-group {
+    margin-bottom: 0;
+  }
+
+  .form-label-modern {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.45rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .required-indicator {
+    color: var(--danger);
+    margin-left: 0.2rem;
+  }
+
+  .input-with-icon {
+    position: relative;
+  }
+
+  .field-icon {
+    position: absolute;
+    left: 0.9rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    color: #9ca3af;
+  }
+
+  .form-control-modern {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    background: var(--bg-soft);
+    border-radius: 12px;
+    border: 1px solid var(--border-soft);
+    color: var(--text-primary);
+    font-size: 0.98rem;
+    transition: all 0.15s;
+  }
+
+  .input-with-icon .form-control-modern {
+    padding-left: 2.5rem;
+  }
+
+  .form-control-modern:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.25);
+  }
+
+  .form-control-modern:disabled {
+    opacity: 0.9;
+    cursor: not-allowed;
+    background: #f3f4f6;
+  }
+
+  .form-control-modern.is-invalid {
+    border-color: var(--danger);
+  }
+
+  .form-control-modern.is-invalid:focus {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+  }
+
+  .invalid-feedback {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.45rem;
+    font-size: 0.8rem;
+    color: var(--danger);
+  }
+
+  .invalid-feedback::before {
+    content: "⚠️";
+  }
+
+  .form-text {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  .form-text::before {
+    content: "ℹ️";
+  }
+
+  /* RUT bloqueado */
+  .disabled-field-wrapper {
+    position: relative;
+  }
+
+  .info-tooltip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: #e5e7ff;
+    border-radius: 50%;
+    font-size: 0.72rem;
+    color: var(--primary-dark);
+    cursor: help;
+    margin-left: 0.35rem;
+  }
+
+  .info-tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111827;
+    color: #f9fafb;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    z-index: 10;
+  }
+
+  /* Alertas */
+  .alert-modern {
+    padding: 1rem 1.25rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    border: 1px solid;
+  }
+
+
+  .alert-danger {
+    background: #fef2f2;
+    border-color: var(--danger);
+    color: #b91c1c;
+  }
+
+  .alert-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .form-row.rut-row {
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .rut-group {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .rut-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.45rem;
+  }
+
+  .disabled-badge {
+    position: static;
+    background: linear-gradient(135deg, #f97316, #fbbf24);
+    color: #fff;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+
+  /* Botones */
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    padding-top: 1.7rem;
+    border-top: 1px solid #e5e7eb;
+    margin-top: 1.5rem;
+  }
+
+  .btn-modern {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.8rem 1.9rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.92rem;
+    transition: all 0.15s;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+  }
+
+  .btn-primary-modern {
+    background: linear-gradient(135deg, var(--secondary), var(--primary));
+    color: #ffffff;
+  }
+
+  .btn-primary-modern:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(129, 140, 248, 0.5);
+  }
+
+  .btn-secondary-modern {
+    background: #f3f4ff;
+    color: var(--text-primary);
+    border: 1px solid #d4d7ff;
+  }
+
+  .btn-secondary-modern:hover {
+    background: #e5e7ff;
+  }
+
+  @keyframes pulse {
+
+    0%,
+    100% {
+      opacity: 0.7;
+    }
+
+    50% {
+      opacity: 1;
+    }
+  }
+
+  .btn-primary-modern:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .edit-profile-container {
+      margin-top: 1.5rem;
+      padding: 0 0.8rem 2.5rem;
+    }
+
+    .edit-header {
+      padding: 1.3rem 1.4rem;
+    }
+
+    .header-content {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .btn-back {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .form-card {
+      padding: 1.8rem 1.5rem 2.1rem;
+    }
+
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+      flex-direction: column-reverse;
+      align-items: stretch;
+    }
+
+    .btn-modern {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block title %}Editar Perfil · LevelUp{% endblock %}
 
 {% block content %}
-<main class="py-4">
-  <div class="container">
-
-    <!-- Header -->
-    <div class="card mb-3">
-      <div class="card-body d-flex justify-content-between align-items-center">
-        <h1 class="h4 m-0">Editar perfil</h1>
-        <a class="btn btn-outline-secondary" href="{% url 'perfil' %}">← Volver</a>
+<div class="edit-profile-container">
+  <!-- Header -->
+  <div class="edit-header">
+    <div class="header-content">
+      <div class="header-title-section">
+        <div class="header-icon">✏️</div>
+        <div>
+          <h1 class="header-title">Editar perfil</h1>
+          <p class="header-subtitle">Actualiza tu información personal</p>
+        </div>
       </div>
+      <a class="btn-back" href="{% url 'perfil' %}">
+        <span>←</span>
+        Volver
+      </a>
     </div>
+  </div>
 
-    <!-- Formulario -->
-    <div class="card">
-      <div class="card-body">
-        <form method="post" novalidate>
-          {% csrf_token %}
+  <!-- Formulario -->
+  <div class="form-card">
+    <form method="post" novalidate id="editProfileForm">
+      {% csrf_token %}
 
-          {% if form.non_field_errors %}
-          <div class="alert alert-danger mb-3">
-            {{ form.non_field_errors|striptags }}
-          </div>
-          {% endif %}
-
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label for="{{ form.first_name.id_for_label }}" class="form-label">Nombre</label>
-              {% if form.first_name.errors %}
-              {{ form.first_name|add_class:"form-control is-invalid" }}
-              <div class="invalid-feedback">
-                {{ form.first_name.errors|striptags }}
-              </div>
-              {% else %}
-              {{ form.first_name|add_class:"form-control" }}
-              {% endif %}
-            </div>
-
-            <div class="col-md-6">
-              <label for="{{ form.last_name.id_for_label }}" class="form-label">Apellido</label>
-              {% if form.last_name.errors %}
-              {{ form.last_name|add_class:"form-control is-invalid" }}
-              <div class="invalid-feedback">
-                {{ form.last_name.errors|striptags }}
-              </div>
-              {% else %}
-              {{ form.last_name|add_class:"form-control" }}
-              {% endif %}
-            </div>
-
-            <!-- RUT: visible, deshabilitado -->
-            <div class="col-12">
-              <label class="form-label">RUT</label>
-              {# El campo ya está disabled en el ProfileForm; aquí solo aseguramos la clase #}
-              {{ form.rut|add_class:"form-control" }}
-              <!-- <div class="form-text">El RUT no se puede modificar. Contacta al administrador si necesitas un cambio.</div> -->
-            </div>
-
-            <div class="col-12">
-              <label for "{{ form.email.id_for_label }}" class="form-label">Email</label>
-              {% if form.email.errors %}
-              {{ form.email|add_class:"form-control is-invalid" }}
-              <div class="invalid-feedback">
-                {{ form.email.errors|striptags }}
-              </div>
-              {% else %}
-              {{ form.email|add_class:"form-control" }}
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="d-flex justify-content-end mt-4">
-            <button type="submit" class="btn btn-primary">Guardar cambios</button>
-          </div>
-        </form>
+      {% if form.non_field_errors %}
+      <div class="alert-modern alert-danger">
+        <span class="alert-icon">❌</span>
+        <div>{{ form.non_field_errors|striptags }}</div>
       </div>
-    </div>
+      {% endif %}
+
+      {# ================= INFORMACIÓN PERSONAL ================= #}
+      <div class="form-section">
+        <h2 class="section-title">
+          <span class="section-icon">👤</span>
+          Información personal
+        </h2>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label-modern">
+              Nombre
+            </label>
+            <div class="input-with-icon">
+              <span class="field-icon">🪪</span>
+              {# visible solo lectura #}
+              <input type="text" class="form-control-modern" value="{{ form.first_name.value|default:user.first_name }}"
+                disabled>
+              {# campo real oculto para mantener el valor #}
+              {{ form.first_name.as_hidden }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label-modern">
+              Apellido
+            </label>
+            <div class="input-with-icon">
+              <span class="field-icon">🧾</span>
+              <input type="text" class="form-control-modern" value="{{ form.last_name.value|default:user.last_name }}"
+                disabled>
+              {{ form.last_name.as_hidden }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# ================= IDENTIFICACIÓN (RUT) ================= #}
+      <div class="form-section">
+        <h2 class="section-title">
+          <span class="section-icon">🆔</span>
+          Identificación
+        </h2>
+
+        <div class="form-row rut-row">
+          <div class="form-group rut-group">
+            <div class="rut-header">
+              <label class="form-label-modern">
+                RUT
+                <span class="info-tooltip"
+                  data-tooltip="El RUT no se puede modificar. Contacta al administrador si necesitas un cambio.">?</span>
+              </label>
+              <span class="disabled-badge">🔒 Bloqueado</span>
+            </div>
+
+            <div class="input-with-icon">
+              <span class="field-icon">🆔</span>
+              <input type="text" class="form-control-modern" value="{{ form.rut.value|default:user.rut }}" disabled>
+              {{ form.rut.as_hidden }}
+            </div>
+
+            <small class="form-text">
+              Tu RUT es un identificador único y no puede ser modificado.
+            </small>
+          </div>
+        </div>
+      </div>
+
+      {# ================= CONTACTO (EMAIL) ================= #}
+      <div class="form-section">
+        <h2 class="section-title">
+          <span class="section-icon">📧</span>
+          Información de contacto
+        </h2>
+
+        <div class="form-group">
+          <div class="rut-header">
+            <label class="form-label-modern">
+              Correo electrónico
+            </label>
+            <span class="disabled-badge">🔒 Bloqueado</span>
+          </div>
+
+          <div class="input-with-icon">
+            <span class="field-icon">📧</span>
+            <input type="text" class="form-control-modern" value="{{ form.email.value|default:user.email }}" disabled>
+            {{ form.email.as_hidden }}
+          </div>
+
+          <small class="form-text">
+            Tu correo electrónico está bloqueado y no puede ser modificado desde este formulario.
+          </small>
+        </div>
+      </div>
+
+      {# ================= BOTONES ================= #}
+      <div class="form-actions">
+        <a href="{% url 'perfil' %}" class="btn-modern btn-secondary-modern">
+          <span>←</span>
+          Volver al perfil
+        </a>
+        <button type="button" class="btn-modern btn-primary-modern" disabled>
+          <span>🔒</span>
+          Edición deshabilitada
+        </button>
+      </div>
+    </form>
 
   </div>
-</main>
+</div>
 
+<script>
+  (function () {
+    const form = document.getElementById('editProfileForm');
+    const submitBtn = document.getElementById('submitBtn');
 
+    if (!form || !submitBtn) return;
+
+    form.addEventListener('submit', function () {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>⏳</span> Guardando...';
+    });
+
+    const hasErrors = document.querySelector('.is-invalid, .alert-danger');
+    if (hasErrors) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>💾</span> Guardar cambios';
+    }
+
+    const inputs = form.querySelectorAll('.form-control-modern:not([disabled])');
+    inputs.forEach(input => {
+      input.addEventListener('blur', function () {
+        if (this.value.trim() === '' && this.hasAttribute('required')) {
+          this.classList.add('is-invalid');
+        } else {
+          this.classList.remove('is-invalid');
+        }
+      });
+
+      input.addEventListener('input', function () {
+        this.classList.remove('is-invalid');
+      });
+    });
+  })();
+</script>
 {% endblock %}

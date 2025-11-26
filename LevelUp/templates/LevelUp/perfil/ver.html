@@ -1,102 +1,582 @@
 {% extends "LevelUp/base.html" %}
 {% load static %}
 
-{% block head %}
-<link rel="stylesheet" href="{% static 'css/style.css' %}?v=3">
-{% endblock %}
-
 {% block title %}Mi Perfil · LevelUp{% endblock %}
 
-{% block content %}
-<main class="min-h-screen">
-  <div class="container">
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'LevelUp/css/style.css' %}?v=3">
 
-    <!-- Portada + header de perfil -->
-    <div class="card mb-1">
-      <div class="profile-cover" aria-label="Portada">
-        {# Si quieres imagen de portada luego, agrega aquí un <img src="..." alt="Portada"> #}
+<style>
+  :root {
+    --primary: #6366f1;
+    --primary-dark: #4f46e5;
+    --secondary: #a855f7;
+    --accent: #f973af;
+
+    --bg-card: #ffffff;
+    --bg-soft: #f3f4ff;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --border-soft: #e5e7eb;
+    --shadow: rgba(15, 23, 42, 0.12);
+  }
+
+  /* Fondo blanco en toda la vista */
+  body {
+    background: #ffffff;
+  }
+
+  main {
+    background: #ffffff !important;
+    min-height: 100vh;
+  }
+
+  .profile-wrapper {
+    max-width: 1100px;
+    margin: 1.5rem auto 3rem;
+    padding: 0 1rem 3rem;
+  }
+
+  /* CARD PRINCIPAL DEL PERFIL */
+  .profile-main {
+    background: var(--bg-card);
+    border-radius: 20px;
+    border: 2px solid var(--primary);   /* borde morado */
+    box-shadow: 0 12px 30px var(--shadow);
+    overflow: hidden;
+  }
+
+  /* Header con portada */
+  .profile-banner {
+    position: relative;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
+    height: 170px;
+  }
+
+  .profile-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.25'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.35;
+  }
+
+  .profile-info-wrapper {
+    position: relative;
+    padding: 0 1.75rem 1.5rem;
+  }
+
+  .profile-avatar-large {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    border: 5px solid var(--bg-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.6rem;
+    font-weight: 700;
+    color: white;
+    margin-top: -55px;
+    box-shadow: 0 8px 22px rgba(129, 140, 248, 0.5);
+    position: relative;
+    z-index: 2;
+  }
+
+  .profile-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-top: 1rem;
+    gap: 2rem;
+  }
+
+  .profile-identity {
+    flex: 1;
+  }
+
+  .profile-name-large {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+  }
+
+  .profile-username {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+  }
+
+  .profile-badges {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--bg-soft);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    border: 1px solid #d4d7ff;
+  }
+
+  .badge-icon {
+    font-size: 1.05rem;
+  }
+
+  .profile-actions-group {
+    display: flex;
+    gap: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .btn-modern {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.4rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .btn-primary-modern {
+    background: linear-gradient(135deg, var(--secondary), var(--primary));
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(129, 140, 248, 0.5);
+  }
+
+  .btn-primary-modern:hover {
+    transform: translateY(-1px);
+  }
+
+  .btn-outline-modern {
+    background: #f3f4ff;
+    color: var(--primary-dark);
+    border: 1px solid #d4d7ff;
+  }
+
+  .btn-outline-modern:hover {
+    background: #e5e7ff;
+  }
+
+  /* Tabs */
+  .tabs-modern {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0 1.75rem;
+    border-top: 1px solid var(--border-soft);
+    border-bottom: 1px solid var(--border-soft);
+    background: #f9fafb;
+    margin-top: 0.75rem;
+  }
+
+  .tab-modern {
+    padding: 0.75rem 1.2rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+
+  .tab-modern:hover {
+    color: var(--text-primary);
+  }
+
+  .tab-modern.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+
+  .tab-content-modern {
+    padding: 0.9rem 1.75rem 1.6rem;
+    background: #ffffff;
+  }
+
+  .tab-pane-modern {
+    display: none;
+  }
+
+  .tab-pane-modern.active {
+    display: block;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    background: #f9fafb;
+    border: 2px dashed var(--border-soft);
+    border-radius: 16px;
+  }
+
+  .empty-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .empty-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-text {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+  }
+
+  /* Info cards */
+  .info-card {
+    background: #ffffff;
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1.4rem;
+  }
+
+  .info-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .info-grid {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .info-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.9rem 1rem;
+    background: var(--bg-soft);
+    border-radius: 12px;
+  }
+
+  .info-icon {
+    font-size: 1.3rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border-radius: 10px;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .info-content {
+    flex: 1;
+  }
+
+  .info-label {
+    font-size: 0.83rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.15rem;
+  }
+
+  .info-value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .stat-card {
+    background: #f9fafb;
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 1.3rem 1.2rem;
+    transition: all 0.2s;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(148, 163, 184, 0.25);
+    border-color: var(--primary);
+  }
+
+  .stat-icon {
+    font-size: 1.7rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.3rem;
+  }
+
+  .stat-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  /* Botón flotante Timo */
+  .timo-home-btn {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--secondary), var(--primary));
+    box-shadow: 0 8px 22px rgba(129, 140, 248, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s;
+    z-index: 1000;
+  }
+
+  .timo-home-btn:hover {
+    transform: scale(1.08) rotate(4deg);
+  }
+
+  .timo-home-btn img {
+    width: 38px;
+    height: 38px;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .profile-wrapper {
+      margin-top: 1rem;
+      padding: 0 0.8rem 2.5rem;
+    }
+
+    .profile-banner {
+      height: 140px;
+    }
+
+    .profile-info-wrapper {
+      padding: 0 1.25rem 1.3rem;
+    }
+
+    .profile-avatar-large {
+      width: 95px;
+      height: 95px;
+      margin-top: -45px;
+      font-size: 2.2rem;
+    }
+
+    .profile-header-content {
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+
+    .profile-actions-group {
+      width: 100%;
+      flex-direction: column;
+    }
+
+    .btn-modern {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .tabs-modern {
+      padding: 0 1.25rem;
+      overflow-x: auto;
+    }
+
+    .tab-content-modern {
+      padding: 0.8rem 1.25rem 1.4rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-wrapper">
+  <div class="profile-main">
+    <div class="profile-banner"></div>
+
+    <div class="profile-info-wrapper">
+      <div class="profile-avatar-large">
+        {% with display_name=user_obj.get_full_name|default:user_obj.username %}
+          {{ display_name|slice:":1"|upper }}
+        {% endwith %}
       </div>
 
-      <div class="card-content">
-        <div class="profile-header">
-          <!-- Avatar solo con inicial -->
-          <div class="profile-avatar">
-            {% with display_name=user_obj.get_full_name|default:user_obj.username %}
-              <span class="avatar-initial">{{ display_name|slice:":1"|upper }}</span>
-            {% endwith %}
-          </div>
+      <div class="profile-header-content">
+        <div class="profile-identity">
+          <h1 class="profile-name-large">{{ user_obj.get_full_name|default:user_obj.username }}</h1>
+          <div class="profile-username">@{{ user_obj.username }}</div>
 
-          <div class="profile-name">
-            <h1 class="h1-title">{{ user_obj.get_full_name|default:user_obj.username }}</h1>
-            <div class="profile-handle">@{{ user_obj.username }}</div>
-          </div>
-
-          <div class="profile-actions">
-            <a class="btn btn-outline" href="{% url 'perfil_editar' %}">✏️ Editar perfil</a>
-            <a class="btn btn-primary" href="{% url 'cambiar_password' %}">🔒 Cambiar contraseña</a>
+          <div class="profile-badges">
+            <span class="badge">
+              <span class="badge-icon">🎓</span>
+              {{ user_obj.get_rol_display }}
+            </span>
+            <span class="badge">
+              <span class="badge-icon">📅</span>
+              Desde {{ user_obj.date_joined|date:"M Y" }}
+            </span>
           </div>
         </div>
 
-        <nav class="profile-tabs" aria-label="Pestañas de perfil">
-          <a href="#" class="active" data-tab="actividad">Actividad</a>
-          <a href="#" data-tab="informacion">Información</a>
-        </nav>
+        <div class="profile-actions-group">
+          <a class="btn-modern btn-outline-modern" href="{% url 'perfil_editar' %}">
+            <span>✏️</span>
+            Editar perfil
+          </a>
+          <a class="btn-modern btn-primary-modern" href="{% url 'cambiar_password' %}">
+            <span>🔒</span>
+            Contraseña
+          </a>
+        </div>
+      </div>
+    </div>
 
-        <!-- Contenedor de secciones -->
-        <div class="tab-content">
-          <!-- Sección ACTIVIDAD -->
-          <div id="actividad" class="tab-pane active">
-            <div class="card">
-              <div class="card-content">
-                <h3 class="section-title">Actividad reciente</h3>
-                <div class="card-soft">Aún no hay actividad. ¡Pronto verás tus logros y cambios aquí! 🎉</div>
+    <nav class="tabs-modern" aria-label="Pestañas de perfil">
+      <a href="#" class="tab-modern active" data-tab="actividad">📊 Actividad</a>
+      <a href="#" class="tab-modern" data-tab="informacion">ℹ️ Información</a>
+      <a href="#" class="tab-modern" data-tab="estadisticas">📈 Estadísticas</a>
+    </nav>
+
+    <div class="tab-content-modern">
+      <div id="actividad" class="tab-pane-modern active">
+        <div class="empty-state">
+          <div class="empty-icon">🎯</div>
+          <h3 class="empty-title">Sin actividad reciente</h3>
+          <p class="empty-text">Tus logros y cambios aparecerán aquí próximamente</p>
+        </div>
+      </div>
+
+      <div id="informacion" class="tab-pane-modern">
+        <div class="info-card">
+          <h3 class="info-title">
+            <span>👤</span>
+            Información personal
+          </h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-icon">🪪</div>
+              <div class="info-content">
+                <div class="info-label">Nombre</div>
+                <div class="info-value">{{ user_obj.first_name|default:"No especificado" }}</div>
+              </div>
+            </div>
+
+            <div class="info-item">
+              <div class="info-icon">🧾</div>
+              <div class="info-content">
+                <div class="info-label">Apellido</div>
+                <div class="info-value">{{ user_obj.last_name|default:"No especificado" }}</div>
+              </div>
+            </div>
+
+            <div class="info-item">
+              <div class="info-icon">📧</div>
+              <div class="info-content">
+                <div class="info-label">Email</div>
+                <div class="info-value">{{ user_obj.email }}</div>
+              </div>
+            </div>
+
+            <div class="info-item">
+              <div class="info-icon">🆔</div>
+              <div class="info-content">
+                <div class="info-label">RUT</div>
+                <div class="info-value">{{ user_obj.rut|default:"No especificado" }}</div>
+              </div>
+            </div>
+
+            <div class="info-item">
+              <div class="info-icon">🎓</div>
+              <div class="info-content">
+                <div class="info-label">Rol</div>
+                <div class="info-value">{{ user_obj.get_rol_display }}</div>
+              </div>
+            </div>
+
+            <div class="info-item">
+              <div class="info-icon">📅</div>
+              <div class="info-content">
+                <div class="info-label">Fecha de registro</div>
+                <div class="info-value">{{ user_obj.date_joined|date:"d/m/Y H:i" }}</div>
               </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          <!-- Sección INFORMACIÓN -->
-          <div id="informacion" class="tab-pane">
-            <div class="card">
-              <div class="card-content">
-                <h3 class="section-title">Información del perfil</h3>
-                <div class="about">
-                  <div class="item">🪪 <span><b>Nombre:</b> {{ user_obj.first_name|default:"—" }}</span></div>
-                  <div class="item">🧾 <span><b>Apellido:</b> {{ user_obj.last_name|default:"—" }}</span></div>
-                  <div class="item">📧 <span><b>Email:</b> {{ user_obj.email }}</span></div>
-                  <div class="item">🆔 <span><b>RUT:</b> {{ user_obj.rut|default:"—" }}</span></div>
-                  <div class="item">🎓 <span><b>Rol:</b> {{ user_obj.get_rol_display }}</span></div>
-                  <div class="item">📅 <span><b>Miembro desde:</b> {{ user_obj.date_joined|date:"d/m/Y H:i" }}</span></div>
-                </div>
-              </div>
-            </div>
+      <div id="estadisticas" class="tab-pane-modern">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">🏆</div>
+            <div class="stat-label">Logros completados</div>
+            <div class="stat-value">0</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon">📚</div>
+            <div class="stat-label">Cursos activos</div>
+            <div class="stat-value">0</div>
           </div>
         </div>
       </div>
     </div>
-  </div><!-- /container -->
-{# Botón flotante Timo #}
-  <a href="{% url 'dashboard' %}" class="timo-home-btn" aria-label="Volver al inicio">
-    <img src="{% static 'LevelUp/img//icons/timo_bolita.png' %}" alt="Volver al inicio">
-  </a>
+  </div>
+</div>
 
-</main>
+<a href="{% url 'dashboard' %}" class="timo-home-btn" aria-label="Volver al inicio">
+  <img src="{% static 'LevelUp/img/icons/timo_bolita.png' %}" alt="Timo">
+</a>
 
 <script>
-  (function(){
-    const tabs = document.querySelectorAll('.profile-tabs a');
-    const panes = document.querySelectorAll('.tab-pane');
-    if (!tabs.length || !panes.length) return;
+(function() {
+  const tabs = document.querySelectorAll('.tab-modern');
+  const panes = document.querySelectorAll('.tab-pane-modern');
 
-    tabs.forEach(tab => {
-      tab.addEventListener('click', e => {
-        e.preventDefault();
-        tabs.forEach(t => t.classList.remove('active'));
-        panes.forEach(p => p.classList.remove('active'));
-        tab.classList.add('active');
-        const pane = document.getElementById(tab.getAttribute('data-tab'));
-        if (pane) pane.classList.add('active');
-      });
+  if (!tabs.length || !panes.length) return;
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', e => {
+      e.preventDefault();
+      tabs.forEach(t => t.classList.remove('active'));
+      panes.forEach(p => p.classList.remove('active'));
+
+      tab.classList.add('active');
+      const targetId = tab.getAttribute('data-tab');
+      const targetPane = document.getElementById(targetId);
+      if (targetPane) targetPane.classList.add('active');
     });
-  })();
+  });
+})();
 </script>
 {% endblock %}
+
+{% block footer %}{% endblock %}

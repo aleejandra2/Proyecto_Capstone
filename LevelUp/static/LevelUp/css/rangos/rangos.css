@@ -802,35 +802,6 @@
   opacity: 1;
 }
 
-/* Botón flotante mejorado */
-.timo-home-btn {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #a855f7, #38bdf8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 30px rgba(148, 163, 184, 0.7);
-  transition: all 0.3s ease;
-  z-index: 1000;
-  border: 3px solid rgba(255, 255, 255, 0.9);
-}
-
-.timo-home-btn:hover {
-  transform: scale(1.1) rotate(10deg);
-  box-shadow: 0 15px 40px rgba(129, 140, 248, 0.85);
-}
-
-.timo-home-btn img {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-}
-
 /* Scroll suave */
 html {
   scroll-behavior: smooth;
