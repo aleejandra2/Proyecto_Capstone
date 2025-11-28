@@ -13,7 +13,7 @@ class LevelUpApp {
         this.bindEvents();
         this.checkSession();
         this.initAnimations();
-        this.initAccordions(); // <-- NUEVO: inicializa acordeones (estudiante_lista)
+        this.initAccordions(); // <-- inicializa acordeones (estudiante_lista)
     }
 
     // Gestión de sesiones
@@ -579,7 +579,7 @@ class LevelUpApp {
         });
     }
 
-    /* ========== NUEVO: Acordeón de asignaturas (estudiante_lista) ========== */
+    /* ========== Acordeón de asignaturas (estudiante_lista) ========== */
     initAccordions() {
         const run = () => {
             const parent = document.querySelector('#acAsignaturas');

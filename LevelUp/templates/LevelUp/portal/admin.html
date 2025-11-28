@@ -18,7 +18,7 @@
 <main class="portal-docente min-h-screen">
   <div class="container">
 
-    {# HERO igual al del docente, pero versión admin #}
+    {# HERO HEADER admin #}
     <div class="portal-hero">
       <div class="portal-hero-content">
         <h1>¡Bienvenido, Administrador! 🛠️</h1>
@@ -34,7 +34,7 @@
       </div>
     </div>
 
-    {# KPI CARDS adaptadas a admin #}
+    {# KPI CARDS admin #}
     <div class="kpi-grid">
       <div class="kpi-card kpi-students">
         <div class="kpi-icon">👩‍🎓</div>
@@ -63,7 +63,7 @@
       </div>
     </div>
 
-    {# ESTADO DEL SISTEMA en lugar de "Actividad reciente" #}
+    {# ESTADO DEL SISTEMA #}
     <div class="activity-section">
       <div class="section-header">
         <h2 class="section-title">
@@ -115,7 +115,7 @@
       </div>
     </div>
 
-    {# ACCIONES RÁPIDAS igual layout que docente, pero con acciones de admin #}
+    {# ACCIONES RÁPIDAS #}
     <div class="activity-section">
       <div class="section-header">
         <h2 class="section-title">
@@ -164,6 +164,5 @@
   </div>
 </main>
 
-{# Igual que en docente.html: portal_docente.css se carga DESPUÉS del <main> #}
 <link rel="stylesheet" href="{% static 'LevelUp/css/portal_docente.css' %}">
 {% endblock %}

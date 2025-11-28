@@ -1,5 +1,3 @@
-/* UI VISUAL MEJORADA - Sin JSON, solo arrastrar y hacer clic */
-
 (function () {
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
@@ -44,7 +42,7 @@
       n = (payload?.items || []).length;
       label = n === 1 ? "ítem" : "ítems";
     } else if (k === "cloze") {
-      // Cloze: usar blanks (nuevo) o answers (viejo) como respaldo
+      // Cloze: usar blanks (nuevo) o answers (antiguo) como respaldo
       const blanksObj = payload?.blanks || payload?.answers || {};
       n =
         blanksObj && typeof blanksObj === "object"
@@ -1054,7 +1052,7 @@ function mountCloze(card, root, payload) {
     sync()
   });
 
-  // cuando cambian los distractores, solo recalculamos el banco
+  // cuando cambian los distractores, solo se vuelve a calcular el banco
   distractorsInput.addEventListener("input", () => {
     sync();
   });

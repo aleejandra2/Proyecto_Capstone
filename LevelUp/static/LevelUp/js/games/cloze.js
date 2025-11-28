@@ -195,8 +195,6 @@ export default function init(host, cfg) {
       playSound('error');
     }
 
-    // Si vino por click, ya borramos la palabra del banco arriba
-
     // Actualizar progreso
     const filled = Object.keys(state.filled).length;
     hd.setBar((filled / total) * 100);

@@ -28,7 +28,7 @@ export default async function init(host, cfg) {
   const wrapper = document.createElement('div');
   wrapper.className = 'tr-card';
 
-  // Header del juego (sin avatar, sin vidas)
+  // Header del juego (sin vidas)
   const headerDiv = document.createElement('div');
   headerDiv.style.cssText = `
     background: linear-gradient(135deg, #FF6B6B 0%, #ff8787 100%);

@@ -349,7 +349,7 @@ body {
   100% { background-position: 200% 0; }
 }
 
-/* Gamification Elements */
+/* Elementos de gamificación */
 .level-badge {
   background: linear-gradient(45deg, #ffd700, #ffed4e);
   color: #744210;
@@ -504,7 +504,7 @@ body {
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
 
-/* ====== Estudiante · Lista (usa estética del home) ====== */
+/* ====== Estudiante Lista  ====== */
 
 /* Botones de acción */
 .btn-edu{
@@ -567,7 +567,6 @@ progress::-moz-progress-bar{ background: linear-gradient(90deg, var(--primary-co
   background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe;
 }
 
-/* Forzamos especificidad y que no lo pise Bootstrap */
 .card.card-hero{
   background: linear-gradient(120deg,#ea84d6,#7edfe6) !important;
   color:#f9f9f9;
@@ -579,7 +578,7 @@ progress::-moz-progress-bar{ background: linear-gradient(90deg, var(--primary-co
   background:#34D399; border-color:#34D399; color:#0F172A;
 }
 
-/* Actividades + chips (lo que ya usaste en HTML) */
+/* Actividades + chips */
 .activity{
   background:#f7f7f7; border:1px solid #112346; border-radius:.75rem;
   transition: transform .15s ease, box-shadow .2s ease, border-color .2s ease;

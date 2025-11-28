@@ -18,19 +18,13 @@ NIVELES = (
     (8, "8° Básico"),
 )
 
-ITEM_TIPOS = [
-    ("quiz", "Cuestionario"),
-    ("game", "Juego (minijuego)"),
-    ("game_config", "Juego • Configuración"),
-]
-
 # --------------------------------------------------------------------
 # Utilidades JSONField (compat)
 # --------------------------------------------------------------------
 try:
     from django.db.models import JSONField
-except Exception:  # pragma: no cover
-    from django.contrib.postgres.fields import JSONField  # type: ignore
+except Exception:  
+    from django.contrib.postgres.fields import JSONField  
 
 
 # ---------------------------------------------------------
@@ -52,7 +46,7 @@ class Usuario(AbstractUser):
         default=Rol.ESTUDIANTE,
     )
 
-    # RUT con validación y unicidad; se guardará normalizado por señal pre_save
+    # RUT con validación y unicidad, se guardará normalizado por señal pre_save
     rut = models.CharField(max_length=12, unique=True, validators=[validar_formato_rut])
 
     # Email único ("email único para login/recuperación")
@@ -87,17 +81,11 @@ class Estudiante(models.Model):
     curso = models.CharField(max_length=50)
     puntos = models.IntegerField(default=0)
     medallas = models.IntegerField(default=0)
-    # --- nuevo: progresión y avatar ---
     xp = models.PositiveIntegerField(default=0)
     coins = models.PositiveIntegerField(default=0)
-    avatar_kind = models.CharField(max_length=20, default="otter")        # especie
-    avatar_slug = models.CharField(max_length=40, default="otter")        # archivo base en /static/LevelUp/img/avatars/otter.png
-    accesorios_desbloqueados = models.JSONField(default=list, blank=True) # ["gafas_azules", "mochila_lvl1"]
-    accesorios_equipados = models.JSONField(default=dict, blank=True)      # {"cabeza":"gorra_roja","cara":"gafas_azules","espalda":"mochila_lvl1"}
-    habilidades = models.JSONField(default=dict, blank=True)               # {"memoria_boost":2}
 
     def nivel_calculado(self):
-        # curva simple: nivel n cuando xp >= n^2 * 100
+        # nivel n cuando xp >= n^2 * 100
         n = 1
         while self.xp >= (n * n * 100):
             n += 1
@@ -110,13 +98,6 @@ class Estudiante(models.Model):
     def add_coins(self, amount: int):
         self.coins = max(0, self.coins + int(amount))
         return self.coins
-
-    def equip_default_if_empty(self):
-        if not self.accesorios_equipados:
-            # 3 slots iniciales
-            self.accesorios_equipados = {"cara": "gafas_azules", "cabeza": "", "espalda": "mochila_lvl1"}
-        if "gafas_azules" not in self.accesorios_desbloqueados:
-            self.accesorios_desbloqueados.append("gafas_azules")
 
     def __str__(self):
         u = self.usuario
@@ -132,16 +113,13 @@ class Ranking(models.Model):
 
     def __str__(self):
         return f"Ranking #{self.pk}"
-
-
 class Recurso(models.Model):
     tipo = models.CharField(max_length=50)     # video, documento, juego, etc.
     url = models.CharField(max_length=255)
 
     def __str__(self):
         return f"{self.tipo}: {self.url}"
-
-
+    
 class Recompensa(models.Model):
     class Tipo(models.TextChoices):
         ESTRELLA = "estrella", "Estrella"
@@ -154,8 +132,6 @@ class Recompensa(models.Model):
 
     def __str__(self):
         return f"Recompensa {self.tipo} (#{self.pk})"
-
-
 # ---------------------------------------------------------
 # Actividades (EXTENDIDO para publicación/XP y autor)
 # ---------------------------------------------------------
@@ -187,9 +163,6 @@ class Actividad(models.Model):
         choices=Dificultad.choices,
         default=Dificultad.MEDIO,
     )
-
-    recurso = models.ForeignKey(Recurso, on_delete=models.SET_NULL, null=True, blank=True)
-    recompensa = models.ForeignKey(Recompensa, on_delete=models.SET_NULL, null=True, blank=True)
 
     # Autor de la actividad
     docente = models.ForeignKey(
@@ -259,7 +232,7 @@ class Actividad(models.Model):
     def save(self, *args, **kwargs):
         """
         - Autocompleta `asignatura` si viene vacía y tenemos `docente`:
-          · Si el docente tiene exactamente 1 AsignacionDocente → usar esa asignatura.
+          · Si el docente tiene exactamente 1 AsignacionDocente usa esa asignatura.
           · Si no, intenta resolver por el string `docente.asignatura` (nombre o código slug).
         - Sella `fecha_publicacion` la primera vez que se publica.
         """
@@ -282,7 +255,7 @@ class Actividad(models.Model):
 
             resolved = None
 
-            # 1) Exactamente una asignación formal del docente
+            # 1) asignación del docente
             if AsignacionDocente is not None:
                 rels = AsignacionDocente.objects.filter(
                     profesor=self.docente.usuario
@@ -457,7 +430,7 @@ class ItemActividad(models.Model):
     tipo = models.CharField(max_length=20, choices=ItemType.choices)
     # Permite enunciado vacío
     enunciado = models.TextField(blank=True)
-    imagen = models.ImageField(upload_to="actividades/items", null=True, blank=True)
+    #imagen = models.ImageField(upload_to="actividades/items", null=True, blank=True)
     datos = models.JSONField(default=dict, blank=True)
     puntaje = models.PositiveIntegerField(
         default=10, validators=[MinValueValidator(1), MaxValueValidator(1000)]
@@ -502,14 +475,6 @@ class Answer(models.Model):
     submission = models.ForeignKey(Submission, on_delete=models.CASCADE, related_name="answers")
     item = models.ForeignKey(ItemActividad, on_delete=models.CASCADE)
 
-    # Respuesta genérica por tipo:
-    # mcq: {"marcadas":[0,2]}
-    # tf: {"valor": true}
-    # fib: {"f1":"4", "f2":"respuesta"}
-    # sort: {"orden":["s1","s3","s2"]}
-    # match: {"pares":[{"left":"l1","right":"rA"}]}
-    # text: {"texto": "..."}
-    # interactive/game: {"completado": true, "score": 800}
     respuesta = JSONField(default=dict, blank=True)
 
     es_correcta = models.BooleanField(default=False)
@@ -532,7 +497,7 @@ class Asignatura(models.Model):
     slug = models.SlugField(
         max_length=100,
         blank=True,
-        null=True,      # 👈 importante para que no pida default
+        null=True,    
     )
 
     icono = models.CharField(
@@ -563,14 +528,11 @@ class PerfilAlumno(models.Model):
     promedio = models.DecimalField(max_digits=3, decimal_places=1, default=5.0)  # ej: 4.7
     dificultad_matematicas = models.BooleanField(default=False)
     dificultad_ingles = models.BooleanField(default=False)
-    # Si luego quieres flags para nuevas asignaturas, agrégalas aquí.
 
     def __str__(self):
         return f"PerfilAlumno({self.usuario})"
 
-
 class Matricula(models.Model):
-    # Por tu definición nueva, estudiante apunta al USER directamente
     estudiante = models.ForeignKey(USER, on_delete=models.CASCADE, related_name="matriculas")
     curso = models.ForeignKey(Curso, on_delete=models.CASCADE, related_name="matriculas")
     fecha = models.DateField(auto_now_add=True)
@@ -579,7 +541,6 @@ class Matricula(models.Model):
         unique_together = [("estudiante", "curso")]
 
     def clean(self):
-        # Acepta código 'ESTUDIANTE' y, por compatibilidad, etiqueta 'Estudiante'
         rol = getattr(self.estudiante, "rol", None)
         if rol not in ("ESTUDIANTE", "Estudiante"):
             raise ValidationError("Solo usuarios con rol ESTUDIANTE pueden ser matriculados.")
@@ -614,7 +575,7 @@ class GrupoRefuerzoNivel(models.Model):
     profesor_ingles = models.ForeignKey(
         USER, on_delete=models.CASCADE, related_name="grupos_refuerzo_ing"
     )
-    # Nuevos profesores (opcionales)
+  
     profesor_lenguaje = models.ForeignKey(
         USER, on_delete=models.SET_NULL, null=True, blank=True, related_name="grupos_refuerzo_leng"
     )

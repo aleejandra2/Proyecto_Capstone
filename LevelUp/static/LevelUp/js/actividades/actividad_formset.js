@@ -1,11 +1,11 @@
-// static/LevelUp/js/actividad_formset.js - VERSIÓN con límite para minijuego
+// static/LevelUp/js/actividad_formset.js
 
 (function () {
     const byId = (id) => document.getElementById(id);
     const qs = (sel, root = document) => root.querySelector(sel);
     const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-    // 🔢 máximo de ítems en modo minijuego (se puede sobreescribir desde el template)
+    // máximo de ítems en modo minijuego
     let maxGameItems = 3;
 
     function currentMode() {
@@ -68,7 +68,7 @@
         console.log(`📊 TOTAL_FORMS actualizado a: ${allCards.length}`);
     }
 
-    // 🔔 UI especial para modo minijuego (instrucciones y botón deshabilitado)
+    // UI para modo minijuego (instrucciones y botón deshabilitado)
     function updateGameModeUI(mode, container) {
         const help = byId("game-mode-help");
         const addBtn = byId("btn-add-item");
@@ -172,7 +172,7 @@
         const ta = qs("textarea[name$='-game_pairs']", card) || qs("textarea[name$='-datos']", card);
         if (!ta) return;
 
-        // 🔑 Si ya tiene contenido JSON válido, no sobrescribir
+        // Si ya tiene contenido JSON válido, no sobrescribir
         const current = ta.value.trim();
         if (current) {
             try {
@@ -239,7 +239,7 @@
 
     // === Agregar ítem ===
     function addItem(container, mode, forceKind = null) {
-        // ⛔ Límite especial para minijuego
+        // Límite específico para minijuego
         if (mode === "game") {
             const visibles = countVisible(container);
             if (visibles >= maxGameItems) {
@@ -263,7 +263,7 @@
         const card = frag.firstElementChild;
         if (!card) return;
 
-        // 🔑 ACTUALIZAR TOTAL_FORMS ANTES de insertar
+        // Actualizar TOTAL_FORMS antes de insertar
         const total = byId("id_items-TOTAL_FORMS");
         if (total) {
             total.value = idx + 1;

@@ -84,7 +84,7 @@
     font-size: 0.85rem;
 }
 
-/* Botón de cerrar sesión estilo docente */
+/* Botón de cerrar sesión */
 .navbar-admin-logout-form {
     margin: 0;
 }
@@ -159,7 +159,6 @@ body.with-admin-navbar {
         display: none;
         position: fixed;
         top: 56px;
-        /* justo debajo de la barra */
         left: 0;
         right: 0;
         bottom: 0;
@@ -198,7 +197,6 @@ body.with-admin-navbar {
    así el footer oscuro queda claramente debajo */
 body.with-admin-navbar main.portal-docente {
     background: #f5f7ff;
-    /* mismo fondo que el portal docente */
     padding-bottom: 3rem;
     /* espacio antes del footer */
 }

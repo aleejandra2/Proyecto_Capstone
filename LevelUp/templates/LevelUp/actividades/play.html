@@ -146,7 +146,7 @@
   flex: 1 1 auto;
   min-height: 0;
   padding: 1.5rem 1.25rem 1.25rem !important;
-  overflow-y: auto;                  /* si no cabe, scroll vertical */
+  overflow-y: auto;            
   overflow-x: hidden;
   text-align: center;
 }
@@ -611,7 +611,7 @@
     }
   }
 
-  // --- Helper para finalizar intento (API) ---
+  // --- Helper para finalizar intento ---
   async function finalizarIntento() {
     if (intentoFinalizado) {
       console.log('ℹ️ [play.html] Intento ya finalizado, omitiendo llamada extra.');

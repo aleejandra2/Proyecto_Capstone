@@ -33,7 +33,7 @@
 }
 
 /* --- Menú Bootstrap --- */
-/* Importante: solo afectamos el collapse DENTRO del navbar, no global */
+/* Solo afecta el collapse DENTRO del navbar, no global */
 @media (max-width: 991.98px){
   .navbar .navbar-collapse.collapse { display: none !important; }
   .navbar .navbar-collapse.collapse.show { display: block !important; }
@@ -142,7 +142,7 @@
 
 /* Responsive */
 @media (max-width: 768px){
-  /* Ocultamos el menú de escritorio; usamos el collapse de Bootstrap o el menú propio */
+  /* Oculta el menú de escritorio y usa el collapse de Bootstrap o el menú propio */
   .navbar-nav{ display:none; }
   .navbar-mobile-toggle{ display:block; }
   .navbar-user-info{ padding:.5rem; }

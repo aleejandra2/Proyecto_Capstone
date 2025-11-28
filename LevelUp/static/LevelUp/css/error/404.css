@@ -54,16 +54,15 @@ body {
     letter-spacing: 0.06em;
 }
 
-/* Imagen un poquito más grande */
+/* Tamaño de la Imagen */
 .error-404-img {
     max-width: 300px;
-    /* <- aquí la agrandamos un poco */
     width: 100%;
     height: auto;
     margin-bottom: 1.75rem;
 }
 
-/* Texto con diseño, más grande pero legible en móvil */
+/* Texto con diseño */
 .error-404-text {
     margin-bottom: 2rem;
     color: #212529;

@@ -171,7 +171,7 @@ body.with-docente-navbar {
     padding: 0.75rem 1rem 1rem;
   }
 
-  /* Ahora el contenido baja en vez de moverse a la derecha */
+  /* El contenido baja en vez de moverse a la derecha */
   body.with-docente-navbar {
     padding-left: 0;
     padding-top: 56px;

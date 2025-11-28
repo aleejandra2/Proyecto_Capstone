@@ -1,7 +1,5 @@
 /* ===================================
-   GAMES.CSS - Sistema Visual para Niños
-   IMPORTANTE: Este archivo debe estar en:
-   static/LevelUp/css/games.css
+   GAMES.CSS - Sistema Visual de LevelUp
    =================================== */
 
 :root {
@@ -237,7 +235,7 @@ button.game-btn {
   z-index: 2;
 }
 
-/* Corrección del contenido del ítem - SIN padding */
+/* Corrección del contenido del ítem sin padding */
 .item-content {
   padding: 0 !important;
   background: white;
@@ -258,7 +256,6 @@ button.game-btn {
   padding: 2rem 1.5rem !important;
   border-radius: 0 !important;
   margin-top: 6px !important;
-  /* El texto ya es blanco por defecto en los elementos internos */
 }
 
 /* Corrección del contenido del ítem con márgenes apropiados */

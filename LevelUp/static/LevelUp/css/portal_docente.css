@@ -20,7 +20,6 @@
 .activity-content {
     flex: 1;
     min-width: 0;
-    /* importante para que el texto pueda hacer wrap */
 }
 
 .activity-text {
@@ -52,7 +51,7 @@
     color: #fff;
 }
 
-/* 🔽 Versión móvil */
+/* Versión móvil */
 @media (max-width: 768px) {
     .activity-item {
         flex-direction: column;

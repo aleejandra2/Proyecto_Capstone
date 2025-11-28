@@ -3,7 +3,7 @@
 .seussbar.topbar{
   background: #ffffff;
   border-bottom: 0px solid #f1f1f5;
-  padding: 4px 0;              /* antes: padding: -2px 0; */
+  padding: 4px 0;          
 }
 
 .topbar-inner {
@@ -11,7 +11,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding-left: 8px;           /* pegamos más a la izquierda */
+  padding-left: 8px;        
   padding-right: 12px;
 }
 
@@ -33,7 +33,7 @@
   gap: 10px;
   border: none;
   background: transparent;
-  padding: 4px 4px 4px 0;      /* padding pequeñito a la izquierda */
+  padding: 4px 4px 4px 0;      
   cursor: pointer;
 }
 
@@ -48,7 +48,7 @@
   font-size: 18px;
 }
 
-/* 👇 imagen del icono elegido en el botón principal */
+/* imagen del icono elegido en el botón principal */
 .subject-icon .subject-main-img {
   width: 20px;
   height: 20px;

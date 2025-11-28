@@ -131,7 +131,7 @@
 /* Stats cards (solo 1 card ahora, rango actual) */
 .hero-stats-grid {
   display: grid;
-  grid-template-columns: 1fr;  /* antes: repeat(2,1fr) */
+  grid-template-columns: 1fr;  
   gap: 1rem;
   margin-top: 2rem;
 }
@@ -352,7 +352,7 @@
   font-size: 1.25rem;
 }
 
-/* ===== PROGRESSION SECTION ===== */
+/* ===== SECCIÓN DE PROGRESO ===== */
 .rangos-progression-section {
   padding: 4rem 0;
   position: relative;
@@ -807,7 +807,7 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Loading skeleton opcional */
+/* Loading skeleton */
 @keyframes shimmer {
   0% {
     background-position: -1000px 0;

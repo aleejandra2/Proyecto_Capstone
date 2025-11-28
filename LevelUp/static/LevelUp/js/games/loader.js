@@ -181,7 +181,7 @@ function ensureDemo(kind, cfg) {
         itemsCount: c.items?.length
       });
 
-      // Si vienen bins + items pero sin answers, los generamos desde item.bin
+      // Si vienen bins + items pero sin answers, se genera desde item.bin
       if (hasBins && hasItems && !hasAnswers) {
         const autoAnswers = {};
         c.items.forEach(it => {
@@ -245,7 +245,7 @@ function ensureDemo(kind, cfg) {
       isValid = Array.isArray(c.items) && c.items.length > 0;
       console.log('🔍 V/F validation:', { hasItems: isValid, count: c.items?.length });
 
-      // Normalizar: is_true → answer
+      // Normalizar: is_true -> answer
       if (isValid && c.items.length > 0) {
         c.items = c.items.map(item => ({
           text: item.text,

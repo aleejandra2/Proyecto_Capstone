@@ -1,7 +1,7 @@
 (function () {
   function qs(sel, root) { return (root || document).querySelector(sel); }
 
-  // Soporta ambas pantallas: cambiar contraseña y registro
+  // Soporta ambas vistas: cambiar contraseña y registro
   const pw1 =
     document.getElementById('id_new_password1') ||
     document.getElementById('id_password1') ||
@@ -56,7 +56,7 @@
     const emailAttr = pw1.dataset.userEmail || '';
     const nameAttr  = pw1.dataset.userName  || '';
 
-    // En registro, tomamos los campos del formulario
+    // En registro, se toman los campos del formulario
     const emailVal = emailAttr || (qs('#id_email', form)?.value || '');
     const first    = (qs('#id_first_name', form)?.value || '');
     const last     = (qs('#id_last_name', form)?.value || '');

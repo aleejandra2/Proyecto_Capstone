@@ -1,4 +1,4 @@
-// JavaScript específico para el navbar de LevelUp
+// Navbar de LevelUp
 class LevelUpNavbar {
     constructor() {
         this.init();
@@ -11,7 +11,7 @@ class LevelUpNavbar {
     }
 
     bindEvents() {
-        // Toggle mobile menu
+        // Alternar menú móvil
         const mobileToggle = document.querySelector('.navbar-mobile-toggle');
         const mobileMenu = document.querySelector('.navbar-mobile-menu');
         
@@ -22,7 +22,7 @@ class LevelUpNavbar {
             });
         }
 
-        // Close mobile menu when clicking outside
+        // Cierra el menú móvil al hacer clic fuera
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.navbar') && mobileMenu) {
                 mobileMenu.classList.remove('active');
@@ -30,14 +30,14 @@ class LevelUpNavbar {
             }
         });
 
-        // Handle navigation clicks
+        // Manejo de clics en la navegación
         document.querySelectorAll('.navbar-link, .navbar-mobile-link').forEach(link => {
             link.addEventListener('click', (e) => {
                 this.handleNavigation(e);
             });
         });
 
-        // User dropdown
+        // Dropdown de usuario
         const userDropdown = document.querySelector('.navbar-dropdown');
         if (userDropdown) {
             userDropdown.addEventListener('mouseenter', () => {
@@ -49,12 +49,12 @@ class LevelUpNavbar {
             });
         }
 
-        // Responsive handling
+        // Manejo responsivo
         window.addEventListener('resize', () => {
             this.handleResize();
         });
 
-        // Scroll effects
+        // Efectos de desplazamiento
         window.addEventListener('scroll', () => {
             this.handleScroll();
         });
@@ -77,20 +77,20 @@ class LevelUpNavbar {
         if (view) {
             e.preventDefault();
             
-            // Update active state
+            // Actualiza el estado activo
             document.querySelectorAll('.navbar-link').forEach(l => {
                 l.classList.remove('active');
             });
             link.classList.add('active');
             
-            // Close mobile menu if open
+            // Cierra el menú móvil si está abierto
             const mobileMenu = document.querySelector('.navbar-mobile-menu');
             if (mobileMenu && mobileMenu.classList.contains('active')) {
                 mobileMenu.classList.remove('active');
                 this.updateMobileToggleIcon();
             }
             
-            // Trigger view change if app is available
+            // Dispara el cambio de vista si la app está disponible
             if (window.app && typeof window.app.switchView === 'function') {
                 window.app.switchView(view);
             }
@@ -98,7 +98,7 @@ class LevelUpNavbar {
     }
 
     initDropdowns() {
-        // Initialize user dropdown
+        // Inicializa el dropdown de usuario
         const userInfo = document.querySelector('.navbar-user-info');
         if (userInfo) {
             userInfo.addEventListener('click', (e) => {
@@ -107,7 +107,7 @@ class LevelUpNavbar {
             });
         }
 
-        // Close dropdown when clicking outside
+        // Cierra el dropdown al hacer clic fuera
         document.addEventListener('click', () => {
             this.closeAllDropdowns();
         });
@@ -150,7 +150,7 @@ class LevelUpNavbar {
     }
 
     updateProgress() {
-        // Update experience progress bar in navbar
+        // Actualiza la barra de progreso del nivel
         const progressBar = document.querySelector('.navbar-progress');
         if (progressBar && window.app && window.app.currentUser) {
             const user = window.app.currentUser;
@@ -163,35 +163,35 @@ class LevelUpNavbar {
     updateUserInfo(user) {
         if (!user) return;
 
-        // Update avatar
+        // Actualiza el avatar
         const avatar = document.querySelector('.navbar-avatar');
         if (avatar) {
             avatar.textContent = user.first_name.charAt(0).toUpperCase();
         }
 
-        // Update username
+        // Actualiza el nombre de usuario
         const username = document.querySelector('.navbar-username');
         if (username) {
             username.textContent = `${user.first_name} ${user.last_name}`;
         }
 
-        // Update level
+        // Actualiza el nivel
         const levelBadge = document.querySelector('.navbar-level');
         if (levelBadge) {
             levelBadge.textContent = `Nivel ${user.level}`;
         }
 
-        // Update notifications if any
+        // Actualiza las notificaciones si las hay
         this.updateNotifications(user);
         
-        // Update progress
+        // Actualiza la barra de progreso
         this.updateProgress();
     }
 
     updateNotifications(user) {
         const notificationBadge = document.querySelector('.navbar-level-notification');
         
-        // Example: Show notification for new achievements
+        // Ejemplo: Mostrar notificación para nuevos logros
         const hasNewAchievements = user.badges && user.badges.some(badge => badge.isNew);
         
         if (hasNewAchievements && notificationBadge) {
@@ -202,7 +202,7 @@ class LevelUpNavbar {
     }
 
     handleResize() {
-        // Close mobile menu on resize to desktop
+        // Cierra el menú móvil al cambiar el tamaño a escritorio
         if (window.innerWidth >= 768) {
             const mobileMenu = document.querySelector('.navbar-mobile-menu');
             if (mobileMenu && mobileMenu.classList.contains('active')) {
@@ -216,14 +216,14 @@ class LevelUpNavbar {
         const navbar = document.querySelector('.navbar');
         if (!navbar) return;
 
-        // Add/remove shadow based on scroll position
+        // Agregar/quitar sombra según la posición del desplazamiento
         if (window.pageYOffset > 10) {
             navbar.classList.add('scrolled');
         } else {
             navbar.classList.remove('scrolled');
         }
 
-        // Update progress bar if in scroll mode
+        // Actualiza la barra de progreso si está en modo desplazamiento
         const progressBar = document.querySelector('.navbar-progress');
         if (progressBar && progressBar.dataset.mode === 'scroll') {
             const windowHeight = document.documentElement.scrollHeight - window.innerHeight;
@@ -232,7 +232,7 @@ class LevelUpNavbar {
         }
     }
 
-    // Notification system
+    // Sistema de notificaciones
     showNavbarNotification(message, type = 'info', duration = 3000) {
         const notification = document.createElement('div');
         notification.className = `navbar-notification navbar-notification-${type}`;
@@ -245,16 +245,16 @@ class LevelUpNavbar {
         if (navbar) {
             navbar.appendChild(notification);
 
-            // Show notification
+            // Mostrar notificación
             setTimeout(() => notification.classList.add('show'), 100);
 
-            // Handle close button
+            // Manejar botón de cierre
             const closeBtn = notification.querySelector('.navbar-notification-close');
             closeBtn.addEventListener('click', () => {
                 this.hideNavbarNotification(notification);
             });
 
-            // Auto hide
+            // Ocultado automático
             if (duration > 0) {
                 setTimeout(() => {
                     this.hideNavbarNotification(notification);
@@ -272,12 +272,12 @@ class LevelUpNavbar {
         }, 300);
     }
 
-    // Level up animation
+    // Animación de subida de nivel
     triggerLevelUpAnimation(newLevel) {
         const levelBadge = document.querySelector('.navbar-level');
         if (!levelBadge) return;
 
-        // Create animation element
+        // Crear elemento de animación
         const animation = document.createElement('div');
         animation.className = 'navbar-level-up-animation';
         animation.innerHTML = `
@@ -287,10 +287,10 @@ class LevelUpNavbar {
 
         levelBadge.parentNode.appendChild(animation);
 
-        // Trigger animation
+        // Disparar animación
         setTimeout(() => animation.classList.add('show'), 100);
 
-        // Remove animation
+        // Eliminar animación
         setTimeout(() => {
             animation.classList.remove('show');
             setTimeout(() => {
@@ -300,7 +300,7 @@ class LevelUpNavbar {
             }, 500);
         }, 3000);
 
-        // Update level badge with animation
+        // Actualizar insignia de nivel con animación
         levelBadge.classList.add('level-up');
         setTimeout(() => {
             levelBadge.textContent = `Nivel ${newLevel}`;
@@ -308,7 +308,7 @@ class LevelUpNavbar {
         }, 500);
     }
 
-    // Search functionality
+    // Funcionalidad de búsqueda
     initSearch() {
         const searchInput = document.querySelector('.navbar-search-input');
         const searchResults = document.querySelector('.navbar-search-results');
@@ -329,7 +329,7 @@ class LevelUpNavbar {
                 }
             });
 
-            // Close search when clicking outside
+            // Cerrar búsqueda al hacer clic fuera
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('.navbar-search')) {
                     this.hideSearchResults();
@@ -339,7 +339,7 @@ class LevelUpNavbar {
     }
 
     performSearch(query) {
-        // Mock search results
+        // Resultados de búsqueda simulados
         const mockResults = [
             { title: 'Operaciones Básicas', type: 'activity', icon: '📊' },
             { title: 'Fracciones', type: 'activity', icon: '📊' },

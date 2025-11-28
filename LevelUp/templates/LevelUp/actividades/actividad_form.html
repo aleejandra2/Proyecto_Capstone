@@ -154,7 +154,7 @@
         <div class="card p-4">
 
           {% with act_tipo=form.instance.tipo %}
-          {# 🔹 añadimos data-game-max-items (por defecto 3) #}
+          {# se añade data-game-max-items (por defecto 3) #}
           <div id="items-formset"
                data-actividad-tipo="{{ act_tipo|default:'quiz' }}"
                data-game-max-items="{{ game_max_enemies|default:3 }}">

@@ -26,7 +26,7 @@ export default async function init(host, cfg) {
   const wrapper = document.createElement('div');
   wrapper.className = 'ordering-game';
 
-  // Header del juego (sin avatar)
+  // Header del juego
   const headerDiv = document.createElement('div');
   headerDiv.style.cssText = `
     background: linear-gradient(135deg, #FFD43B 0%, #FFA94D 100%);

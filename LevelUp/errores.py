@@ -1,10 +1,7 @@
 from django.shortcuts import render
 
 class Custom404Middleware:
-    """
-    Fuerza el uso de la plantilla 404 personalizada
-    tanto en desarrollo como en producción.
-    """
+    
     def __init__(self, get_response):
         self.get_response = get_response
 

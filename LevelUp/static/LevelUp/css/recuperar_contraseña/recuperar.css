@@ -58,7 +58,7 @@ html, body {
   margin-bottom: 1.3rem;
 }
 
-/* Etiquetas e inputs (usamos las mismas genéricas que en register) */
+/* Etiquetas e inputs */
 .form-label {
   font-weight: 600;
   font-size: 0.95rem;

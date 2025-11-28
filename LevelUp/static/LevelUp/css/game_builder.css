@@ -75,7 +75,6 @@
 
 /* ===============================
    CLOZE PREVIEW DENTRO DEL BUILDER
-   (para que no tome estilos gigantes del juego)
    =============================== */
 
 .gbuilder .cloze-preview {
@@ -125,7 +124,7 @@
 }
 
 /* ===============================
-   RESPONSIVE (TABLET / MOBILE)
+   RESPONSIVO (TABLET / MOBILE)
    =============================== */
 
 @media (max-width: 768px) {
@@ -146,7 +145,7 @@
 }
 
 /* ===============================
-   RESPONSIVE ESPECÍFICO PARA CADA TIPO
+   RESPONSIVO ESPECÍFICO PARA CADA TIPO
    - VF
    - CLASIFICAR (items)
    - PARES (dragmatch / memory)

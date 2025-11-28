@@ -7,14 +7,13 @@
 {# Para que el layout se acomode al navbar admin, igual que en otras vistas del admin #}
 {% block body_class %}with-admin-navbar{% endblock %}
 
-{# CSS extra: reutiliza lo del base y suma el propio del registro + navbar admin #}
 {% block extra_css %}
   {{ block.super }}
   <link rel="stylesheet" href="{% static 'LevelUp/css/navbar/navbar_admin.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'LevelUp/css/register.css' %}?v=1">
 {% endblock %}
 
-{# AQUÍ metemos el navbar del administrador #}
+{# navbar del administrador #}
 {% block navbar %}
   {% include "LevelUp/partials/navbar_admin.html" %}
 {% endblock %}

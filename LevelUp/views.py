@@ -43,8 +43,6 @@ from .models import (
     Usuario, Asignatura, Estudiante, Docente, Actividad, AsignacionActividad,
     ItemActividad, Submission, Answer, Matricula,
     GrupoRefuerzoNivelAlumno, GrupoRefuerzoNivel, NIVELES, Curso, AsignacionDocente
-    # Si tienes este modelo en tu app:
-    # AsignacionDocente,
 )
 
 User = get_user_model()
@@ -331,7 +329,7 @@ def home_view(request):
                 finalizado=True,
                 actividad__asignacionactividad__estudiante=F("estudiante"),
             )
-            # usamos la fecha de envío, y si falta, la de inicio
+            # usa la fecha de envío, y si falta, la de inicio
             .annotate(
                 fecha_evento=Coalesce("enviado_en", "iniciado_en")
             )
@@ -341,7 +339,7 @@ def home_view(request):
         total_estudiantes = subs_qs.values("estudiante_id").distinct().count()
 
         # ----- Actividad reciente -----
-        # orden de más reciente a más antigua (hoy → ayer → antes de ayer…)
+        # orden de más reciente a más antigua 
         recientes = subs_qs.order_by("-fecha_evento", "-id")[:5]
 
         actividad_reciente = []
@@ -476,7 +474,7 @@ def cambiar_password_view(request):
     return render(request, "LevelUp/perfil/cambiar_password.html", {"form": form})
 
 # ===================================================================
-# Funciones de administración 
+# Funciones de administrador 
 # ===================================================================
 
 # ---------- Decorador ----------
@@ -507,7 +505,6 @@ def adm_cursos_nuevo(request):
 @admin_required
 def adm_cursos_editar(request, pk):
     curso = get_object_or_404(Curso, pk=pk)
-    # Para edición, evitamos el "duplicado" contra sí mismo:
     class CursoEditForm(CursoForm):
         def clean(self):
             data = super().clean()
@@ -579,7 +576,7 @@ def adm_asignaturas_borrar(request, pk):
         messages.error(request, "No se puede eliminar: hay actividades u otras referencias a esta asignatura.")
     return redirect("adm_asignaturas_lista")
 
-# ---------- ASIGNACIÓN DOCENTE → ASIGNATURA ----------
+# ---------- ASIGNACIÓN DOCENTE -> ASIGNATURA ----------
 @admin_required
 def adm_asignaciones_lista(request):
     filas = (AsignacionDocente.objects
@@ -824,10 +821,6 @@ def actividades_docente_lista(request):
     if docente:
         qs = qs.filter(docente=docente)
 
-    # Si tienes AsignacionDocente, puedes detectar asignatura del profe:
-    # from .models import AsignacionDocente
-    # rels = AsignacionDocente.objects.filter(profesor=request.user).select_related("asignatura")
-    # asignatura_prof = rels.first().asignatura if rels.count() == 1 else None
     asignatura_prof = None
     if docente and getattr(docente, "asignatura", None):
         asignatura_prof = Asignatura.objects.filter(nombre__iexact=docente.asignatura.strip()).first()
@@ -849,7 +842,6 @@ class ItemInlineFormSet(BaseInlineFormSet):
         super().__init__(*args, **kwargs)
 
     def _construct_form(self, i, **kwargs):
-        # PÁSALO como kwarg para que ItemForm lo lea en __init__
         kwargs.setdefault("actividad_tipo", self.actividad_tipo)
         return super()._construct_form(i, **kwargs)
 
@@ -866,10 +858,11 @@ ItemFormSet = inlineformset_factory(
     ItemActividad,
     form=ItemForm,
     formset=ItemInlineFormSet,
-    fields=("enunciado", "puntaje"),  # quitar "tipo"
+    fields=("enunciado", "puntaje"), 
     extra=0,
     can_delete=True,
 )
+
 # =====================================================
 # CREAR ACTIVIDAD 
 # =====================================================
@@ -897,8 +890,8 @@ def actividad_crear(request):
     if request.method == "POST":
         form = ActividadForm(request.POST, request.FILES)
 
-        # Siempre construimos un formset para re-renderizar la página,
-        # aunque NO lo usemos para guardar en BD.
+        # Siempre se construye un formset para re-renderizar la página,
+        # aunque NO lo se use para guardar en BD.
         tipo_norm = normalize_tipo(request.POST.get("tipo"))
         temp_act = Actividad(docente=docente)
         formset = ItemFormSet(
@@ -951,7 +944,7 @@ def actividad_crear(request):
                     print(f"      puntaje: '{punt_raw}'")
                     print(f"      payload: {len(payload)} chars")
 
-                    # Ítem marcado para borrar → ignorar
+                    # Ítem marcado para borrar -> ignorar
                     if delete_raw in ("1", "true", "True", "on"):
                         print("      ⏭️ Marcado DELETE, saltando")
                         continue
@@ -1005,7 +998,7 @@ def actividad_crear(request):
                     except Exception as e:
                         print(f"         ❌ ERROR: {e}")
 
-                # 3) Asignar a cursos / alumnos (igual que antes)
+                # 3) Asignar a cursos / alumnos 
                 cursos_ids = [int(x) for x in request.POST.getlist("cursos") if str(x).strip()]
                 alumnos_usuario_ids = [int(x) for x in request.POST.getlist("alumnos") if str(x).strip()]
 
@@ -1060,8 +1053,7 @@ def actividad_crear(request):
 
             return redirect("docente_lista")
 
-        # Form principal inválido: mostramos errores y
-        # seguimos hasta el render final con form + formset.
+        # Form principal inválido: se muestran errores y se sigue hasta el render final con form + formset.
         print(f"\n❌ Form inválido: {form.errors}")
         messages.error(request, "Revisa los errores en el formulario.")
     else:
@@ -1118,7 +1110,7 @@ def actividad_editar(request, pk):
             actividad_tipo=tipo_norm,
         )
         
-        # 🔍 DEBUG INICIAL
+        # DEBUG INICIAL
         print("\n" + "="*60)
         print(f"✏️ EDITAR ACTIVIDAD #{pk}")
         print(f"   Ítems iniciales en BD: {items_iniciales}")
@@ -1127,7 +1119,7 @@ def actividad_editar(request, pk):
 
         # Validar solo el form principal (actividad)
         if form.is_valid():
-            # NO validamos el formset, lo procesamos manualmente
+            # NO validar el formset, se procesa manualmente
             with transaction.atomic():
                 # 1) Guardar actividad
                 obj = form.save(commit=False)
@@ -1137,7 +1129,7 @@ def actividad_editar(request, pk):
                 obj.save()
                 form.save_m2m()
 
-                # 2) Procesar ítems DIRECTAMENTE desde request.POST
+                # 2) Procesar ítems directamente desde request.POST
                 items_guardados = 0
                 items_actualizados = 0
                 items_nuevos = 0
@@ -1278,11 +1270,11 @@ def actividad_editar(request, pk):
                 if cursos_ids:
                     usuarios_de_cursos = Matricula.objects.filter(
                         curso_id__in=cursos_ids
-                    ).values_list("estudiante_id", flat=True)  # ← usuario.id
+                    ).values_list("estudiante_id", flat=True)  # usuario.id
 
                     est_from_cursos = Estudiante.objects.filter(
                         usuario_id__in=usuarios_de_cursos
-                    ).values_list("pk", flat=True)            # ← estudiante.pk
+                    ).values_list("pk", flat=True)            # estudiante.pk
 
                     estudiantes_pks.update(est_from_cursos)
 
@@ -1356,7 +1348,7 @@ def actividad_editar(request, pk):
             actividad_tipo=act.tipo,
         )
 
-    # Asignaciones actuales (para pintar checkboxes)
+    # Asignaciones actuales (para marcar checkboxes)
     est_ids_asignados = set(
         AsignacionActividad.objects.filter(actividad=act).values_list("estudiante_id", flat=True)
     )
@@ -1508,7 +1500,7 @@ def estudiante_set_asignatura(request):
     session_slug = slugify(asig.nombre)
     request.session["asignatura_activa_slug"] = session_slug
     request.session["asignatura_activa_nombre"] = asig.nombre
-    request.session["asignatura_activa_icono"] = asig.icono  # ruta que luego usamos en el navbar
+    request.session["asignatura_activa_icono"] = asig.icono 
 
     return JsonResponse({"ok": True, "nombre": asig.nombre})
 
@@ -1547,7 +1539,7 @@ def estudiante_mis_actividades(request):
     else:
         print(f"   ⚠️ Sin filtro de asignatura. asig_slug en sesión = «{asig_slug}»")
 
-    # ⚠️ Filtrar por estudiante.pk
+    # Filtrar por estudiante.pk
     act_qs = (
         Actividad.objects
         .filter(
@@ -2153,10 +2145,10 @@ def api_item_answer(request, pk, item_id):
                       [ru.recompensa.slug for ru in nuevos_logros])
                 nombres = [ru.recompensa.nombre for ru in nuevos_logros]
 
-                # 🔔 NUEVO: guardar IDs en la sesión para el popup global
+                # guardar IDs en la sesión para el popup global
                 nuevas_ids = [ru.recompensa_id for ru in nuevos_logros]
                 ya_guardadas = request.session.get("nuevas_recompensas_ids", [])
-                # unimos sin duplicados
+                # unir sin duplicados
                 merged = list({*ya_guardadas, *nuevas_ids})
                 request.session["nuevas_recompensas_ids"] = merged
                 print(f"💾 nuevas_recompensas_ids en sesión: {merged}")
@@ -2264,7 +2256,7 @@ def api_item_answer(request, pk, item_id):
         
         print(f"🎁 Recompensas aplicadas: XP={outcome.xp}, Coins={outcome.coins}")
 
-        # 2) XP → PerfilGamificacion (barra y nivel)
+        # 2) XP -> PerfilGamificacion (barra y nivel)
         try:
             gamif_info = registrar_actividad_completada(
                 request.user,
@@ -2432,14 +2424,12 @@ def _fix_tileset_sources(map_data):
         if not source:
             continue
 
-        # Ya es absoluto (http o empieza con /static/) → lo dejamos
         if source.startswith("http://") or source.startswith("https://") or source.startswith("/static/"):
             continue
 
-        # Nos quedamos con el nombre de archivo, sin rutas relativas
         filename = source.split("/")[-1]
 
-        # Construimos ruta estática absoluta
+        # Construir ruta estática absoluta
         ts["source"] = static(f"LevelUp/tilesets/{filename}")
 
     return map_data
@@ -2466,14 +2456,12 @@ def _fix_image_layers(map_data):
         if not img:
             continue
 
-        # Si ya es absoluta (/static o http), no tocamos
         if img.startswith("/static/") or img.startswith("http://") or img.startswith("https://"):
             continue
 
-        # Nos quedamos solo con el nombre de archivo
         filename = img.split("/")[-1]
 
-        # Construimos ruta estática absoluta
+        # Construir ruta estática absoluta
         layer["image"] = static(f"LevelUp/img/images_tiled/{filename}")
 
     return map_data
@@ -2482,9 +2470,8 @@ def _fix_image_layers(map_data):
 @login_required
 def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
     """
-    Devuelve el mapa Tiled enriquecido con preguntas de la actividad.
+    Devuelve el mapa Tiled con preguntas de la actividad.
 
-    Además:
     - Loguea info del mapa y tilesets.
     - Corrige los 'source' de tilesets para que apunten a /static/LevelUp/tilesets/*.xml
       evitando 404 tipo /misiones/mapa/tilesets/bloques.xml.
@@ -2594,7 +2581,6 @@ def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
             }
 
         # Construir lista de preguntas
-                # Construir lista de "paquetes" de preguntas (1 por ItemActividad)
         questions = []
 
         for it in items_qs:
@@ -2604,7 +2590,7 @@ def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
             # Paquete de preguntas normalizado
             paquetes = []
 
-            # ====== TRIVIA con lista "questions" (builder nuevo) ======
+            # ====== TRIVIA con lista "questions" ======
             if kind == "trivia" and isinstance(datos.get("questions"), list) and datos["questions"]:
                 for sub in datos["questions"]:
                     sub = sub or {}
@@ -2624,7 +2610,7 @@ def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
                         "correct": ans,
                     })
 
-            # ====== TRIVIA "plana" (soporte antiguo) ======
+            # ====== TRIVIA "plana" ======
             elif kind == "trivia":
                 qtxt = (datos.get("question") or it.enunciado or "Pregunta").strip()
                 opts = list(datos.get("options") or [])
@@ -2649,15 +2635,14 @@ def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
                     "correct": 1,
                 })
 
-            # Tomamos la primera solo como "preview" para compatibilidad
             first = paquetes[0]
 
             questions.append({
                 # id se asigna después
                 "item_pk": it.pk,
                 "kind": "trivia",
-                "questions": paquetes,      # 👈 todas las sub-preguntas
-                "q": first["q"],            # 👈 compatibilidad: una sola
+                "questions": paquetes,      # todas las sub-preguntas
+                "q": first["q"],            # compatibilidad: una sola
                 "options": first["options"],
                 "correct": first["correct"],
             })
@@ -2691,9 +2676,9 @@ def misiones_mapa(request, actividad_pk=None, slug=None, nivel=None):
                     obj["properties"] = props_list
                     idx += 1
 
-        # 🔧 FIX: ajustar rutas de tilesets → /static/LevelUp/tilesets/*.xml
+        # FIX: ajustar rutas de tilesets /static/LevelUp/tilesets/*.xml
         _fix_tileset_sources(new_map)
-        # 🔧 FIX: ajustar imágenes de capas de fondo → /static/LevelUp/img/images_tiled/*.png
+        # FIX: ajustar imágenes de capas de fondo /static/LevelUp/img/images_tiled/*.png
         _fix_image_layers(new_map)
 
         # Logs finales
@@ -2754,8 +2739,8 @@ except NameError:
 def misiones_jugar(request, slug, nivel):
     """
     Renderiza la plantilla jugar.html.
-    - Si viene ?actividad=ID → el mapa se obtiene desde misiones_mapa_actividad (JSON dinámico).
-    - Si no viene actividad → usa un mapa estático de fallback.
+    - Si viene ?actividad=ID el mapa se obtiene desde misiones_mapa_actividad (JSON dinámico).
+    - Si no viene actividad usa un mapa estático de fallback.
     """
     actividad_pk = request.GET.get("actividad")
 
@@ -2811,7 +2796,7 @@ def actividad_crear_mision(request):
             titulo="Misión sin título",
             descripcion="Videojuego con preguntas editables por el docente.",
             tipo="game",
-            dificultad="medio",      # ajusta al valor real de tu ChoiceField
+            dificultad="medio",     
             docente=docente,
             es_publicada=False,
             xp_total=100,
@@ -2823,7 +2808,7 @@ def actividad_crear_mision(request):
             {
                 "q": "¿Cuánto es 2 + 2?",
                 "opts": ["3", "4", "5", "6"],
-                "ans": 1,  # índice 0-based → "4"
+                "ans": 1,  # índice 0-based "4"
             },
             {
                 "q": "¿Cuánto es 5 × 3?",
@@ -2860,7 +2845,4 @@ def actividad_crear_mision(request):
 # ERROR 404
 # ---------------------------------------------------------------------
 def custom_404(request, exception):
-    """
-    Página personalizada para error 404 (no encontrado).
-    """
     return render(request, "LevelUp/error/404.html", status=404)

@@ -92,7 +92,7 @@ class LoginForm(forms.Form):
 
 
 # ==============================
-# Recuperar contraseña (visible)
+# Recuperar contraseña 
 # ==============================
 class PasswordResetFormVisible(PasswordResetForm):
     def clean_email(self):
@@ -175,7 +175,7 @@ class CursoForm(forms.ModelForm):
 class AsignaturaForm(forms.ModelForm):
     class Meta:
         model = Asignatura
-        # 👈 SOLO se muestra este campo en la plantilla
+        # solo se muestra este campo en la plantilla
         fields = ("nombre",)
         labels = {
             "nombre": "Nombre de la asignatura",
@@ -194,12 +194,12 @@ class AsignaturaForm(forms.ModelForm):
             obj.slug = base
 
         if not obj.icono:
-            # Puedes cambiar la ruta o extensión si usas .webp, etc.
             obj.icono = f"LevelUp/img/asignaturas/{base}.png"
 
         if commit:
             obj.save()
         return obj
+
 # ==============================
 # Asignar Asignatura a Docente
 # ==============================
@@ -267,7 +267,7 @@ class ActividadForm(forms.ModelForm):
         help_text="Si está activo, se ignora 'Intentos máximos'."
     )
 
-    # 👇 CLAVE: que NO sea requerido aquí
+    # que no sea requerido aquí
     intentos_max = forms.IntegerField(
         required=False,
         min_value=1,
@@ -306,11 +306,11 @@ class ActividadForm(forms.ModelForm):
         val = self.cleaned_data.get("intentos_max")
 
         if ilimitado:
-            # Si es ilimitado, no exigimos valor y devolvemos un sentinel (p.ej. 1)
+            # Si es ilimitado, no se pide valor y devuelve un sentinel (p.ej. 1)
             # para satisfacer el modelo sin molestar al usuario.
             return val or 1
 
-        # Si NO es ilimitado, ahora sí es obligatorio y con rango 1..1000
+        # Si no es ilimitado, sí es obligatorio y con rango 1 - 1000
         if val is None:
             raise forms.ValidationError("Este campo es obligatorio si no es ilimitado.")
         if not (1 <= int(val) <= 1000):
@@ -409,7 +409,7 @@ class ItemInlineFormSet(BaseInlineFormSet):
         """Override para configurar cada form antes de validación"""
         form = super()._construct_form(i, **kwargs)
         
-        # 🔑 CRÍTICO: Para extra_forms con contenido, desactivar empty_permitted
+        # Para extra_forms con contenido, desactivar empty_permitted
         if i >= self.initial_form_count():
             # Es un extra_form
             if hasattr(self, 'data') and self.data:
@@ -463,7 +463,7 @@ class ItemInlineFormSet(BaseInlineFormSet):
             
             print(f"   Form {i}: tiene_algo={tiene_algo}, enun={len(enun)}, punt={punt}, payload={len(payload)}")
 
-            # 🔑 CLAVE: Si HAY payload del builder, este form NO es vacío
+            # Si hay payload del builder, este form no es vacío
             if payload:
                 form.empty_permitted = False
                 # Forzar que Django lo considere válido aunque esté en extra_forms
@@ -476,20 +476,20 @@ class ItemInlineFormSet(BaseInlineFormSet):
                 
                 if not enun:
                     form.add_error("enunciado", "Este campo es obligatorio cuando el ítem tiene contenido.")
-                    print(f"      → ERROR: Falta enunciado")
+                    print(f"      ERROR: Falta enunciado")
                 if punt in (None, ""):
                     form.add_error("puntaje", "Este campo es obligatorio cuando el ítem tiene contenido.")
-                    print(f"      → ERROR: Falta puntaje")
+                    print(f"      ERROR: Falta puntaje")
                     
     def save(self, commit=True):
         """
         Override save para asegurar que TODOS los forms con contenido se guarden,
         incluso los que Django considera 'extra_forms'
         """
-        # Primero guardamos normalmente (esto guarda initial forms y algunos extra)
+        # Primero se guarda normalmente (esto guarda initial forms y algunos extra)
         instances = super().save(commit=False)
         
-        # Ahora forzamos el guardado de TODOS los extra_forms que tienen contenido
+        # Ahora se "fuerza" el guardado de TODOS los extra_forms que tienen contenido
         saved_forms = []
         
         for form in self.forms:
@@ -571,7 +571,7 @@ class ItemForm(forms.ModelForm):
         else:
             self.fields["item_kind"].choices = GAME_KIND_CHOICES
 
-        # ⚠️ PRECARGA DESDE INSTANCIA EXISTENTE
+        # Precargar datos si existen
         if self.instance and self.instance.pk:
             datos = getattr(self.instance, "datos", None) or {}
             
@@ -582,7 +582,7 @@ class ItemForm(forms.ModelForm):
                 self.fields["item_kind"].initial = kind
                 self.fields["game_time_limit"].initial = datos.get("timeLimit") or datos.get("tiempo")
                 
-                # ⚠️ CRÍTICO: Serializar como JSON
+                # Serializar como JSON
                 try:
                     # Asegurarse de que datos es un dict válido
                     if not isinstance(datos, dict):
@@ -599,7 +599,7 @@ class ItemForm(forms.ModelForm):
                     print(f"❌ Error serializando datos del ítem {self.instance.pk}: {e}")
                     self.fields["game_pairs"].initial = json.dumps({"kind": kind}, ensure_ascii=False)
             else:
-                # Sin datos: crear estructura base
+                # Sin no hay datos crea estructura base
                 self.fields["game_pairs"].initial = json.dumps({"kind": "trivia"}, ensure_ascii=False)
 
     def clean(self):
@@ -607,14 +607,14 @@ class ItemForm(forms.ModelForm):
         kind = _norm(cleaned.get("item_kind") or "trivia")
         raw = cleaned.get("game_pairs") or ""
 
-        # ⚠️ Si el textarea viene vacío pero la instancia tiene datos, preservarlos
+        # Si el textarea viene vacío pero la instancia tiene datos, los mantiene
         if not raw.strip() and self.instance.pk and self.instance.datos:
             print(f"⚠️ Textarea vacío, preservando datos existentes del ítem {self.instance.pk}")
             datos = self.instance.datos
             # Actualizar kind por si cambió
             datos["kind"] = kind
         elif not raw.strip():
-            # Nuevo ítem sin datos: crear estructura base
+            # Nuevo ítem sin datos crear estructura base
             datos = {"kind": kind}
             if kind == "trivia":
                 datos["questions"] = []
@@ -646,7 +646,7 @@ class ItemForm(forms.ModelForm):
             except Exception:
                 pass
 
-        # ⚠️ CRÍTICO: Guardar en la instancia
+        # Guardar en la instancia
         self.instance.datos = datos
         self.instance.tipo = "game"
         
