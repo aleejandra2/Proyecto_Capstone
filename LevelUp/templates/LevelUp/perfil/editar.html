@@ -20,7 +20,6 @@
     --border-soft: #e5e7eb;
   }
 
-  /* Fondo blanco en toda la vista */
   body {
     background: #ffffff;
   }
@@ -35,14 +34,12 @@
     padding: 0 1rem 3rem;
   }
 
-  /* Header del formulario */
   .edit-header {
     background: #f9f5ff;
     border-radius: 20px;
     padding: 1.5rem 2rem;
     margin-bottom: 1.5rem;
     border: 2px solid var(--secondary);
-    /* borde de color */
   }
 
   .header-content {
@@ -103,7 +100,6 @@
     transform: translateX(-2px);
   }
 
-  /* CARD PRINCIPAL DEL FORMULARIO */
   .form-card {
     background: var(--bg-card);
     border-radius: 20px;
@@ -231,11 +227,6 @@
     content: "ℹ️";
   }
 
-  /* RUT bloqueado */
-  .disabled-field-wrapper {
-    position: relative;
-  }
-
   .info-tooltip {
     position: relative;
     display: inline-flex;
@@ -266,7 +257,6 @@
     z-index: 10;
   }
 
-  /* Alertas */
   .alert-modern {
     padding: 1rem 1.25rem;
     border-radius: 12px;
@@ -276,7 +266,6 @@
     gap: 0.75rem;
     border: 1px solid;
   }
-
 
   .alert-danger {
     background: #fef2f2;
@@ -317,8 +306,6 @@
     white-space: nowrap;
   }
 
-
-  /* Botones */
   .form-actions {
     display: flex;
     gap: 1rem;
@@ -363,15 +350,8 @@
   }
 
   @keyframes pulse {
-
-    0%,
-    100% {
-      opacity: 0.7;
-    }
-
-    50% {
-      opacity: 1;
-    }
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
   }
 
   .btn-primary-modern:disabled {
@@ -380,7 +360,6 @@
     animation: pulse 1.5s ease-in-out infinite;
   }
 
-  /* Responsive */
   @media (max-width: 768px) {
     .edit-profile-container {
       margin-top: 1.5rem;
@@ -432,8 +411,7 @@
       <div class="header-title-section">
         <div class="header-icon">✏️</div>
         <div>
-          <h1 class="header-title">Editar perfil</h1>
-          <p class="header-subtitle">Actualiza tu información personal</p>
+          <h1 class="header-title">Perfil</h1>
         </div>
       </div>
       <a class="btn-back" href="{% url 'perfil' %}">
@@ -449,10 +427,10 @@
       {% csrf_token %}
 
       {% if form.non_field_errors %}
-      <div class="alert-modern alert-danger">
-        <span class="alert-icon">❌</span>
-        <div>{{ form.non_field_errors|striptags }}</div>
-      </div>
+        <div class="alert-modern alert-danger">
+          <span class="alert-icon">❌</span>
+          <div>{{ form.non_field_errors|striptags }}</div>
+        </div>
       {% endif %}
 
       {# ================= INFORMACIÓN PERSONAL ================= #}
@@ -466,27 +444,45 @@
           <div class="form-group">
             <label class="form-label-modern">
               Nombre
+              <span class="required-indicator">*</span>
             </label>
             <div class="input-with-icon">
               <span class="field-icon">🪪</span>
-              {# visible solo lectura #}
-              <input type="text" class="form-control-modern" value="{{ form.first_name.value|default:user.first_name }}"
-                disabled>
-              {# campo real oculto para mantener el valor #}
-              {{ form.first_name.as_hidden }}
+              {% if user.is_superuser or user.is_staff or user.rol == "ADMINISTRADOR" %}
+                {{ form.first_name|add_class:"form-control-modern" }}
+              {% else %}
+                <input type="text" class="form-control-modern"
+                       value="{{ form.first_name.value|default:user.first_name }}" disabled>
+                {{ form.first_name.as_hidden }}
+              {% endif %}
             </div>
+            {% if form.first_name.errors %}
+              <div class="invalid-feedback">
+                {{ form.first_name.errors|striptags }}
+              </div>
+            {% endif %}
           </div>
 
           <div class="form-group">
             <label class="form-label-modern">
               Apellido
+              <span class="required-indicator">*</span>
             </label>
             <div class="input-with-icon">
               <span class="field-icon">🧾</span>
-              <input type="text" class="form-control-modern" value="{{ form.last_name.value|default:user.last_name }}"
-                disabled>
-              {{ form.last_name.as_hidden }}
+              {% if user.is_superuser or user.is_staff or user.rol == "ADMINISTRADOR" %}
+                {{ form.last_name|add_class:"form-control-modern" }}
+              {% else %}
+                <input type="text" class="form-control-modern"
+                       value="{{ form.last_name.value|default:user.last_name }}" disabled>
+                {{ form.last_name.as_hidden }}
+              {% endif %}
             </div>
+            {% if form.last_name.errors %}
+              <div class="invalid-feedback">
+                {{ form.last_name.errors|striptags }}
+              </div>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -503,20 +499,33 @@
             <div class="rut-header">
               <label class="form-label-modern">
                 RUT
-                <span class="info-tooltip"
-                  data-tooltip="El RUT no se puede modificar. Contacta al administrador si necesitas un cambio.">?</span>
+                {% if not user.is_superuser and not user.is_staff and user.rol != "ADMINISTRADOR" %}
+                  <span class="info-tooltip"
+                        data-tooltip="El RUT no se puede modificar. Contacta al administrador si necesitas un cambio.">?</span>
+                {% endif %}
               </label>
-              <span class="disabled-badge">🔒 Bloqueado</span>
+              {% if not user.is_superuser and not user.is_staff and user.rol != "ADMINISTRADOR" %}
+                <span class="disabled-badge">🔒 Bloqueado</span>
+              {% endif %}
             </div>
 
             <div class="input-with-icon">
               <span class="field-icon">🆔</span>
-              <input type="text" class="form-control-modern" value="{{ form.rut.value|default:user.rut }}" disabled>
-              {{ form.rut.as_hidden }}
+              {% if user.is_superuser or user.is_staff or user.rol == "ADMINISTRADOR" %}
+                {{ form.rut|add_class:"form-control-modern" }}
+              {% else %}
+                <input type="text" class="form-control-modern"
+                       value="{{ form.rut.value|default:user.rut }}" disabled>
+                {{ form.rut.as_hidden }}
+              {% endif %}
             </div>
 
             <small class="form-text">
-              Tu RUT es un identificador único y no puede ser modificado.
+              {% if user.is_superuser or user.is_staff or user.rol == "ADMINISTRADOR" %}
+                Puedes modificar el RUT si es necesario. Hazlo con cuidado.
+              {% else %}
+                Tu RUT es un identificador único y no puede ser modificado.
+              {% endif %}
             </small>
           </div>
         </div>
@@ -534,17 +543,28 @@
             <label class="form-label-modern">
               Correo electrónico
             </label>
-            <span class="disabled-badge">🔒 Bloqueado</span>
+            {% if not user.is_superuser and not user.is_staff and user.rol != "ADMINISTRADOR" %}
+              <span class="disabled-badge">🔒 Bloqueado</span>
+            {% endif %}
           </div>
 
           <div class="input-with-icon">
             <span class="field-icon">📧</span>
-            <input type="text" class="form-control-modern" value="{{ form.email.value|default:user.email }}" disabled>
-            {{ form.email.as_hidden }}
+            {% if user.is_superuser or user.is_staff or user.rol == "ADMINISTRADOR" %}
+              {{ form.email|add_class:"form-control-modern" }}
+            {% else %}
+              <input type="text" class="form-control-modern"
+                     value="{{ form.email.value|default:user.email }}" disabled>
+              {{ form.email.as_hidden }}
+            {% endif %}
           </div>
 
           <small class="form-text">
-            Tu correo electrónico está bloqueado y no puede ser modificado desde este formulario.
+            {% if user.is_superuser or user.is_staff or user.rol == "ADMINISTRADOR" %}
+              Solo el administrador puede actualizar este correo.
+            {% else %}
+              Tu correo electrónico está bloqueado y no puede ser modificado desde este formulario.
+            {% endif %}
           </small>
         </div>
       </div>
@@ -555,22 +575,31 @@
           <span>←</span>
           Volver al perfil
         </a>
-        <button type="button" class="btn-modern btn-primary-modern" disabled>
-          <span>🔒</span>
-          Edición deshabilitada
-        </button>
-      </div>
-    </form>
 
+        {% if user.is_superuser or user.is_staff or user.rol == "ADMINISTRADOR" %}
+          <button type="submit" id="submitBtn" class="btn-modern btn-primary-modern">
+            <span>💾</span>
+            Guardar cambios
+          </button>
+        {% else %}
+          <button type="button" class="btn-modern btn-primary-modern" disabled>
+            <span>🔒</span>
+            Edición deshabilitada
+          </button>
+        {% endif %}
+      </div>
+
+    </form>
   </div>
 </div>
 
 <script>
   (function () {
     const form = document.getElementById('editProfileForm');
-    const submitBtn = document.getElementById('submitBtn');
+    const submitBtn = document.getElementById('submitBtn'); // solo existe si el usuario puede guardar
 
-    if (!form || !submitBtn) return;
+    if (!form) return;
+    if (!submitBtn) return;
 
     form.addEventListener('submit', function () {
       submitBtn.disabled = true;
@@ -599,4 +628,5 @@
     });
   })();
 </script>
+
 {% endblock %}
