@@ -72,10 +72,34 @@
                             <div class="ring ring-2"></div>
                             <div class="ring ring-3"></div>
                         </div>
+
                         <div class="timo-avatar-container">
-                            <img src="{% static 'LevelUp/img/avatars/Timo.png' %}"
-                                 alt="Timo" class="timo-avatar-img">
+                            {% if perfil %}
+                                {# Cambiar avatar según el rango de Timo #}
+                                {% if perfil.rango_timo == "Timo Explorador" %}
+                                    <img src="{% static 'LevelUp/img/timo/Timo_explorador.png' %}"
+                                         alt="{{ perfil.rango_timo }}" class="timo-avatar-img">
+                                {% elif perfil.rango_timo == "Timo Guardián" %}
+                                    <img src="{% static 'LevelUp/img/timo/Timo_guardian.png' %}"
+                                         alt="{{ perfil.rango_timo }}" class="timo-avatar-img">
+                                {% elif perfil.rango_timo == "Timo Guerrero" %}
+                                    <img src="{% static 'LevelUp/img/timo/Timo_guerrero.png' %}"
+                                         alt="{{ perfil.rango_timo }}" class="timo-avatar-img">
+                                {% elif perfil.rango_timo == "Timo Héroe Legendario" %}
+                                    <img src="{% static 'LevelUp/img/timo/Timo_legendario.png' %}"
+                                         alt="{{ perfil.rango_timo }}" class="timo-avatar-img">
+                                {% else %}
+                                    {# Fallback por si aparece un rango nuevo o distinto #}
+                                    <img src="{% static 'LevelUp/img/timo/Timo.png' %}"
+                                         alt="Timo" class="timo-avatar-img">
+                                {% endif %}
+                            {% else %}
+                                {# Sin perfil, mostrar Timo base #}
+                                <img src="{% static 'LevelUp/img/timo/Timo.png' %}"
+                                     alt="Timo" class="timo-avatar-img">
+                            {% endif %}
                         </div>
+
                         {% if perfil %}
                         <div class="showcase-rank-badge">
                             <span class="badge-icon">🏆</span>
