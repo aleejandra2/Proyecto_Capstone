@@ -151,11 +151,12 @@
                           Jugar
                           {% endif %}
                         </a>
-
-                        <a class="btn btn-edu-alt btn-sm flex-fill {% if not r.tiene_resultados %}disabled{% endif %}"
-                          href="{% if r.tiene_resultados %}{% url 'resolver_resultado' a.pk %}{% else %}#{% endif %}">
-                          Ver resultados
-                        </a>
+                        {% if a.tipo != "game" %}
+                            <a class="btn btn-edu-alt btn-sm flex-fill {% if not r.tiene_resultados %}disabled{% endif %}"
+                              href="{% if r.tiene_resultados %}{% url 'resolver_resultado' a.pk %}{% else %}#{% endif %}">
+                              Ver resultados
+                            </a>
+                        {% endif %}
                       </div>
 
                     </div>
