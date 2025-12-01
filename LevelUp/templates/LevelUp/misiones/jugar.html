@@ -284,7 +284,9 @@
       <p id="endStats">¡Bien hecho!</p>
       <div class="btns">
         <button id="btnRetry">Reintentar</button>
-        <button id="btnExit" href="{% url 'estudiante_lista' %}" class="ghost">Salir</button>
+        {% if actividad %}
+          <button id="btnExit" type="button" class="ghost">Salir</button>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -296,6 +298,26 @@
     /* ================== CONFIG & UTILS ================== */
     const MAP_URL = "{{ map_url|escapejs }}";
     const MAP_ABS = new URL(MAP_URL, window.location.origin).toString();
+    // URL para finalizar el intento del minijuego (item_id = 0)
+    const FINISH_URL = {% if actividad %}"{% url 'api_item_answer' actividad.pk 0 %}"{% else %}null{% endif %};
+
+    // Helper para CSRF desde cookie
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + "=")) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+    // URL para volver a la lista de actividades del estudiante
+    const ACTIVIDADES_URL = "{% url 'estudiante_lista' %}";
     const FLIP_H = 0x80000000, FLIP_V = 0x40000000, FLIP_D = 0x20000000, GID_MASK = 0x1fffffff;
     const absUrl = (rel, base) => new URL(rel, base).href;
     const decodeGid = raw => ({ gid: raw & GID_MASK, flipH: !!(raw & FLIP_H), flipV: !!(raw & FLIP_V), flipD: !!(raw & FLIP_D) });
@@ -590,22 +612,98 @@
       };
 
       const menuStart = document.getElementById('menuStart');
-      const menuEnd = document.getElementById('menuEnd');
-      const endStats = document.getElementById('endStats');
+      const menuEnd   = document.getElementById('menuEnd');
+      const endStats  = document.getElementById('endStats');
+      const btnStart  = document.getElementById('btnStart');
+      const btnRetry  = document.getElementById('btnRetry');
 
-      document.getElementById('btnStart').onclick = () => {
-        UIAudio.play('start');
+      let gameStarted = false;
+
+      function startGame() {
+        if (gameStarted) return;
+        gameStarted = true;
+
+        // ocultar menú de inicio y sonido de comienzo
         menuStart.classList.remove('show');
-        if (window.Play && typeof window.Play.init === 'function') {
-          window.Play.init(game, window.LEVEL, askQuestion, (stats) => {
-            UIAudio.play('win'); FX.burst(2200);
-            endStats.textContent = `Monedas: ${stats.coins} · Tiempo: ${Math.round(stats.time / 1000)} s`;
-            menuEnd.classList.add('show');
-          });
+        UIAudio.play('start');
+
+        // inicia el motor del juego
+        window.Play.init(game, window.LEVEL, askQuestion, async (stats) => {
+        // 1) Finalizar intento en el backend y saber si aún puede reintentar
+        let puedeReintentar = true;
+
+        if (FINISH_URL) {
+          try {
+            const resp = await fetch(FINISH_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken"),
+              },
+              body: JSON.stringify({
+                payload: {
+                  completado: true,
+                  kind: "mission",
+                  meta: {
+                    coins: stats.coins ?? 0,
+                    time:  stats.time  ?? 0,
+                    correctas: stats.coins ?? 0,
+                    total:     stats.coins ?? 0,
+                  },
+                },
+              }),
+            });
+
+            if (resp.ok) {
+              const data = await resp.json();
+              if (typeof data.puede_reintentar === "boolean") {
+                puedeReintentar = data.puede_reintentar;
+              }
+            }
+          } catch (e) {
+            console.error("Error finalizando intento del minijuego:", e);
+          }
         }
-      };
-      document.getElementById('btnRetry').onclick = () => location.reload();
-      document.getElementById('btnExit').onclick = () => location.assign("{% url 'estudiante_lista' %}");
+
+        // 2) Feedback visual y menú final
+        UIAudio.play('win');
+        FX.burst(2200);
+        endStats.textContent =
+          `Monedas: ${stats.coins} · Tiempo: ${Math.round(stats.time / 1000)} s`;
+
+        // 3) Configurar botón "Reintentar" según intentos disponibles
+        if (btnRetry) {
+          if (puedeReintentar) {
+            btnRetry.disabled = false;
+            btnRetry.classList.remove('ghost');
+            btnRetry.onclick = () => location.reload();
+          } else {
+            btnRetry.disabled = true;
+            btnRetry.classList.add('ghost');
+            // btnRetry.textContent = "Sin intentos";
+          }
+        }
+
+        menuEnd.classList.add('show');
+      });
+      }
+
+      // click en "¡Jugar!"
+      if (btnStart) {
+        btnStart.addEventListener('click', startGame);
+      }
+
+      // botón Reintentar
+      //document.getElementById('btnRetry').onclick = () => location.reload();
+
+      // Redirigir a la lista de actividades cuando el alumno pulsa "Salir"
+      const btnExit = document.getElementById('btnExit');
+      if (btnExit) {
+        btnExit.addEventListener('click', () => {
+          window.location.href = "{% url 'estudiante_lista' %}";
+        });
+      }
+
     })().catch(e => console.error('Fallo general:', e));
 
     /* ===== Overlay Preguntas ===== */

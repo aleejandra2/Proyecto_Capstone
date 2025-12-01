@@ -273,7 +273,7 @@ def logout_view(request):
         request.session.pop(key, None)
 
     logout(request)
-    return redirect("login")
+    return redirect("home")
 
 # -------------------------------------------------------------------
 # Portal por rol (/inicio/)
@@ -2127,6 +2127,7 @@ def api_item_answer(request, pk, item_id):
         sub.save()
         print(f"✅ Submission finalizado")
 
+        # Registrar actividad completada en perfil
         try:
             perfil = obtener_o_crear_perfil(request.user)
             perfil.registrar_actividad_completada()
@@ -2134,6 +2135,7 @@ def api_item_answer(request, pk, item_id):
         except Exception as e:
             print(f"⚠️ Error registrando actividad completada en gamificación: {e}")
 
+        # Evaluar logros asociados a esta actividad
         try:
             nuevos_logros = evaluar_logros_por_actividad(
                 estudiante=estudiante,
@@ -2148,7 +2150,6 @@ def api_item_answer(request, pk, item_id):
                 # guardar IDs en la sesión para el popup global
                 nuevas_ids = [ru.recompensa_id for ru in nuevos_logros]
                 ya_guardadas = request.session.get("nuevas_recompensas_ids", [])
-                # unir sin duplicados
                 merged = list({*ya_guardadas, *nuevas_ids})
                 request.session["nuevas_recompensas_ids"] = merged
                 print(f"💾 nuevas_recompensas_ids en sesión: {merged}")
@@ -2158,10 +2159,38 @@ def api_item_answer(request, pk, item_id):
             print(f"⚠️ Error evaluando logros especiales: {e}")
             nombres = []
 
+        # ---- Cálculo de intentos usados / disponibles para esta actividad ----
+        intentos_usados = Submission.objects.filter(
+            actividad=actividad,
+            estudiante=estudiante,
+        ).count()
+
+        if actividad.intentos_ilimitados:
+            intentos_max = 0  # 0 = ilimitado
+        else:
+            raw_max = actividad.intentos_max or 0
+            try:
+                intentos_max = int(raw_max)
+            except (TypeError, ValueError):
+                intentos_max = 0
+
+        es_intentos_ilimitados = (intentos_max == 0)
+        ahora = timezone.now()
+
+        puede_reintentar = (
+            actividad.es_publicada
+            and (not actividad.fecha_cierre or ahora <= actividad.fecha_cierre)
+            and (es_intentos_ilimitados or intentos_usados < intentos_max)
+        )
+
         return JsonResponse({
             "ok": True,
             "message": "Intento finalizado",
-            "logros_nuevos": nombres, 
+            "logros_nuevos": nombres,
+            "intentos_usados": intentos_usados,
+            "intentos_max": intentos_max,
+            "es_intentos_ilimitados": es_intentos_ilimitados,
+            "puede_reintentar": puede_reintentar,
         })
 
     # -----------------------------
@@ -2739,20 +2768,33 @@ except NameError:
 def misiones_jugar(request, slug, nivel):
     """
     Renderiza la plantilla jugar.html.
-    - Si viene ?actividad=ID el mapa se obtiene desde misiones_mapa_actividad (JSON dinámico).
+    - Si viene ?actividad=ID el mapa se obtiene desde misiones_mapa_actividad (JSON dinámico)
+      y se pasa la Actividad al template.
     - Si no viene actividad usa un mapa estático de fallback.
     """
     actividad_pk = request.GET.get("actividad")
+    actividad = None
 
     if actividad_pk:
+        try:
+            actividad_pk_int = int(actividad_pk)
+        except (TypeError, ValueError):
+            actividad_pk_int = None
+
+        if actividad_pk_int:
+            try:
+                actividad = Actividad.objects.get(pk=actividad_pk_int)
+            except Actividad.DoesNotExist:
+                actividad = None
+
+    if actividad is not None:
         # Modo normal: misión asociada a una Actividad
         try:
             map_url = reverse(
                 "misiones_mapa_actividad",
-                kwargs={"actividad_pk": int(actividad_pk)},
+                kwargs={"actividad_pk": actividad.pk},
             )
         except Exception:
-            # Fallback seguro
             map_url = static("LevelUp/maps/escenario1.json")
     else:
         # Fallback: mapa estático (por si se entra directo a /misiones/bosque/1/)
@@ -2762,7 +2804,6 @@ def misiones_jugar(request, slug, nivel):
         except Exception:
             default = None
 
-        # Soportar tanto dict como string
         if isinstance(default, dict):
             map_path = default.get("map", map_path)
         elif isinstance(default, str) and default.strip():
@@ -2777,9 +2818,9 @@ def misiones_jugar(request, slug, nivel):
             "map_url": map_url,
             "mundo": slug,
             "nivel": nivel,
+            "actividad": actividad,   
         },
     )
-
 # -------------------------------------------------------------
 # Atajo para crear misión base y llevar al editor
 # -------------------------------------------------------------

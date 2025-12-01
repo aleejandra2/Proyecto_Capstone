@@ -123,11 +123,11 @@
                           </span>
                           {% endif %}
 
-                          {% if r.tiene_resultados %}
-                          <span class="badge rounded-pill text-bg-primary d-inline-flex align-items-center gap-1"
-                            title="Ya tienes resultados guardados">
-                            <i class="bi bi-bar-chart-fill"></i> Con resultados
-                          </span>
+                          {% if a.tipo != "game" and r.tiene_resultados %}
+                            <span class="badge rounded-pill text-bg-primary d-inline-flex align-items-center gap-1"
+                                  title="Ya tienes resultados guardados">
+                              <i class="bi bi-bar-chart-fill"></i> Con resultados
+                            </span>
                           {% endif %}
 
                           {% if not r.puede_intentar and not r.tiene_abierto %}

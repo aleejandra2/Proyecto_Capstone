@@ -61,7 +61,7 @@ class UsuarioAdmin(BaseUserAdmin):
 class ItemActividadInline(admin.StackedInline):
     model = ItemActividad
     extra = 0
-    fields = ("orden", "tipo", "enunciado", "puntaje", "imagen", "datos")
+    fields = ("orden", "tipo", "enunciado", "puntaje", "datos")
     ordering = ("orden",)
 
 @admin.register(Actividad)
